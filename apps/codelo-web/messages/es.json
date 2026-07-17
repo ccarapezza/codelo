@@ -1,0 +1,79 @@
+{
+  "site": {
+    "title": "Cogollos del Oeste — agrupación cannábica",
+    "description": "Portal de la agrupación cannábica Cogollos del Oeste: información de cultivo responsable, REPROCANN, actividades y noticias."
+  },
+  "common": {
+    "loading": "Cargando…",
+    "viewAll": "Ver todo",
+    "backHome": "Volver al inicio"
+  },
+  "nav": {
+    "home": "Inicio",
+    "about": "Quiénes somos",
+    "reprocann": "REPROCANN",
+    "events": "Actividades",
+    "blog": "Noticias",
+    "contact": "Contacto"
+  },
+  "header": {
+    "logoAlt": "Cogollos del Oeste — inicio",
+    "mobileMenu": "Abrir menú",
+    "drawerTitle": "Menú",
+    "themeLabel": "Tema"
+  },
+  "footer": {
+    "sectionSite": "La agrupación",
+    "sectionInfo": "Información",
+    "sectionEditorial": "Editorial",
+    "tagline": "Agrupación cannábica del oeste del Gran Buenos Aires: cultivo responsable, información y comunidad.",
+    "ariaNav": "Mapa del sitio",
+    "copyright": "© {year} Cogollos del Oeste.",
+    "disclaimer": "Información de divulgación · +18"
+  },
+  "home": {
+    "title": "Cogollos del Oeste",
+    "intro": "Somos una agrupación cannábica del oeste del Gran Buenos Aires. Acá vas a encontrar información de cultivo responsable, el marco legal vigente y nuestras actividades.",
+    "upcomingEvents": "Próximas actividades",
+    "allEvents": "Ver todas",
+    "noEvents": "No hay actividades programadas por ahora.",
+    "latestNews": "Últimas noticias",
+    "allNews": "Ver todas",
+    "noPosts": "Todavía no hay notas publicadas."
+  },
+  "pages": {
+    "missing": "Esta página todavía no tiene contenido cargado en el CMS."
+  },
+  "events": {
+    "title": "Actividades",
+    "upcomingTitle": "Próximas",
+    "pastTitle": "Pasadas",
+    "upcoming": "Próxima",
+    "past": "Realizada",
+    "emptyUpcoming": "No hay actividades programadas por ahora. Seguinos en redes para enterarte de las próximas."
+  },
+  "blog": {
+    "title": "Noticias",
+    "tagline": "Notas, guías y novedades de la agrupación.",
+    "eyebrow": "Editorial",
+    "empty": "Todavía no hay notas publicadas.",
+    "emptyContent": "Esta nota no tiene contenido.",
+    "featured": "Destacada",
+    "readPost": "Leer nota",
+    "readAria": "Leer: {title}",
+    "readingTime": "{minutes} min de lectura",
+    "keepReading": "Seguir leyendo",
+    "moreNotes": "Más notas",
+    "backToBlog": "Volver a noticias",
+    "tags": "Etiquetas",
+    "viewAll": "Ver todas"
+  },
+  "news": {
+    "eyebrow": "Noticias",
+    "ariaLabel": "Últimas noticias",
+    "viewAll": "Ver todas"
+  },
+  "postListItem": {
+    "read": "Leer"
+  }
+}

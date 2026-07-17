@@ -1,0 +1,44 @@
+{
+  "kind": "collectionType",
+  "collectionName": "tags",
+  "info": {
+    "singularName": "tag",
+    "pluralName": "tags",
+    "displayName": "Tag",
+    "description": "Tags to relate posts to sections (cultivo, legal, comunidad…) or events."
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "name",
+      "required": true,
+      "unique": true
+    },
+    "kind": {
+      "type": "enumeration",
+      "enum": ["topic", "event"],
+      "required": true,
+      "default": "topic"
+    },
+    "reference": {
+      "type": "string",
+      "required": false,
+      "description": "For kind=event, store the event slug so the web can link the tag to /actividades."
+    },
+    "posts": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::post.post",
+      "mappedBy": "tags"
+    }
+  }
+}

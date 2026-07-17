@@ -1,0 +1,141 @@
+import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
+import { Inter } from "next/font/google";
+import Script from "next/script";
+import { notFound } from "next/navigation";
+import { hasLocale, NextIntlClientProvider } from "next-intl";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { routing } from "@/i18n/routing";
+import { SiteHeader } from "@/components/SiteHeader";
+import { LocaleAlternatesProvider } from "@/components/locale-alternates";
+import { NavigationProgress } from "@/components/NavigationProgress";
+import { SiteFooter } from "@/components/SiteFooter";
+import { resolveGaId, resolveClarityId } from "@/lib/analytics";
+import { getSiteSettings } from "@/lib/cms";
+import { robotsForLocale } from "@/lib/seo";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
+import "./globals.css";
+
+const OG_LOCALE: Record<string, string> = {
+  es: "es_AR",
+  en: "en_US",
+};
+
+export function generateStaticParams() {
+  return routing.locales.map(lang => ({ lang }));
+}
+
+const inter = Inter({
+  variable: "--font-sans",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}): Promise<Metadata> {
+  const { lang } = await params;
+  const [settings, t] = await Promise.all([
+    getSiteSettings(),
+    getTranslations({ locale: lang, namespace: "site" }),
+  ]);
+  const title = t("title");
+  const description = t("description");
+  const gscToken = settings.googleSiteVerification?.trim() || undefined;
+
+  return {
+    metadataBase: new URL(SITE_URL),
+    verification: gscToken ? { google: gscToken } : undefined,
+    // Locale-wide noindex default for non-indexable locales (currently EN —
+    // see NOINDEX_LOCALES). Inherited by every page that doesn't set its own
+    // `robots`; pages that do must fall back to robotsForLocale(lang) first.
+    robots: robotsForLocale(lang),
+    title: {
+      default: title,
+      template: `%s · ${SITE_NAME}`,
+    },
+    description,
+    openGraph: {
+      type: "website",
+      locale: OG_LOCALE[lang] ?? OG_LOCALE.es,
+      siteName: SITE_NAME,
+      url: `/${lang}`,
+      title,
+      description,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
+  };
+}
+
+const THEME_SCRIPT = `(function(){try{var m=document.cookie.split('; ').find(function(r){return r.indexOf('theme=')===0;});var t=m?m.split('=')[1]:'system';if(t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark');}}catch(e){}})();`;
+
+export default async function RootLayout({
+  children,
+  params,
+}: Readonly<{
+  children: React.ReactNode;
+  params: Promise<{ lang: string }>;
+}>) {
+  const { lang } = await params;
+  if (!hasLocale(routing.locales, lang)) {
+    notFound();
+  }
+  setRequestLocale(lang);
+
+  const cookieStore = await cookies();
+  const theme = cookieStore.get("theme")?.value;
+  const htmlClass = theme === "dark" ? "dark" : undefined;
+
+  const settings = await getSiteSettings();
+  const gaId = process.env.NODE_ENV === "production" ? resolveGaId(settings) : null;
+  const clarityId = process.env.NODE_ENV === "production" ? resolveClarityId(settings) : null;
+
+  return (
+    <html lang={lang} translate="no" className={htmlClass} suppressHydrationWarning>
+      <body
+        className={`${inter.variable} min-h-screen overflow-x-hidden bg-background font-sans text-foreground antialiased`}
+      >
+        <Script id="codelo-theme-init" strategy="beforeInteractive">
+          {THEME_SCRIPT}
+        </Script>
+        {gaId ? (
+          <>
+            <Script
+              id="ga-loader"
+              async
+              strategy="afterInteractive"
+              src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+            />
+            <Script id="ga-init" strategy="afterInteractive">
+              {`window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag('js', new Date());gtag('config', '${gaId}');`}
+            </Script>
+          </>
+        ) : null}
+        {clarityId ? (
+          <Script id="ms-clarity" strategy="afterInteractive">
+            {`(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window, document, "clarity", "script", "${clarityId}");`}
+          </Script>
+        ) : null}
+        <NextIntlClientProvider>
+          <LocaleAlternatesProvider>
+            <NavigationProgress />
+            <SiteHeader />
+            {children}
+            <SiteFooter />
+          </LocaleAlternatesProvider>
+        </NextIntlClientProvider>
+      </body>
+    </html>
+  );
+}

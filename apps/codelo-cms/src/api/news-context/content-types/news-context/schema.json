@@ -1,0 +1,45 @@
+{
+  "kind": "collectionType",
+  "collectionName": "news_contexts",
+  "info": {
+    "singularName": "news-context",
+    "pluralName": "news-contexts",
+    "displayName": "News Context"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {
+    "content-manager": {
+      "visible": false
+    },
+    "content-type-builder": {
+      "visible": false
+    }
+  },
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "url": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "source": {
+      "type": "string",
+      "required": true
+    },
+    "summary": {
+      "type": "text"
+    },
+    "itemPublishedAt": {
+      "type": "datetime"
+    },
+    "fetchedAt": {
+      "type": "datetime",
+      "required": true
+    }
+  }
+}

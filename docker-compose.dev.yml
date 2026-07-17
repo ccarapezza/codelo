@@ -1,0 +1,31 @@
+# Local development services. Ports are bound to 127.0.0.1 so they are
+# NOT reachable from the LAN when running on a laptop on a public Wi-Fi.
+# Ports are offset from fulbo (5432/6379), pingpong (5433) and x100
+# (5434/6380) so every stack can coexist on the same machine.
+services:
+  postgres:
+    image: postgres:18
+    container_name: codelo-postgres
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5435:5432"
+    environment:
+      POSTGRES_DB: codelo
+      POSTGRES_USER: codelo
+      POSTGRES_PASSWORD: codelo
+    volumes:
+      - postgres-data:/var/lib/postgresql
+
+  redis:
+    image: redis:7
+    container_name: codelo-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6381:6379"
+    volumes:
+      - redis-data:/data
+
+volumes:
+  postgres-data:
+  redis-data:

@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+.pnp.cjs
+.pnp.loader.mjs
+
+# Build outputs
+.next/
+.turbo/
+dist/
+build/
+.cache/
+
+# Env files
+.env
+.env.*
+!.env.example
+apps/**/.env
+apps/**/.env.*
+!apps/**/.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+
+# Local AI/dev tool caches
+.playwright-mcp/
+.claude/
+apps/**/.claude/
+secret-envs/
+
+# Editor backup files
+*~
+*.bak
+
+# Strapi
+apps/codelo-cms/.strapi
+apps/codelo-cms/build/
+apps/codelo-cms/.tmp/
+apps/codelo-cms/types/generated/
+
+# TypeScript incremental build info
+*.tsbuildinfo

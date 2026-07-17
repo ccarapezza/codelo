@@ -1,0 +1,71 @@
+{
+  "kind": "collectionType",
+  "collectionName": "agent_actions",
+  "info": {
+    "singularName": "agent-action",
+    "pluralName": "agent-actions",
+    "displayName": "Agent Action (audit)",
+    "description": "Append-only log of every action taken by an AI agent (Director, Redactor, Image Generator). Read-only audit trail."
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {
+    "content-manager": {
+      "visible": false
+    },
+    "content-type-builder": {
+      "visible": false
+    }
+  },
+  "attributes": {
+    "agentRole": {
+      "type": "enumeration",
+      "enum": ["director", "redactor", "image-generator", "analyst", "system"],
+      "required": true
+    },
+    "agentName": {
+      "type": "string"
+    },
+    "agentDocumentId": {
+      "type": "string"
+    },
+    "action": {
+      "type": "enumeration",
+      "enum": [
+        "draft_created",
+        "draft_published",
+        "draft_rejected",
+        "cover_generated",
+        "cover_failed",
+        "cover_manual",
+        "carousel_manual",
+        "carousel_failed",
+        "batch_dispatched",
+        "post_translated",
+        "translation_failed",
+        "agent_failed",
+        "director_idle",
+        "studio_portada",
+        "studio_carrusel",
+        "studio_historia",
+        "studio_reel",
+        "studio_failed"
+      ],
+      "required": true
+    },
+    "summary": {
+      "type": "text",
+      "required": true
+    },
+    "postDocumentId": {
+      "type": "string"
+    },
+    "postTitle": {
+      "type": "string"
+    },
+    "metadata": {
+      "type": "json"
+    }
+  }
+}

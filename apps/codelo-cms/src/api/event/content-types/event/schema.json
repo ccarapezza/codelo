@@ -1,0 +1,46 @@
+{
+  "kind": "collectionType",
+  "collectionName": "events",
+  "info": {
+    "singularName": "event",
+    "pluralName": "events",
+    "displayName": "Event",
+    "description": "Actividades de la agrupación: encuentros, talleres, jornadas."
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "title",
+      "required": true,
+      "unique": true
+    },
+    "startsAt": {
+      "type": "datetime",
+      "required": true
+    },
+    "endsAt": {
+      "type": "datetime"
+    },
+    "place": {
+      "type": "string",
+      "description": "Lugar del encuentro (texto libre; puede ser 'a confirmar por privado')."
+    },
+    "description": {
+      "type": "richtext",
+      "description": "Markdown body rendered by the web."
+    },
+    "coverImage": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": ["images"]
+    }
+  }
+}

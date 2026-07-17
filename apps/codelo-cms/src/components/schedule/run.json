@@ -1,0 +1,32 @@
+{
+  "collectionName": "components_schedule_runs",
+  "info": {
+    "displayName": "Recurring Schedule",
+    "description": "Recurring execution schedule for an agent."
+  },
+  "options": {},
+  "attributes": {
+    "days": {
+      "type": "json"
+    },
+    "time": {
+      "type": "string",
+      "required": true
+    },
+    "timezone": {
+      "type": "string",
+      "default": "America/Argentina/Buenos_Aires"
+    },
+    "notesCount": {
+      "type": "integer",
+      "default": 1
+    },
+    "enabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "lastRunAt": {
+      "type": "datetime"
+    }
+  }
+}

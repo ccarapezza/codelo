@@ -1,0 +1,35 @@
+{
+  "kind": "collectionType",
+  "collectionName": "rss_feeds",
+  "info": {
+    "singularName": "rss-feed",
+    "pluralName": "rss-feeds",
+    "displayName": "RSS Feed"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {
+    "content-type-builder": {
+      "visible": false
+    }
+  },
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "url": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "enabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "lastFetchedAt": {
+      "type": "datetime"
+    }
+  }
+}

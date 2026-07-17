@@ -1,0 +1,55 @@
+{
+  "kind": "collectionType",
+  "collectionName": "house_ads",
+  "info": {
+    "singularName": "house-ad",
+    "pluralName": "house-ads",
+    "displayName": "House ad",
+    "description": "Self-promotional banner that overrides AdSense for a given slot. Multiple entries per slot rotate randomly per page render (weighted by `weight`)."
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "slot": {
+      "type": "enumeration",
+      "enum": ["mobileBanner", "homeInFeed", "inArticle", "sidebarLeft", "sidebarRight"],
+      "required": true
+    },
+    "image": {
+      "type": "media",
+      "multiple": false,
+      "required": true,
+      "allowedTypes": ["images"]
+    },
+    "alt": {
+      "type": "string",
+      "required": true,
+      "maxLength": 255
+    },
+    "href": {
+      "type": "string",
+      "required": true,
+      "maxLength": 500
+    },
+    "enabled": {
+      "type": "boolean",
+      "default": true,
+      "required": true
+    },
+    "weight": {
+      "type": "integer",
+      "default": 1,
+      "min": 0,
+      "max": 100,
+      "required": false
+    },
+    "label": {
+      "type": "string",
+      "required": false,
+      "maxLength": 80,
+      "description": "Internal label to identify this banner in the admin (e.g. 'Promo Mundial 2026 — Mobile A')."
+    }
+  }
+}

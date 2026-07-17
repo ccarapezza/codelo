@@ -1,0 +1,69 @@
+{
+  "kind": "singleType",
+  "collectionName": "site_settings",
+  "info": {
+    "singularName": "site-setting",
+    "pluralName": "site-settings",
+    "displayName": "Site Settings",
+    "description": "Global site configuration: model names (non-secret) and AdSense params (public). OpenAI API keys are sourced from OPENAI_API_KEY / OPENAI_IMAGE_API_KEY env vars."
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {
+    "content-manager": {
+      "visible": false
+    },
+    "content-type-builder": {
+      "visible": false
+    }
+  },
+  "attributes": {
+    "openaiTextModel": {
+      "type": "string",
+      "default": "gpt-4o-mini",
+      "private": true
+    },
+    "openaiImageModel": {
+      "type": "string",
+      "default": "gpt-image-1-mini",
+      "private": true
+    },
+    "adsensePublisherId": {
+      "type": "string"
+    },
+    "adsenseSidebarLeftSlot": {
+      "type": "string"
+    },
+    "adsenseSidebarRightSlot": {
+      "type": "string"
+    },
+    "adsenseHomeInFeedSlot": {
+      "type": "string"
+    },
+    "adsenseMobileBannerSlot": {
+      "type": "string"
+    },
+    "adsenseInArticleSlot": {
+      "type": "string"
+    },
+    "googleAnalyticsId": {
+      "type": "string",
+      "description": "GA4 Measurement ID for gtag.js (e.g. G-XXXXXXXXXX). Public; injected by codelo-web in production when set."
+    },
+    "googleSiteVerification": {
+      "type": "string",
+      "description": "Token for the google-site-verification meta tag (Google Search Console → HTML tag method). Just the content value, not the full tag."
+    },
+    "clarityProjectId": {
+      "type": "string",
+      "description": "Microsoft Clarity project ID (clarity.microsoft.com → Settings → Overview). Public; injected by codelo-web in production when set."
+    },
+    "houseAdsEnabled": {
+      "type": "boolean",
+      "default": false,
+      "required": true,
+      "description": "Global toggle for self-promotional banners. When true, house-ad entries override AdSense per slot; when false, all slots fall back to AdSense."
+    }
+  }
+}

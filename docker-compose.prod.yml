@@ -1,0 +1,141 @@
+# Production stack for Cogollos del Oeste (domain TBD).
+#
+# Deployed via Jenkins (`westcode-shared` shared library, `deployDockerCompose`).
+# The `.env` file in the repo dir is rendered by Jenkins from Jenkins
+# credentials + non-secret defaults on each pipeline run — do not commit it.
+#
+# Reverse proxy + TLS are handled by the shared Caddy living in `/opt/proxy`
+# on the host (shared with the fulbo/x100 stacks). The `web` and `cms`
+# services attach to the external `proxy-edge` network so the shared Caddy
+# can reach them by container name (codelo-web, codelo-cms).
+#
+# No Prisma/migrate service here: Strapi manages its own schema on boot.
+#
+# Tail logs:
+#   docker compose -f docker-compose.prod.yml logs -f web cms
+
+x-restart-policy: &restart_policy
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: codelo-postgres
+    <<: *restart_policy
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-codelo}
+      POSTGRES_USER: ${POSTGRES_USER:-codelo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}
+    # postgres:18+ stores data in a major-version-specific subdirectory of
+    # /var/lib/postgresql — mount the parent dir (see docker-library/postgres#1259).
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-codelo}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [internal]
+
+  redis:
+    image: redis:7-alpine
+    container_name: codelo-redis
+    <<: *restart_policy
+    command:
+      - "redis-server"
+      - "--appendonly"
+      - "yes"
+      - "--requirepass"
+      - "${REDIS_PASSWORD:?REDIS_PASSWORD required}"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    networks: [internal]
+
+  # Strapi headless CMS — admin UI + REST API
+  cms:
+    build:
+      context: .
+      dockerfile: apps/codelo-cms/Dockerfile
+    container_name: codelo-cms
+    <<: *restart_policy
+    # The VPS (8GB) also hosts fulbo and x100 — keep limits modest.
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 384M
+    environment:
+      DATABASE_CLIENT: postgres
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${POSTGRES_DB:-codelo}
+      DATABASE_USERNAME: ${POSTGRES_USER:-codelo}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      DATABASE_SSL: "false"
+      APP_KEYS: ${STRAPI_APP_KEYS:?required}
+      API_TOKEN_SALT: ${STRAPI_API_TOKEN_SALT:?required}
+      ADMIN_JWT_SECRET: ${STRAPI_ADMIN_JWT_SECRET:?required}
+      JWT_SECRET: ${STRAPI_JWT_SECRET:?required}
+      TRANSFER_TOKEN_SALT: ${STRAPI_TRANSFER_TOKEN_SALT:?required}
+      ENCRYPTION_KEY: ${STRAPI_ENCRYPTION_KEY:?required}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?required}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?required}
+      OPENAI_IMAGE_API_KEY: ${OPENAI_IMAGE_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://cogollosdeloeste.example}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-60}
+      # Public URL behind Caddy (used in admin emails, oembeds, etc.)
+      URL: ${CMS_PUBLIC_URL:-https://cms.cogollosdeloeste.example}
+      ADMIN_URL: /admin
+      STRAPI_TELEMETRY_DISABLED: "true"
+      NODE_ENV: production
+    volumes:
+      - cms-uploads:/repo/apps/codelo-cms/public/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [internal, proxy-edge]
+
+  # Next.js public site — codelo-web
+  web:
+    build:
+      context: .
+      dockerfile: apps/codelo-web/Dockerfile
+    container_name: codelo-web
+    <<: *restart_policy
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+        reservations:
+          memory: 256M
+    environment:
+      CMS_URL: http://cms:1337
+      NEXT_PUBLIC_CMS_URL: ${CMS_PUBLIC_URL:-https://cms.cogollosdeloeste.example}
+      NEXT_PUBLIC_SITE_URL: ${SITE_PUBLIC_URL:-https://cogollosdeloeste.example}
+      NODE_ENV: production
+    depends_on:
+      cms:
+        condition: service_started
+    networks: [internal, proxy-edge]
+
+networks:
+  internal:
+    name: codelo-internal
+  proxy-edge:
+    external: true
+
+volumes:
+  postgres-data:
+  redis-data:
+  cms-uploads:

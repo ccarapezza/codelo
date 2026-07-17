@@ -1,0 +1,20 @@
+{
+  "name": "@codelo/monorepo",
+  "private": true,
+  "packageManager": "pnpm@9.12.0",
+  "scripts": {
+    "dev": "pnpm dev:web",
+    "dev:all": "concurrently -n web,cms -c auto \"pnpm dev:web\" \"pnpm dev:cms\"",
+    "dev:web": "pnpm --filter codelo-web dev",
+    "dev:cms": "pnpm --filter codelo-cms dev",
+    "lint": "pnpm -r --if-present run lint",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "test": "pnpm -r --if-present run test",
+    "format": "prettier --check .",
+    "format:write": "prettier --write ."
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "prettier": "^3.7.4"
+  }
+}
