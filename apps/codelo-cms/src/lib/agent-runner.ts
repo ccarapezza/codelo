@@ -10,13 +10,7 @@ import {
   findDuplicateSubject,
   type GeneratedPost,
 } from "./openai";
-import { getRecentNewsForTopic, isMundialRelevant, type NewsItem } from "./rss-fetcher";
-import {
-  fetchRecentFinishedMatches,
-  fetchMatchDetail,
-  buildMatchStatsDigest,
-  isMatchStatsComplete,
-} from "./match-context";
+import { getRecentNewsForTopic, type NewsItem } from "./rss-fetcher";
 import {
   getOpenRouterImageKey,
   getOpenAIImageKey,
@@ -41,9 +35,19 @@ type ScheduleEntry = {
 type AgentDoc = {
   documentId: string;
   name: string;
-  role: "director" | "redactor" | "image-generator" | "analyst";
+  role: "director" | "redactor" | "image-generator";
   instructions: string;
   topic: string | null;
+  /**
+   * Si es true, el redactor NO escribe cuando no hay noticias que matcheen su
+   * topic. Sin contexto el motor cae en "modo análisis" y redacta de memoria
+   * del modelo, que es donde aparecen los datos inventados (en una prueba real
+   * fechó la Ley 27.669 en 2020; se publicó en 2022). Conviene activarlo en los
+   * beats donde un dato falso hace daño: legales, salud.
+   */
+  requireNewsContext?: boolean;
+  /** Etiqueta que se adjunta a cada nota del agente; agrupa las secciones de la home. */
+  defaultTag?: { documentId: string } | null;
   enabled: boolean;
   schedules: ScheduleEntry[];
 };
@@ -188,19 +192,16 @@ export async function runRedactor(
   const rawNews = !isAssignedMode && agent.topic
     ? await getRecentNewsForTopic(strapi, agent.topic, 50)
     : [];
-  const mundialNews = rawNews.filter(isMundialRelevant);
-  const recentNews = isAssignedMode
-    ? assignedItems!
-    : mundialNews.length > 0
-      ? mundialNews.slice(0, 10)
-      : rawNews.slice(0, 10);
+  // `getRecentNewsForTopic` already ranks by how well each item matches the
+  // agent's topic keywords, so the top slice IS the relevant slice — there is
+  // no second relevance filter to apply here.
+  const recentNews = isAssignedMode ? assignedItems! : rawNews.slice(0, 10);
 
   const hasContext = recentNews.length > 0;
-  const usedFallback = mundialNews.length === 0 && rawNews.length > 0;
-  if (usedFallback) {
-    strapi.log.warn(
-      `[agent-runner] Redactor "${agent.name}": no Mundial-relevant news found in last 24h; ` +
-        `falling back to generic football news (${rawNews.length} items).`,
+  if (!isAssignedMode && agent.topic && !hasContext) {
+    strapi.log.info(
+      `[agent-runner] Redactor "${agent.name}": sin noticias de las últimas 24h que ` +
+        `matcheen su topic; no se genera nota en esta corrida.`,
     );
   }
 
@@ -226,7 +227,7 @@ export async function runRedactor(
         "- The title MUST describe ONE single concrete fact that appears in ONE single source above.",
         "- NEVER combine two unrelated facts into one title (e.g. if source A says 'X is sad' and source B says 'Y is injured', DO NOT write 'X and Y are injured').",
         "- The title MUST NOT contradict the body of the article. If the body says 'X wants to play', the title cannot say 'X will not play'.",
-        "- The title MUST NOT contradict the source. If the source headline says 'X is excited about the World Cup', the title cannot imply X is out.",
+        "- The title MUST NOT contradict the source. If the source headline says 'the ruling recognises the right to self-cultivation', the title cannot imply it was denied.",
         "- Prefer factual, neutral titles over sensationalist clickbait.",
         "- If the title mentions a player, the named action (injury, transfer, statement) must be literally about THAT player in the source.",
         "",
@@ -292,6 +293,23 @@ export async function runRedactor(
     return Array.from(titlesByDoc.values());
   }
 
+  // Corte duro para beats sensibles: sin fuentes no se escribe. Evita que el
+  // modo análisis produzca notas "de memoria" con datos no verificables.
+  if (!isAssignedMode && !hasContext && agent.requireNewsContext) {
+    strapi.log.info(
+      `[agent-runner] Redactor "${agent.name}": requireNewsContext activo y sin ` +
+        `noticias que matcheen su topic — no se genera nota (evita modo análisis).`,
+    );
+    await logAgentAction(strapi, {
+      agentRole: "redactor",
+      agentName: agent.name,
+      agentDocumentId: agent.documentId,
+      action: "redactor_idle",
+      summary: `Redactor "${agent.name}" no generó: sin contexto de noticias (requireNewsContext)`,
+    });
+    return;
+  }
+
   const iterations = isAssignedMode ? assignedItems!.length : notesCount;
 
   for (let i = 0; i < iterations; i++) {
@@ -336,7 +354,8 @@ export async function runRedactor(
     // HARD dedup gate: the LLM hint is advisory and absent in assigned/batch mode,
     // so a reworded headline of the same event still slips through. A semantic
     // check (vs lexical similarity) catches "same event, different title" without
-    // flagging preview-vs-result or two teams' separate squad lists.
+    // flagging a bill's introduction vs its sanction, or two organisations each
+    // obtaining their own licence.
     const duplicateOf = await findDuplicateSubject(client, model, generated.title, recentTitles);
     if (duplicateOf) {
       strapi.log.warn(
@@ -354,6 +373,11 @@ export async function runRedactor(
         content: generated.content,
         authorName: agent.name,
         generatedByAgent: agent.documentId,
+        // La etiqueta viaja desde la configuración del agente: es lo que
+        // agrupa las secciones por área en la home. Determinista a propósito
+        // —no la elige el modelo— para que la sección no dependa de que el
+        // LLM acierte una taxonomía.
+        ...(agent.defaultTag?.documentId ? { tags: [agent.defaultTag.documentId] } : {}),
       },
       status: "draft",
     })) as unknown as { documentId: string; title: string };
@@ -380,300 +404,6 @@ export async function runRedactor(
   }
 }
 
-// "Capa 2" of the AdSense remediation: ORIGINAL, data-driven match analyses
-// written ONLY from the site's own stats (xG, player ratings, formations).
-// Mirrors runRedactor's client/model/draft/audit plumbing, but its source
-// material is the match-stats digest fetched over HTTP from the web app's
-// internal API — NOT RSS news. Creates DRAFTS only; never publishes, never
-// translates (Spanish only for now).
-export async function runAnalyst(
-  strapi: Core.Strapi,
-  agent: AgentDoc,
-  notesCount = 1,
-  // Accepted for dispatch-signature parity with runRedactor; the analyst
-  // discovers its own matches and ignores any pre-assigned news items.
-  _assignedItems?: NewsItem[],
-): Promise<void> {
-  const textKey = getOpenAITextKey();
-  const client = getOpenAIClient(textKey);
-  const model = await getOpenAITextModel(strapi);
-  const director = await findActiveDirector(strapi);
-  const promptSettings = await getPromptSettings(strapi);
-
-  // Cover-image pipeline (same as the Director): the analyst auto-publishes, so
-  // it generates a cover before publishing. A missing OpenRouter key is handled
-  // per-post (cover_failed) rather than aborting the run.
-  const imageKey = getOpenAIImageKey();
-  const imageModel = await getOpenAIImageModel(strapi);
-  let openrouterKey: string | undefined;
-  if (isOpenRouterModel(imageModel)) {
-    try {
-      openrouterKey = getOpenRouterImageKey();
-    } catch {
-      // Missing OPENROUTER_API_KEY surfaces as a per-post cover_failed below.
-    }
-  }
-  const imgAgent = await findActiveImageGenerator(strapi);
-
-  // Source material: recently-finished matches. A misconfig (missing env) throws
-  // inside the fetch helper — catch + skip so the cron tick no-ops instead of
-  // crashing the whole runner.
-  let candidates: Awaited<ReturnType<typeof fetchRecentFinishedMatches>>;
-  try {
-    candidates = await fetchRecentFinishedMatches();
-  } catch (err) {
-    strapi.log.warn(
-      `[agent-runner] Analyst "${agent.name}" could not fetch recent matches (skipping): ${(err as Error).message}`,
-    );
-    return;
-  }
-
-  // Dedupe: never analyze the same match twice. Check BOTH draft and published
-  // posts so a regeneration can't slip through after the director publishes.
-  async function alreadyAnalyzed(matchId: string): Promise<boolean> {
-    const [drafts, published] = await Promise.all([
-      strapi.documents("api::post.post").findMany({
-        filters: { sourceMatchId: matchId },
-        status: "draft",
-        fields: ["documentId"],
-        limit: 1,
-      }) as never,
-      strapi.documents("api::post.post").findMany({
-        filters: { sourceMatchId: matchId },
-        status: "published",
-        fields: ["documentId"],
-        limit: 1,
-      }) as never,
-    ]) as unknown as [Array<{ documentId: string }>, Array<{ documentId: string }>];
-    return drafts.length > 0 || published.length > 0;
-  }
-
-  // Take the first `notesCount` un-analyzed matches.
-  const chosen: typeof candidates = [];
-  for (const m of candidates) {
-    if (chosen.length >= notesCount) break;
-    if (await alreadyAnalyzed(m.matchId)) continue;
-    chosen.push(m);
-  }
-
-  if (chosen.length === 0) {
-    strapi.log.info(
-      `[agent-runner] Analyst "${agent.name}" found no new finished matches to analyze.`,
-    );
-    return;
-  }
-
-  const lang = promptSettings.writingLanguage;
-  let produced = 0;
-
-  for (const candidate of chosen) {
-    // One failure must not abort the rest.
-    try {
-      const detail = await fetchMatchDetail(candidate.matchId);
-      if (!detail) {
-        strapi.log.warn(
-          `[agent-runner] Analyst "${agent.name}": match ${candidate.matchId} returned no detail; skipping.`,
-        );
-        continue;
-      }
-
-      // Auto-publish gate. The analyst's value is xG + ratings, which data
-      // providers fill a few hours AFTER full time. If they're not in yet and
-      // the match finished recently, skip WITHOUT creating anything so a later
-      // run retries and auto-publishes once the stats land (zero manual work).
-      // Only for a match whose stats never arrived (finished long ago) do we
-      // fall back to leaving a draft, so nothing is silently lost.
-      const statsComplete = isMatchStatsComplete(detail);
-      const kickoffMs = candidate.kickoffAt ? Date.parse(candidate.kickoffAt) : NaN;
-      const hoursSinceKickoff = Number.isFinite(kickoffMs)
-        ? (Date.now() - kickoffMs) / 3_600_000
-        : Infinity;
-      const STALE_HOURS = 12;
-      if (!statsComplete && hoursSinceKickoff < STALE_HOURS) {
-        strapi.log.info(
-          `[agent-runner] Analyst "${agent.name}": stats not ready for ${candidate.matchId}; will retry on a later run.`,
-        );
-        continue; // no post created → dedupe won't block the retry
-      }
-
-      const digest = buildMatchStatsDigest(detail);
-
-      const systemPrompt = [
-        promptSettings.analystSystemInstructions,
-        "\nVoz y tono adicionales del agente:",
-        agent.instructions,
-        director?.instructions
-          ? `\nLineamientos editoriales del director:\n${director.instructions}`
-          : "",
-        `\n${promptSettings.analystBodyStructure}`,
-        "\n## REGLA DURA",
-        "Escribí SOLO con los hechos del bloque de datos de abajo; NO inventes nada que no esté ahí; tono rioplatense, análisis, markdown.",
-        `\nDevolvé STRICT JSON: { "title": string, "excerpt": string (1-2 oraciones), "content": string (Markdown rico, ~450-650 palabras) }`,
-      ]
-        .filter(Boolean)
-        .join("\n");
-
-      const userPrompt = [
-        `Escribí un análisis del partido en ${lang}, usando EXCLUSIVAMENTE el siguiente bloque de datos. No agregues ningún dato que no esté acá.`,
-        "",
-        "## BLOQUE DE DATOS DEL PARTIDO (verdad absoluta)",
-        digest,
-        "",
-        "Devolvé solo el JSON.",
-      ].join("\n");
-
-      const generated = await generatePost(client, model, systemPrompt, userPrompt);
-
-      const createdDraft = (await strapi.documents("api::post.post").create({
-        data: {
-          title: generated.title,
-          slug: makeSlug(generated.title),
-          excerpt: generated.excerpt,
-          content: generated.content,
-          authorName: agent.name,
-          generatedByAgent: agent.documentId,
-          sourceMatchId: candidate.matchId,
-        },
-        status: "draft",
-      })) as unknown as { documentId: string; title: string };
-      produced++;
-
-      // Stale match whose stats never arrived: keep it as a draft for human
-      // review instead of auto-publishing an analysis full of "s/d".
-      if (!statsComplete) {
-        strapi.log.info(
-          `[agent-runner] Analyst "${agent.name}" left draft (stats never arrived) for ${candidate.matchId}: ${generated.title}`,
-        );
-        await logAgentAction(strapi, {
-          agentRole: "analyst",
-          action: "draft_created",
-          agentName: agent.name,
-          agentDocumentId: agent.documentId,
-          postDocumentId: createdDraft.documentId,
-          postTitle: createdDraft.title,
-          summary: `Analyst "${agent.name}" dejó draft (stats incompletas): "${createdDraft.title}"`,
-          metadata: {
-            iteration: produced,
-            of: chosen.length,
-            sourceMatchId: candidate.matchId,
-            league: candidate.leagueName,
-            reason: "incomplete_stats",
-          },
-        });
-        continue;
-      }
-
-      // Stats complete → generate a cover (same pipeline as the Director) and
-      // publish automatically. A cover failure is non-fatal: publish anyway.
-      let coverImageId: number | null = null;
-      let chosenPrompt: string | null = null;
-      if (imgAgent) {
-        try {
-          const recent = (await strapi.documents("api::post.post").findMany({
-            filters: { coverPrompt: { $notNull: true } },
-            sort: { createdAt: "desc" },
-            fields: ["coverPrompt"],
-            limit: 10,
-          } as never)) as unknown as Array<{ coverPrompt: string | null }>;
-          const recentDescriptions = recent.map((r) => r.coverPrompt!).filter(Boolean);
-          chosenPrompt = await chooseImagePrompt(client, model, {
-            title: generated.title,
-            excerpt: generated.excerpt,
-            seedKey: `${createdDraft.documentId}|${generated.title}`,
-            recentDescriptions,
-            systemInstructions:
-              imgAgent.imagePromptTemplate?.trim() || promptSettings.imageSystemInstructions,
-            themeGuide: promptSettings.imageThemeGuide,
-            anchorTaxonomy: promptSettings.imageAnchorTaxonomy,
-          });
-          const imageBuffer = await generateCoverImage(
-            { openaiImageKey: imageKey, openrouterKey },
-            imageModel,
-            chosenPrompt,
-            { size: imgAgent.imageSize ?? undefined, quality: imgAgent.imageQuality ?? undefined },
-          );
-          const ext = isOpenRouterModel(imageModel) ? "png" : "jpg";
-          const filename = `cover-${createdDraft.documentId}-${Date.now()}.${ext}`;
-          coverImageId = await uploadImageToStrapi(
-            strapi as Parameters<typeof uploadImageToStrapi>[0],
-            imageBuffer,
-            filename,
-            generated.title,
-          );
-          await logAgentAction(strapi, {
-            agentRole: "image-generator",
-            action: "cover_generated",
-            agentName: "Image Generator",
-            agentDocumentId: imgAgent.documentId ?? null,
-            postDocumentId: createdDraft.documentId,
-            postTitle: generated.title,
-            summary: `Generador de Imágenes generó cover para: "${generated.title}"`,
-            metadata: { model: imageModel, triggeredBy: agent.name, trigger: "analyst" },
-          });
-        } catch (imgErr) {
-          strapi.log.warn(
-            `[agent-runner] Analyst cover generation failed (publishing without image):`,
-            imgErr,
-          );
-          await logAgentAction(strapi, {
-            agentRole: "image-generator",
-            action: "cover_failed",
-            agentName: "Image Generator",
-            agentDocumentId: imgAgent.documentId ?? null,
-            postDocumentId: createdDraft.documentId,
-            postTitle: generated.title,
-            summary: `Generador de Imágenes falló cover para: "${generated.title}"`,
-            metadata: { error: (imgErr as Error).message, triggeredBy: agent.name },
-          });
-        }
-      }
-
-      if (coverImageId || chosenPrompt) {
-        await strapi.documents("api::post.post").update({
-          documentId: createdDraft.documentId,
-          data: {
-            ...(coverImageId ? { coverImage: coverImageId } : {}),
-            ...(chosenPrompt ? { coverPrompt: chosenPrompt } : {}),
-          } as never,
-        });
-      }
-
-      await strapi.documents("api::post.post").publish({ documentId: createdDraft.documentId });
-
-      strapi.log.info(
-        `[agent-runner] Analyst "${agent.name}" PUBLISHED (${produced}/${chosen.length}) for match ${candidate.matchId}: ${generated.title}`,
-      );
-      await logAgentAction(strapi, {
-        agentRole: "analyst",
-        action: "draft_published",
-        agentName: agent.name,
-        agentDocumentId: agent.documentId,
-        postDocumentId: createdDraft.documentId,
-        postTitle: createdDraft.title,
-        summary: `Analyst "${agent.name}" publicó: "${createdDraft.title}"`,
-        metadata: {
-          iteration: produced,
-          of: chosen.length,
-          sourceMatchId: candidate.matchId,
-          league: candidate.leagueName,
-        },
-      });
-    } catch (err) {
-      strapi.log.error(
-        `[agent-runner] Analyst "${agent.name}" failed on match ${candidate.matchId}:`,
-        err,
-      );
-      await logAgentAction(strapi, {
-        agentRole: "analyst",
-        action: "agent_failed",
-        agentName: agent.name,
-        agentDocumentId: agent.documentId,
-        summary: `Analyst "${agent.name}" falló analizando match ${candidate.matchId}`,
-        metadata: { sourceMatchId: candidate.matchId, error: (err as Error).message },
-      });
-    }
-  }
-}
 
 async function runDirector(
   strapi: Core.Strapi,
@@ -699,14 +429,9 @@ async function runDirector(
   const imgAgent = await findActiveImageGenerator(strapi);
 
   const draftPool = (await strapi.documents("api::post.post").findMany({
-    // Redactor drafts only. Analyst drafts (identified by a non-null
-    // sourceMatchId) are grounded in match STATS, not RSS news — the Director's
-    // news-fabrication check can't verify xG/ratings against the feed and would
-    // wrongly reject (and DELETE) them. They are meant for human review, so the
-    // Director leaves them untouched as drafts.
+    // Redactor drafts only.
     filters: {
       generatedByAgent: { documentId: { $notNull: true } },
-      sourceMatchId: { $null: true },
       // Skip drafts the Director already rejected (archived, not deleted) so it
       // doesn't re-review and re-reject them on every run.
       directorRejectionReason: { $null: true },
@@ -780,7 +505,7 @@ async function runDirector(
         title: draft.title,
         excerpt: draft.excerpt ?? "",
         content: draft.content ?? "",
-      }, newsContextForReview, promptSettings.fabricationProneFacts);
+      }, newsContextForReview, promptSettings.fabricationProneFacts, promptSettings.brandName);
 
       if (result.rejected) {
         strapi.log.warn(
@@ -974,7 +699,7 @@ export async function runDueAgents(strapi: Core.Strapi): Promise<void> {
 
   const agents = (await strapi.documents("api::agent.agent").findMany({
     filters: { enabled: true },
-    populate: ["schedules"],
+    populate: ["schedules", "defaultTag"],
   })) as unknown as AgentDoc[];
 
   for (const agent of agents) {
@@ -988,8 +713,6 @@ export async function runDueAgents(strapi: Core.Strapi): Promise<void> {
         const notesCount = schedule.notesCount ?? 1;
         if (agent.role === "redactor") {
           await runRedactor(strapi, agent, notesCount);
-        } else if (agent.role === "analyst") {
-          await runAnalyst(strapi, agent, notesCount);
         } else if (agent.role === "director") {
           await runDirector(strapi, agent, notesCount);
         }
@@ -1030,15 +753,13 @@ export async function runAgentNow(
 
   const agent = (await strapi.documents("api::agent.agent").findOne({
     documentId,
-    populate: ["schedules"],
+    populate: ["schedules", "defaultTag"],
   })) as unknown as AgentDoc | null;
 
   if (!agent) throw new Error(`Agent ${documentId} not found.`);
 
   if (agent.role === "redactor") {
     await runRedactor(strapi, agent, notesCount);
-  } else if (agent.role === "analyst") {
-    await runAnalyst(strapi, agent, notesCount);
   } else if (agent.role === "director") {
     await runDirector(strapi, agent, notesCount);
   } else {

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
-import { ArrowLeft, Calendar, Clock, User } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { getPostBySlug, getLatestPosts, resolvePostRedirect, type CmsTag } from "@/lib/cms";
 import { Link, redirect } from "@/i18n/navigation";
 import { SetLocaleAlternates, type LocaleAlternates } from "@/components/locale-alternates";
@@ -72,12 +72,12 @@ function tagHref(tag: CmsTag): string | null {
 }
 
 function tagChipClass(tag: CmsTag, size: "sm" | "md" = "md"): string {
-  const base = "inline-flex items-center rounded-full font-medium transition-colors";
-  const sizing = size === "sm" ? "px-2.5 py-0.5 text-[11px]" : "px-3 py-1 text-xs";
+  const base = "label inline-flex items-center border transition-colors";
+  const sizing = size === "sm" ? "px-2 py-1" : "px-2.5 py-1.5";
   const variant =
     tag.kind === "event"
-      ? "border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10"
-      : "border border-border bg-muted text-foreground hover:bg-muted/80";
+      ? "border-ember/50 text-ember hover:bg-ember/10"
+      : "border-rule text-muted-foreground hover:border-ink hover:text-foreground";
   return cn(base, sizing, variant);
 }
 
@@ -167,7 +167,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ lang:
 
       {post.coverImage ? (
         <div className="mx-auto mt-6 w-full max-w-6xl px-6 sm:mt-8">
-          <div className="relative aspect-[16/9] w-full overflow-hidden rounded-lg sm:aspect-[2/1]">
+          <div className="duotone relative aspect-[16/9] w-full overflow-hidden sm:aspect-[2/1]">
             <PostCover
               image={post.coverImage}
               alt={post.title}
@@ -183,11 +183,11 @@ export default async function BlogPostPage({ params }: { params: Promise<{ lang:
       <header className="mx-auto w-full max-w-3xl px-6 pt-10 sm:pt-14">
         <div className="flex flex-col gap-5">
           {eyebrowTags.length > 0 ? (
-            <p className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.3em]">
+            <p className="label flex flex-wrap items-center gap-2">
               {eyebrowTags.map((tag, idx) => (
                 <span key={tag.slug} className="inline-flex items-center gap-2">
                   {idx > 0 ? <span aria-hidden className="text-border">·</span> : null}
-                  <span className="text-primary">
+                  <span className="text-ember">
                     {tag.name}
                   </span>
                 </span>
@@ -195,7 +195,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ lang:
             </p>
           ) : null}
 
-          <h1 className="font-display text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl md:text-6xl">
+          <h1 className="text-[clamp(2.25rem,5vw,4rem)] leading-[0.98] font-semibold tracking-tight text-balance text-foreground">
             {post.title}
           </h1>
 
@@ -205,10 +205,9 @@ export default async function BlogPostPage({ params }: { params: Promise<{ lang:
             </p>
           ) : null}
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+          <div className="label flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground">
             {post.authorName ? (
-              <span className="inline-flex items-center gap-1.5 font-medium text-foreground/80">
-                <User className="size-3.5" aria-hidden />
+              <span className="text-foreground/80">
                 {post.authorName}
               </span>
             ) : null}
@@ -216,16 +215,14 @@ export default async function BlogPostPage({ params }: { params: Promise<{ lang:
               <span aria-hidden className="text-border">·</span>
             ) : null}
             {post.publishedAt ? (
-              <span className="inline-flex items-center gap-1.5">
-                <Calendar className="size-3.5" aria-hidden />
+              <span>
                 <time dateTime={post.publishedAt}>{formatDate(post.publishedAt, locale)}</time>
               </span>
             ) : null}
             {minutes > 0 ? (
               <>
                 <span aria-hidden className="text-border">·</span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Clock className="size-3.5" aria-hidden />
+                <span>
                   {t("readingTime", { minutes })}
                 </span>
               </>
@@ -234,23 +231,25 @@ export default async function BlogPostPage({ params }: { params: Promise<{ lang:
         </div>
       </header>
 
-      <div className="mx-auto w-full max-w-2xl px-6 pt-12">
+      <div className="mx-auto w-full max-w-3xl px-6 pt-12">
         {safeHtml ? (
           <div
             className={cn(
-              "prose prose-lg max-w-none",
+              "article-body prose prose-xl max-w-none",
               "prose-headings:font-display prose-headings:tracking-tight prose-headings:text-foreground",
-              "prose-h2:mt-12 prose-h2:mb-4 prose-h2:text-2xl prose-h2:border-b prose-h2:border-border prose-h2:pb-2 sm:prose-h2:text-3xl",
+              "prose-h2:mt-12 prose-h2:mb-4 prose-h2:text-2xl prose-h2:border-b prose-h2:border-rule prose-h2:pb-2 sm:prose-h2:text-3xl",
               "prose-h3:mt-8 prose-h3:text-xl",
               "prose-p:font-serif prose-p:leading-[1.75] prose-p:text-foreground/90",
               "prose-strong:font-semibold prose-strong:text-foreground",
               "prose-em:font-serif prose-em:italic prose-em:text-muted-foreground",
-              "prose-a:text-primary prose-a:font-medium prose-a:no-underline hover:prose-a:underline",
-              "prose-blockquote:border-l-4 prose-blockquote:border-primary prose-blockquote:bg-muted/30 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:not-italic prose-blockquote:font-serif prose-blockquote:text-foreground",
-              "prose-ul:font-serif prose-ol:font-serif prose-li:leading-[1.7] prose-li:text-foreground/90 prose-li:marker:text-primary",
-              "prose-code:rounded prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:font-mono prose-code:text-primary prose-code:before:content-none prose-code:after:content-none",
-              "prose-hr:my-12 prose-hr:border-border",
-              "prose-img:rounded-lg prose-img:border prose-img:border-border",
+              "prose-a:text-ember prose-a:font-medium prose-a:no-underline hover:prose-a:underline",
+              // Pull quote: sin barra lateral, tipografía grande y acento verde
+              // — tratamiento de revista en vez de cita indentada.
+              "prose-blockquote:my-10 prose-blockquote:border-l-0 prose-blockquote:border-y prose-blockquote:border-ember/35 prose-blockquote:bg-transparent prose-blockquote:px-0 prose-blockquote:py-6 prose-blockquote:not-italic prose-blockquote:font-serif prose-blockquote:text-xl prose-blockquote:leading-snug prose-blockquote:text-ember sm:prose-blockquote:text-2xl",
+              "prose-ul:font-serif prose-ol:font-serif prose-li:leading-[1.7] prose-li:text-foreground/90 prose-li:marker:text-ember",
+              "prose-code:rounded prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:font-mono prose-code:text-ember prose-code:before:content-none prose-code:after:content-none",
+              "prose-hr:my-12 prose-hr:border-rule",
+              "prose-img:border prose-img:border-rule",
             )}
             dangerouslySetInnerHTML={{ __html: safeHtml }}
           />
@@ -262,8 +261,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ lang:
 
 
         {post.tags.length > 0 ? (
-          <footer className="mt-16 border-t border-border pt-8">
-            <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <footer className="section-rule mt-16 pt-4">
+            <h2 className="label text-ink">
               {t("tags")}
             </h2>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -277,20 +276,17 @@ export default async function BlogPostPage({ params }: { params: Promise<{ lang:
 
       {related.length > 0 ? (
         <section className="mx-auto mt-20 w-full max-w-4xl px-6">
-          <header className="mb-2 flex items-end justify-between gap-4 border-b border-border pb-4">
-            <h2 className="font-display text-2xl tracking-tight text-foreground sm:text-3xl">
+          <header className="section-rule mb-2 flex items-end justify-between gap-4 pt-3 pb-3">
+            <h2 className="label text-ink">
               {t("keepReading")}
             </h2>
-            <Link
-              href="/blog"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-            >
+            <Link href="/blog" className="label text-ember hover:underline">
               {t("viewAll")}
             </Link>
           </header>
           <div>
             {related.map((p) => (
-              <div key={p.id} className="border-b border-border last:border-b-0">
+              <div key={p.id} className="border-b border-rule last:border-b-0">
                 <PostListItem post={p} />
               </div>
             ))}

@@ -1,9 +1,9 @@
 import { ImageResponse } from "next/og";
 import { getPostBySlug } from "@/lib/cms";
 import { logoDataUri } from "@/lib/og-assets";
-import { SITE_URL } from "@/lib/seo";
+import { SITE_NAME, SITE_URL } from "@/lib/seo";
 
-export const alt = "Nota — Fulbo Studio";
+export const alt = `Nota — ${SITE_NAME}`;
 // 600×315 (1.91:1, same ratio as the 1200×630 standard). next/og only emits
 // PNG, and a PNG of a full-bleed *photo* at 1200×630 weighs ~950 KB — well over
 // WhatsApp's ~300 KB preview ceiling, so the thumbnail silently failed to show.
@@ -136,7 +136,7 @@ export default async function Image({
             letterSpacing: "0.32em",
           }}
         >
-          FULBO.STUDIO
+          {SITE_NAME.toUpperCase()}
         </div>
       </div>
     ),

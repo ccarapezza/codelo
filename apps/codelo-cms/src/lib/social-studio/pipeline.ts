@@ -55,14 +55,14 @@ import { composeReel } from "../social-video/compose";
 
 // Estilo del prompt de video (b-roll vertical sin texto, en clave de marca).
 export const VIDEO_BG_STYLE =
-  "Estilo: video editorial deportivo de futbol, atmosfera cinematografica oscura, alto contraste, " +
-  "tonos oscuros con destellos naranja y ambar (como fuego), camara lenta sutil y movimiento leve y continuo. " +
+  "Estilo: video editorial botanico y documental, atmosfera cinematografica, luz natural suave, " +
+  "tonos verdes profundos y tierra con destellos calidos, camara lenta sutil y movimiento leve y continuo. " +
   "Formato vertical 9:16. Dejar el centro y la mitad inferior mas oscuros y despejados para sobreimprimir texto. " +
   "MUY IMPORTANTE: sin ningun texto, sin letras, sin numeros, sin logos, sin marcas de agua.";
 
 export const DEFAULT_VIDEO_PROMPT =
-  "Hinchada de futbol celebrando de noche en la tribuna de un estadio lleno, papelitos cayendo, " +
-  "humo y luces de reflectores, banderas flameando, camara lenta epica";
+  "Macro de hojas verdes moviendose apenas con la brisa a contraluz, gotas de rocio, " +
+  "profundidad de campo corta, luz dorada de la manana, sin personas ni rostros";
 
 export function stepsForFormat(format: StudioFormat, output?: "image" | "video"): Array<{ key: string; label: string }> {
   switch (format) {
@@ -225,7 +225,7 @@ async function generateOverlayFields(
       {
         role: "system",
         content:
-          "Sos el editor de redes de Fulbo Studio. Tono rioplatense futbolero, sin emojis. " +
+          "Sos el editor de redes de Cogollos del Oeste. Tono rioplatense claro, sin emojis. " +
           "Usá SOLO información del material; no inventes datos. " + ask,
       },
       { role: "user", content: `Título: ${material.title}\nResumen: ${material.excerpt}\n\n${material.content.slice(0, 3000)}` },
@@ -455,8 +455,8 @@ export async function runGenerateJob(strapi: any, job: StudioJob): Promise<void>
         // negro de marca (antes la portada quedaba oscura si el modelo lo omitía).
         const bgPrompt =
           coverPrompt ||
-          `${material.postTitle || material.title}. Editorial sports football (soccer) photo, cinematic, ` +
-            `dark moody tones with amber and orange highlights, no text, no logos, no faces.`;
+          `${material.postTitle || material.title}. Editorial botanical image, cinematic, ` +
+            `deep blue-black tones with amber highlights, no consumption imagery, no text, no logos, no faces.`;
         if (req.options.bgFileId) {
           bgFileId = req.options.bgFileId;
           bgUri = await bgUriFromFile(strapi, bgFileId);

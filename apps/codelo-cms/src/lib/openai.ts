@@ -99,35 +99,69 @@ const COMPOSITIONS = [
   "aerial top-down flat lay",
   "wide environmental shot with leading lines",
   "through-window or doorway framed composition",
-  "split symmetric two-panel composition",
-  "diagonal low-angle action perspective",
-  "silhouette against backlit floodlight",
-  "over-the-shoulder POV",
+  // NOT a split/two-panel composition: that contradicts the anti-diptych hard
+  // rule in imageSystemInstructions, and the model obeyed the composition over
+  // the rule every time the seed landed here.
+  "centred symmetric composition with a single subject",
+  "diagonal low-angle perspective",
+  "backlit silhouette against a bright ground",
+  "close third-person over-the-shoulder view",
 ] as const;
 
+// ─── Visual treatment (the anti-monotony dimension) ──────────────────────
+// Covers used to be uniformly photorealistic because photorealism was asserted
+// in three places at once: the system instructions, the user prompt, and a
+// STYLES pool whose every entry was a photographic style. The treatment is now
+// the thing the seed rotates, and it decides whether the cover is a photograph
+// at all. Roughly a third stay photographic — a news portal still needs
+// credible photo covers — and the rest are drawn, printed or diagrammatic.
+type TreatmentKind = "photo" | "art";
+interface Treatment {
+  kind: TreatmentKind;
+  value: string;
+}
+
+const TREATMENTS: ReadonlyArray<Treatment> = [
+  { kind: "photo", value: "documentary photojournalism: natural light, unstaged, reportage framing" },
+  { kind: "photo", value: "modern minimalist editorial photography with generous negative space" },
+  { kind: "photo", value: "macro nature photography with scientific clarity and fine texture detail" },
+  { kind: "photo", value: "archival 1970s film photograph: visible grain, faded dyes, slight vignette" },
+  { kind: "art",   value: "19th-century botanical plate: precise ink linework, hand-tinted watercolour washes, herbarium-sheet layout" },
+  { kind: "art",   value: "risograph print: two or three spot inks, visible misregistration, paper tooth showing through" },
+  { kind: "art",   value: "linocut relief print: bold carved strokes, stark high contrast, two-colour palette" },
+  { kind: "art",   value: "flat vector editorial illustration: geometric shapes, limited palette, poster-like clarity" },
+  { kind: "art",   value: "annotated technical diagram: cross-sections, callout leader lines, schematic clarity" },
+  { kind: "art",   value: "cut-paper collage: layered textured papers, hard-edged shapes, soft drop shadows" },
+  { kind: "art",   value: "ink wash brushwork: gestural strokes, controlled bleed, wide areas of empty paper" },
+  { kind: "art",   value: "engraved etching from an old scientific journal: fine cross-hatching, sepia ink on cream stock" },
+];
+
+// A photograph's variable axis is light; a drawing's is ink, palette and mark-
+// making. Feeding "golden hour with long shadows" to a linocut just produces a
+// confused hybrid, so each treatment kind draws from its own pool.
 type MoodTone = "warm" | "cool" | "harsh" | "night" | "muted" | "vivid";
 const MOODS: ReadonlyArray<{ tone: MoodTone; value: string }> = [
   { tone: "warm",  value: "golden hour warm light with long shadows" },
   { tone: "cool",  value: "blue hour cold light, melancholy mood" },
   { tone: "harsh", value: "harsh midday sun, high contrast" },
-  { tone: "night", value: "stadium floodlights at night, dramatic spotlights" },
+  { tone: "night", value: "single hard light source at night, deep shadows" },
   { tone: "muted", value: "overcast diffused light, desaturated palette" },
   { tone: "warm",  value: "dusk amber light with dramatic clouds" },
   { tone: "cool",  value: "dawn pale blue light, mist in the air" },
-  { tone: "vivid", value: "neon-accent lighting, vibrant colors" },
+  { tone: "vivid", value: "raking side light, saturated colours" },
   { tone: "muted", value: "monochrome / duotone editorial treatment" },
 ];
 
-const STYLES = [
-  "Sports Illustrated magazine cover style",
-  "National Geographic editorial documentary style",
-  "Magnum photo agency photojournalism style",
-  "modern minimalist editorial photography",
-  "vintage 1970s sports poster style",
-  "Annie Leibovitz portrait-style staging (without faces)",
-  "FIFA museum archive aesthetic",
-  "high-fashion editorial sports campaign",
-] as const;
+const ART_RENDERS: ReadonlyArray<{ tone: MoodTone; value: string }> = [
+  { tone: "warm",  value: "warm ochre and terracotta inks on cream stock" },
+  { tone: "cool",  value: "indigo and slate inks with cold negative space" },
+  { tone: "vivid", value: "two saturated spot colours overprinted where they overlap" },
+  { tone: "muted", value: "muted earth palette, heavy paper texture, soft edges" },
+  { tone: "harsh", value: "stark black ink on bare paper, no midtones" },
+  { tone: "warm",  value: "amber and deep-blue duotone, matching the house palette" },
+  { tone: "cool",  value: "pale washes with a single accent colour" },
+  { tone: "muted", value: "sepia monochrome with fine hatching for shading" },
+];
 
 function hashSeed(s: string): number {
   // djb2 — fast, low collision for short strings.
@@ -144,8 +178,9 @@ function pickFromPool<T>(pool: ReadonlyArray<T>, seed: number, offset = 0): T {
 // extractArticleAnchors(); composition/mood/style come from the seed rotation.
 export interface PromptConstraints {
   composition: string;
+  /** Lighting (photo) or ink/palette (art) — whichever the treatment implies. */
   mood: string;
-  style: string;
+  treatment: Treatment;
   anchors: ArticleAnchors;
 }
 
@@ -154,11 +189,15 @@ export function resolvePromptConstraints(
   anchors: ArticleAnchors,
 ): PromptConstraints {
   const seed = hashSeed(seedKey);
+  const treatment = pickFromPool(TREATMENTS, seed, 13);
+  // The mood pool follows the treatment: lighting for photographs, ink and
+  // palette for everything drawn or printed.
+  const moodPool = treatment.kind === "photo" ? MOODS : ART_RENDERS;
   return {
     composition: pickFromPool(COMPOSITIONS, seed, 0),
     // Offsets are coprime with each pool size to de-correlate the picks.
-    mood: pickFromPool(MOODS, seed, 7).value,
-    style: pickFromPool(STYLES, seed, 13),
+    mood: pickFromPool(moodPool, seed, 7).value,
+    treatment,
     anchors,
   };
 }
@@ -166,20 +205,25 @@ export function resolvePromptConstraints(
 // ─── Article anchors (Fase D) ────────────────────────────────────────────
 // One cheap text-model call to extract entities the cover MUST feature.
 
+// These fields MUST stay in sync with IMAGE_ANCHOR_TAXONOMY in prompt-defaults:
+// the taxonomy tells the model what to return, this shape decides what we keep.
+// They drifted once — the taxonomy asked for topic/palette/season while the
+// parser still read the football-era teamColors/jerseyNumber, so three of five
+// anchors were silently dropped on every cover.
 export interface ArticleAnchors {
-  country: string | null;        // e.g. "Argentina"
-  teamColors: string | null;     // e.g. "sky blue and white"
-  jerseyNumber: number | null;
-  eventType: string | null;      // "penalty", "red card", "transfer", "injury", etc.
-  venue: string | null;          // stadium / city if explicitly mentioned
+  topic: string | null;          // e.g. "cultivo", "legal", "salud"
+  palette: string | null;        // e.g. "warm greens and wood tones"
+  eventType: string | null;      // "taller", "trámite", "fallo", etc.
+  venue: string | null;          // place / neighbourhood if explicitly mentioned
+  season: string | null;         // growing-cycle stage, if mentioned
 }
 
 const EMPTY_ANCHORS: ArticleAnchors = {
-  country: null,
-  teamColors: null,
-  jerseyNumber: null,
+  topic: null,
+  palette: null,
   eventType: null,
   venue: null,
+  season: null,
 };
 
 export async function extractArticleAnchors(
@@ -194,7 +238,7 @@ export async function extractArticleAnchors(
   const system = [
     "You extract concrete visual anchors from a news article to guide cover-image generation.",
     "Return STRICT JSON matching exactly this shape (use null when the article does not mention the field):",
-    `{ "country": string|null, "teamColors": string|null, "jerseyNumber": number|null, "eventType": string|null, "venue": string|null }`,
+    `{ "topic": string|null, "palette": string|null, "eventType": string|null, "venue": string|null, "season": string|null }`,
     "",
     "Rules:",
     anchorTaxonomy,
@@ -213,11 +257,11 @@ export async function extractArticleAnchors(
     const raw = res.choices[0]?.message?.content ?? "{}";
     const parsed = JSON.parse(raw) as Partial<ArticleAnchors>;
     return {
-      country: typeof parsed.country === "string" ? parsed.country.trim() : null,
-      teamColors: typeof parsed.teamColors === "string" ? parsed.teamColors.trim() : null,
-      jerseyNumber: typeof parsed.jerseyNumber === "number" ? parsed.jerseyNumber : null,
+      topic: typeof parsed.topic === "string" ? parsed.topic.trim() : null,
+      palette: typeof parsed.palette === "string" ? parsed.palette.trim() : null,
       eventType: typeof parsed.eventType === "string" ? parsed.eventType.trim() : null,
       venue: typeof parsed.venue === "string" ? parsed.venue.trim() : null,
+      season: typeof parsed.season === "string" ? parsed.season.trim() : null,
     };
   } catch {
     // Anchor extraction is enrichment — never block the cover on its failure.
@@ -241,10 +285,10 @@ export async function findDuplicateSubject(
 ): Promise<string | null> {
   if (recentTitles.length === 0) return null;
   const system = [
-    "You are a news-desk de-duplication checker for a football website.",
+    "You are a news-desk de-duplication checker for a non-profit info portal covering cannabis, hemp, drug policy, health and the environment.",
     "Decide whether a CANDIDATE headline reports the SAME specific event as any EXISTING headline.",
-    "Same event = same subject AND the same concrete happening: e.g. the same press-conference decision, the same interview, the same squad announcement, the same match result.",
-    "These are NOT duplicates: a match PREVIEW vs that match's RESULT; two DIFFERENT national teams doing the same kind of thing (e.g. each announcing its own squad); the same player appearing in two unrelated news; a follow-up that adds genuinely new facts.",
+    "Same event = same subject AND the same concrete happening: e.g. the same published regulation, the same court ruling, the same study, the same licence granted to the same organisation.",
+    "These are NOT duplicates: a bill's INTRODUCTION vs its later SANCTION; two DIFFERENT organisations each obtaining their own licence or registry; the same law cited as background in two unrelated articles; an explainer about a procedure vs news of that procedure changing; a follow-up that adds genuinely new facts.",
     'Return STRICT JSON: { "duplicateIndex": number } — the 1-based index of the EXISTING headline that is the same event, or 0 if none match.',
   ].join("\n");
   const list = recentTitles.map((t, i) => `${i + 1}. ${t}`).join("\n");
@@ -289,7 +333,7 @@ function buildUserPrompt(
   themeGuide: string,
 ): string {
   const sections: string[] = [
-    `Create a photorealistic editorial cover image description for this news article.`,
+    `Create an editorial cover image description for this news article.`,
     ``,
     `Title: "${title}"`,
     `Summary: "${excerpt.slice(0, 400)}"`,
@@ -297,20 +341,30 @@ function buildUserPrompt(
   ];
 
   if (constraints) {
-    const { composition, mood, style, anchors } = constraints;
+    const { composition, mood, treatment, anchors } = constraints;
+    const isPhoto = treatment.kind === "photo";
     sections.push(
       `HARD CONSTRAINTS for this specific cover (these override theme defaults if they conflict):`,
+      // The medium leads: everything below is read in its terms, and the theme
+      // guide's cues are scenes to depict, not an instruction to photograph.
+      `- Medium: ${isPhoto ? "photograph" : "illustration / print — NOT a photograph"}`,
+      `- Treatment: ${treatment.value}`,
       `- Composition: ${composition}`,
-      `- Lighting mood: ${mood}`,
-      `- Editorial style: ${style}`,
+      isPhoto ? `- Lighting mood: ${mood}` : `- Ink and palette: ${mood}`,
       ``,
     );
+    if (!isPhoto) {
+      sections.push(
+        `Because this cover is illustrated, your description MUST name the medium explicitly in its FIRST clause (e.g. "A linocut print of…", "A botanical plate showing…"). Then describe it as artwork: name the marks, ink, texture and paper. Do NOT use photographic vocabulary (lens, depth of field, bokeh, exposure, shot on...). The scene cues below are WHAT to depict; the treatment above is HOW to render it.`,
+        ``,
+      );
+    }
     const anchorLines: string[] = [];
-    if (anchors.country) anchorLines.push(`- Country / national team focus: ${anchors.country}`);
-    if (anchors.teamColors) anchorLines.push(`- Color palette: ${anchors.teamColors}`);
-    if (anchors.jerseyNumber !== null) anchorLines.push(`- Jersey number to highlight: #${anchors.jerseyNumber}`);
+    if (anchors.topic) anchorLines.push(`- Topic to depict: ${anchors.topic}`);
+    if (anchors.palette) anchorLines.push(`- Colour palette: ${anchors.palette}`);
     if (anchors.eventType) anchorLines.push(`- Event type to depict: ${anchors.eventType}`);
-    if (anchors.venue) anchorLines.push(`- Venue context: ${anchors.venue}`);
+    if (anchors.venue) anchorLines.push(`- Place context: ${anchors.venue}`);
+    if (anchors.season) anchorLines.push(`- Growing-cycle stage: ${anchors.season}`);
     if (anchorLines.length > 0) {
       sections.push(`MUST FEATURE (anchors from this article):`, ...anchorLines, ``);
     }
@@ -327,9 +381,9 @@ function buildUserPrompt(
   sections.push(
     `STEPS:`,
     `1. Identify the core theme of THIS specific article.`,
-    `2. Choose ONE category from THEME → SCENE CUES, then ONE variant (a/b/c/d).`,
-    `3. Bake in the composition / mood / style constraints above.`,
-    `4. Incorporate the country/team palette and any anchors.`,
+    `2. Choose ONE category from THEME → SCENE CUES, then ONE variant (a/b/c/d) — this is the SUBJECT only.`,
+    `3. Render that subject in the medium and treatment specified above.`,
+    `4. Bake in the composition and ink/lighting constraints, plus any anchors.`,
     `5. Output a single dense paragraph, 2-3 sentences max.`,
     ``,
     themeGuide,
@@ -338,7 +392,7 @@ function buildUserPrompt(
   if (constraints) {
     sections.push(
       ``,
-      `Reminder: composition MUST be "${constraints.composition}" and mood MUST be "${constraints.mood}". Do not drift.`,
+      `Reminder: the medium MUST be ${constraints.treatment.kind === "photo" ? "a photograph" : "an illustration, not a photograph"}, rendered as "${constraints.treatment.value}", with composition "${constraints.composition}". Do not drift.`,
     );
   }
 
@@ -629,6 +683,7 @@ export async function reviewPost(
   draft: GeneratedPost,
   newsContext: string,
   fabricationProneFacts: string = DEFAULT_PROMPT_SETTINGS.fabricationProneFacts,
+  brandName: string = DEFAULT_PROMPT_SETTINGS.brandName,
 ): Promise<ReviewResult> {
   const systemPrompt = [
     "You are a strict editor-in-chief whose ONLY job is to prevent hallucinated news from being published.",
@@ -656,11 +711,13 @@ export async function reviewPost(
     "",
     "## STEP 2.5 — BRAND GUARDRAIL (mandatory)",
     "",
-    "We are Fulbo, an independent outlet with our OWN data and ratings. A source can INFORM an article, but the article must never be ABOUT another outlet or republish its work. REJECT if ANY of these is true:",
-    "  - The title or article names/credits a rival media outlet as its subject or as the authority for a claim (e.g. 'Los puntajes de Olé', 'según Marca', 'el ranking de ESPN'). Examples of outlets to never feature: Olé, Marca, AS, Mundo Deportivo, Sport, ESPN, TyC Sports, DAZN, The Athletic, Goal, 433.",
-    "  - The article's CONTENT is another outlet's player ratings, scores, rankings or list (we publish OUR OWN ratings/stats; never reproduce or attribute a third party's). ",
-    "  - The piece reads as coverage of what another media said/published rather than the football itself.",
-    "Reword to report the underlying football fact in Fulbo's own voice with no outlet name; if the story has no substance once the outlet is removed, REJECT it.",
+    `We are ${brandName}, an independent non-profit outlet with our own editorial voice. A source can INFORM an article, but the article must never be ABOUT another outlet or republish its work. REJECT if ANY of these is true:`,
+    "  - The title or article names/credits another media outlet as its subject or as the authority for a claim (e.g. 'según Infobae', 'el informe de Perfil').",
+    "  - The article's CONTENT is another outlet's list, ranking or compilation, reproduced or attributed.",
+    "  - The piece reads as coverage of what another media said/published rather than of the underlying fact itself.",
+    "  - It reads as promotional copy for a company, brand, shop or product rather than as journalism.",
+    `Reword to report the underlying fact in ${brandName}'s own voice with no outlet name; if the story has no substance once the outlet is removed, REJECT it.`,
+    "NOTE: an official source is NOT a rival outlet. Citing the Boletín Oficial, a law, a court ruling, a regulator (ARICCAME, ANMAT) or a peer-reviewed journal is REQUIRED, not a violation.",
     "",
     "## STEP 3 — REFINE (only if everything passes)",
     "",
@@ -717,13 +774,13 @@ export async function translatePost(
   source: GeneratedPost,
 ): Promise<TranslatedPost> {
   const systemPrompt = [
-    "You are an editorial translator for a football (soccer) news site. Translate the article below from Spanish to English.",
+    "You are an editorial translator for a non-profit info portal covering ethnobotany, cannabis and hemp, drug policy, health and the environment. Translate the article below from Spanish to English.",
     "",
     "## Rules",
     "- Preserve the Markdown structure EXACTLY: same headings (##), blockquotes, bold, italics, lists, links. Translate only the text inside them.",
-    "- Do NOT translate proper nouns: player names, club names, stadium names, competition names that are brands (e.g. 'La Bombonera', 'el Diego'). Nicknames in quotes stay in Spanish with the original quotes.",
-    "- Keep all numbers, dates, scores and statistics exactly as they are.",
-    "- Write natural, idiomatic sports-journalism English — not a literal word-for-word translation.",
+    "- Do NOT translate proper nouns: organisation names, institutions and programmes (e.g. 'REPROCANN', 'ARICCAME', 'Boletín Oficial'), law and decree names, place names. Keep botanical binomials in Latin (Cannabis sativa).",
+    "- Keep all numbers, dates, article/law numbers and statistics exactly as they are.",
+    "- Write natural, idiomatic editorial English — not a literal word-for-word translation.",
     "- Do not add, remove or reorder information.",
     "",
     "## Output",

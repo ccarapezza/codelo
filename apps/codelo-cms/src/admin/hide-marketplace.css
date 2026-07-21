@@ -1,0 +1,22 @@
+/*
+ * Oculta el ítem "Marketplace" del menú del admin.
+ *
+ * Por qué CSS y no configuración: a diferencia de "Deploy" —que lo agregaba
+ * @strapi/plugin-cloud y se resolvió desinstalando el paquete—, el Marketplace
+ * es parte del CORE del admin. Se registra en useMenu() como
+ * { id: 'global.marketplace', to: '/marketplace' } y su única puerta es el
+ * permiso `admin::marketplace.read`. Revocarlo funciona para roles comunes,
+ * pero los Super Admin saltean toda la capa de permisos, así que para ellos no
+ * hay forma soportada de sacarlo.
+ *
+ * ALCANCE: esto es cosmético. La ruta /admin/marketplace sigue existiendo y
+ * responde si se la escribe a mano. Si el objetivo fuera bloquear el acceso de
+ * verdad, el camino es un rol sin ese permiso, no este archivo.
+ *
+ * El selector va por href y no por clase: las clases son hashes de
+ * styled-components y cambian en cada build de Strapi. El `$=` cubre el caso de
+ * que la base del admin deje de ser /admin.
+ */
+nav a[href$="/marketplace"] {
+  display: none !important;
+}

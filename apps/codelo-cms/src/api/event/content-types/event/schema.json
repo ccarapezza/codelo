@@ -33,6 +33,12 @@
       "type": "string",
       "description": "Lugar del encuentro (texto libre; puede ser 'a confirmar por privado')."
     },
+    "organizer": {
+      "type": "string"
+    },
+    "sourceUrl": {
+      "type": "string"
+    },
     "description": {
       "type": "richtext",
       "description": "Markdown body rendered by the web."
@@ -40,7 +46,9 @@
     "coverImage": {
       "type": "media",
       "multiple": false,
-      "allowedTypes": ["images"]
+      "allowedTypes": [
+        "images"
+      ]
     }
   }
 }

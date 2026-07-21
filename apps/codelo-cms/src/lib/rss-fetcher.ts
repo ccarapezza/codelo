@@ -71,7 +71,7 @@ async function fetchFeed(feedUrl: string, source: string, timeoutMs = 8000): Pro
   try {
     const res = await fetch(feedUrl, {
       signal: controller.signal,
-      headers: { "User-Agent": "FulboBot/1.0 (RSS aggregator)" },
+      headers: { "User-Agent": "CodeloBot/1.0 (RSS aggregator)" },
     });
     if (!res.ok) return [];
     const xml = await res.text();
@@ -83,9 +83,24 @@ async function fetchFeed(feedUrl: string, source: string, timeoutMs = 8000): Pro
   }
 }
 
-function isWithin24h(item: NewsItem): boolean {
+/**
+ * Ventana de INGESTA: 7 días, no 24 h.
+ *
+ * Un medio cannábico especializado publica cada dos o tres días. Con 24 h sus
+ * notas se descartaban acá mismo, antes de llegar a la base: medido, El Planteo
+ * tenía 50 notas en su feed y 0 dentro de las 24 h; Cáñamo, 100 y 0; Filter,
+ * 10 y 0. El pool quedaba con el flujo de los generalistas (~89 %) y lo único
+ * cannábico eran las normas del Boletín, así que todas las notas salían
+ * regulatorias. Ampliar solo la ventana de consumo no alcanza: si el ítem no
+ * se guarda, no existe.
+ */
+const INGEST_WINDOW_DAYS = 7;
+
+function isRecentEnough(item: NewsItem): boolean {
   if (!item.itemPublishedAt) return true;
-  return item.itemPublishedAt.getTime() >= Date.now() - 24 * 60 * 60 * 1000;
+  return (
+    item.itemPublishedAt.getTime() >= Date.now() - INGEST_WINDOW_DAYS * 24 * 60 * 60 * 1000
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -120,7 +135,7 @@ export async function validateFeed(
   try {
     res = await fetch(feedUrl, {
       signal: controller.signal,
-      headers: { "User-Agent": "FulboBot/1.0 (RSS aggregator)" },
+      headers: { "User-Agent": "CodeloBot/1.0 (RSS aggregator)" },
     });
   } catch (err) {
     clearTimeout(timer);
@@ -162,7 +177,7 @@ export async function validateFeed(
   const feedLink = extractField(channelXml, "link") || null;
   const language = extractField(channelXml, "language") || null;
 
-  const freshItems = items.filter(isWithin24h).length;
+  const freshItems = items.filter(isRecentEnough).length;
   const samples = items.slice(0, 5).map((i) => ({
     title: i.title,
     url: i.url,
@@ -227,8 +242,8 @@ export async function fetchAndSaveNews(
   const allItems: NewsItem[] = [];
   results.forEach((r, i) => {
     if (r.status === "fulfilled") {
-      const fresh = r.value.filter(isWithin24h);
-      strapi.log.info(`[rss-fetcher] ${feeds[i].name}: ${fresh.length} items (last 24h)`);
+      const fresh = r.value.filter(isRecentEnough);
+      strapi.log.info(`[rss-fetcher] ${feeds[i].name}: ${fresh.length} items (últimos ${INGEST_WINDOW_DAYS} días)`);
       allItems.push(...fresh);
     } else {
       strapi.log.warn(`[rss-fetcher] ${feeds[i].name} failed:`, r.reason);
@@ -278,44 +293,44 @@ export async function fetchAndSaveNews(
   strapi.log.info("[rss-fetcher] RSS fetch cycle complete.");
 }
 
-// Hardcoded keyword set that flags items as relevant to the 2026 World Cup.
-// Multi-language so feeds in EN/ES/PT all surface relevant articles.
-// Most RSS feeds we ingest are generic football (club leagues); this filter
-// is what stops the redactor from picking up Real Madrid or Premier League
-// stories when its job is to cover the World Cup.
-const MUNDIAL_KEYWORDS = [
-  "mundial",
-  "world cup",
-  "copa del mundo",
-  "selección",
-  "seleccion",
-  "seleção",
-  "selecao",
-  "national team",
-  "eliminator", // eliminator, eliminatoria, eliminatorio
-  "qualifier",
-  "fifa world",
-  "wc 2026",
-  "wc2026",
-  "wc-2026",
-];
-
-export function isMundialRelevant(item: { title: string; summary: string }): boolean {
-  const haystack = `${item.title} ${item.summary ?? ""}`.toLowerCase();
-  return MUNDIAL_KEYWORDS.some((kw) => haystack.includes(kw));
-}
-
 export async function getRecentNewsForTopic(
   strapi: Core.Strapi,
   topic: string,
   limit = 10,
 ): Promise<NewsItem[]> {
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  // Ventana de 7 días, no de 24 h. Un medio cannábico especializado publica
+  // cada dos o tres días: con 24 h sus notas quedaban afuera antes de que un
+  // redactor las viera y el pool se llenaba solo de normativa. Medido: El
+  // Planteo tenía 50 notas y 0 dentro de las últimas 24 h; Cáñamo, 100 y 0.
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
+  const keywords = topic
+    .toLowerCase()
+    .split(/[\s,;.]+/)
+    .filter((w) => w.length > 3);
+
+  // El filtro por keywords va en la CONSULTA, no en memoria. Si se recorta
+  // primero por fecha y se filtra después, los generalistas (Infobae y
+  // compañía aportan ~89 % del pool y casi nunca hablan del tema) desplazan a
+  // las fuentes de nicho fuera del tope y el redactor nunca las ve. Filtrando
+  // en la query, el tope se aplica sobre lo que YA es relevante.
+  const keywordFilter =
+    keywords.length > 0
+      ? {
+          $or: keywords.flatMap((kw) => [
+            { title: { $containsi: kw } },
+            { summary: { $containsi: kw } },
+          ]),
+        }
+      : {};
+
+  // Ordenado por fetchedAt (cuándo lo ingerimos), NO por itemPublishedAt: las
+  // normas del Boletín llevan la fecha de la norma (semanas atrás) y por
+  // itemPublishedAt caían siempre al fondo.
   const all = (await strapi.documents("api::news-context.news-context").findMany({
-    filters: { fetchedAt: { $gte: since.toISOString() } },
-    sort: { itemPublishedAt: "desc" },
-    limit: 200,
+    filters: { fetchedAt: { $gte: since.toISOString() }, ...keywordFilter },
+    sort: { fetchedAt: "desc" },
+    limit: 300,
   })) as unknown as Array<{
     title: string;
     url: string;
@@ -326,11 +341,6 @@ export async function getRecentNewsForTopic(
   }>;
 
   if (all.length === 0) return [];
-
-  const keywords = topic
-    .toLowerCase()
-    .split(/[\s,;.]+/)
-    .filter((w) => w.length > 3);
 
   let scored = all.map((item) => {
     const haystack = `${item.title} ${item.summary}`.toLowerCase();

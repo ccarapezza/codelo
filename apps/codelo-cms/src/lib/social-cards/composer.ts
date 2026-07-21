@@ -111,10 +111,13 @@ export function sanitizeSlide(raw: unknown): Slide | null {
 
 function buildSystemPrompt(ps: PromptSettings): string {
   return [
-    "Sos el editor de redes sociales de Fulbo Studio. Generás un carrusel de Instagram",
-    '(5 a 7 placas) a partir de un artículo ya publicado. Voz de marca: "Notas, datos y',
-    'crónicas del fútbol mundial. Hecho con fútbol y café." Tono rioplatense, futbolero,',
-    "cercano, sin solemnidad.",
+    `Sos el editor de redes sociales de ${ps.brandName}, asociación civil sin fines de lucro.`,
+    "Generás un carrusel de Instagram (5 a 7 placas) a partir de un artículo ya publicado.",
+    "Voz de marca: divulgación seria y cercana sobre cannabis, cáñamo, salud, derechos y",
+    "ambiente. Tono rioplatense, claro, sin solemnidad y sin apología.",
+    "",
+    "REGLAS DURAS: nunca fomentes el consumo de sustancia alguna, lícita o no; no des",
+    "consejo médico ni dosis; no publicites productos, marcas ni comercios.",
     "",
     "REGLA INVIOLABLE (credibilidad): usá ÚNICAMENTE información presente en el artículo.",
     "NO inventes datos, cifras, fechas, resultados ni declaraciones. Está prohibido fabricar:",
@@ -128,7 +131,7 @@ function buildSystemPrompt(ps: PromptSettings): string {
     '  texto, sin logos, sin caras reconocibles>" }.',
     "- Placas intermedias: elegí entre stat (un dato/número fuerte del texto), bullets (2 a 4 puntos),",
     "  quote (una frase textual + autor si aparece).",
-    '- Última placa = "cta": title corto, subtitle, url "cogollosdeloeste.example".',
+    '- Última placa = "cta": title corto, subtitle, url "cogollosdeloeste.com.ar".',
     "",
     `TEMPLATES VÁLIDOS (no inventes otros): ${TEMPLATE_NAMES.join(", ")}.`,
     "",
@@ -143,14 +146,15 @@ function buildSystemPrompt(ps: PromptSettings): string {
     "",
     'CAPTION (campo "caption"): texto para el feed de Instagram en rioplatense, con un hook en la',
     'primera línea, 2 a 4 líneas de desarrollo basadas en el artículo, cierre "Link en la bio 👇"',
-    "y 8 a 12 hashtags de fútbol relevantes al tema. Los emojis van solo acá, no en las placas.",
+    "y 8 a 12 hashtags relevantes al tema (cannabis, cáñamo, salud, derechos, ambiente,",
+    "según corresponda). Los emojis van solo acá, no en las placas.",
     "",
     "Devolvé EXCLUSIVAMENTE este JSON (placas PLANAS, fijate el ejemplo):",
     '{ "slides": [',
     '  { "template": "cover", "kicker": "...", "title": "...", "hint": "deslizá", "bg": { "ai": "<prompt en inglés>" } },',
     '  { "template": "stat", "kicker": "...", "big": "2-0", "label": "..." },',
     '  { "template": "bullets", "kicker": "...", "title": "...", "items": ["...", "..."] },',
-    '  { "template": "cta", "title": "...", "subtitle": "...", "url": "cogollosdeloeste.example" }',
+    '  { "template": "cta", "title": "...", "subtitle": "...", "url": "cogollosdeloeste.com.ar" }',
     '], "caption": "..." }',
   ].join("\n");
 }
@@ -230,7 +234,7 @@ export async function composeCarousel(
   });
 
   const caption =
-    cut(parsed.caption, 2200) ?? `${input.title}\n\nLink en la bio 👇\n\n#futbol #FulboStudio #${BRAND.handle.replace(".", "")}`;
+    cut(parsed.caption, 2200) ?? `${input.title}\n\nLink en la bio 👇\n\n#cannabis #canamo #${BRAND.handle.replace(".", "")}`;
 
   return { slides, caption, coverPrompt };
 }

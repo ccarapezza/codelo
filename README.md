@@ -1,7 +1,7 @@
 # Cogollos del Oeste (codelo)
 
 Portal de información de la agrupación cannábica **Cogollos del Oeste**
-(oeste del Gran Buenos Aires): cultivo responsable, REPROCANN, actividades
+(oeste de la Ciudad de Buenos Aires): cultivo responsable, REPROCANN, actividades
 y noticias. Monorepo hermano de fulbo/x100 — misma arquitectura, sin APIs
 externas de datos: **todo el contenido vive en el CMS**.
 

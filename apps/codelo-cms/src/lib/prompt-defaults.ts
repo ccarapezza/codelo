@@ -12,6 +12,8 @@
 // code edits.
 
 export interface PromptSettings {
+  /** Editorial brand the agents write as, e.g. "Cogollos del Oeste". */
+  brandName: string;
   /** What the site covers — completes "You are a journalist writing … for {this}." */
   domainDescription: string;
   /** Language the articles are written in, e.g. "Spanish". */
@@ -22,10 +24,6 @@ export interface PromptSettings {
   analysisModeFraming: string;
   /** Markdown formatting/structure rules for the article body (headings, lists, blockquotes, bold). */
   bodyStructureGuide: string;
-  /** System-instructions block for the "analyst" agent (writes pieces ONLY from the provided data). */
-  analystSystemInstructions: string;
-  /** Body-structure guide specific to the analyst's pieces. */
-  analystBodyStructure: string;
   /** Domain rules for cover images: what they depict, palettes, forbidden elements. */
   imageSystemInstructions: string;
   /** THEME → SCENE CUES taxonomy the image-prompt generator picks from. */
@@ -36,19 +34,20 @@ export interface PromptSettings {
 
 const IMAGE_SYSTEM_INSTRUCTIONS = [
   "You generate concise, vivid image descriptions for AI image generation.",
-  "The images are editorial covers for articles on the info portal of an Argentine cannabis association (cultivation, harm reduction, REPROCANN registry, community activities).",
+  "The images are editorial covers for articles on the info portal of an Argentine non-profit civil association: ethnobotany of plants and fungi (emphasis on Cannabis and hemp), human rights and the right to health, harm reduction, environmental sustainability, cultivation, the REPROCANN registry, and community activities.",
   "",
   "HARD RULES:",
   "- NO recognizable real human faces (likeness risk). Hands at work, gloved hands, silhouettes, backs of heads, distant groups in a workshop are ALLOWED and ENCOURAGED.",
   "- NEVER depict consumption: no smoking, no joints, no smoke, no paraphernalia in use, no intoxication imagery. The visual language is botanical, educational and community-oriented.",
   "- NO minors, ever, in any form.",
   "- The cover MUST visually represent the SPECIFIC theme of THIS article — never a generic cannabis-leaf wallpaper.",
-  "- Compose ONE single unified photograph: a single frame, single scene, single continuous background. NEVER a diptych, split-screen, side-by-side panels, collage, grid, montage, triptych, or before/after.",
+  "- Compose ONE single unified image: a single frame, single scene, single continuous background. NEVER a diptych, split-screen, side-by-side panels, grid, montage, triptych, or before/after comparison. (This is about LAYOUT: a cut-paper or collage TREATMENT is fine as long as it renders one continuous scene.)",
+  "- The artwork MUST bleed to all four edges. NEVER draw a picture frame, mount, border, vignette box, torn paper edge or sheet lying on a surface — the cover is cropped by CSS on the site, so any drawn frame reads as a mistake. This trips up the illustrated treatments in particular (a botanical plate is the PLATE itself, not a photo of one).",
   "- Pick exactly ONE scene category from THEME → SCENE CUES below, then pick exactly ONE variant (a/b/c/d) from that category. Do not mix variants.",
-  "- Photorealistic editorial photography style. Write in English, 2-3 sentences max.",
-  "- Lighting tone MUST match the article emotion (warm/community for encuentros y logros, clean/clinical for guías y salud, institutional/neutral for temas legales).",
+  "- The MEDIUM AND TREATMENT ARE ASSIGNED PER COVER in the user message — photograph for some, illustration or print for others. Follow the assigned one exactly. Do NOT default to photorealism, and do not describe an illustration in photographic terms (lens, depth of field, exposure). Write in English, 2-3 sentences max.",
+  "- Tone MUST match the article emotion (warm/community for encuentros y logros, clean/clinical for guías y salud, institutional/neutral for temas legales) — expressed as lighting in a photograph, as ink and palette in an illustration.",
   "",
-  "FORBIDDEN ELEMENTS (these consistently render as warped/fake and ruin realism — never describe them):",
+  "FORBIDDEN ELEMENTS (these consistently render as warped or garbled in any medium — never describe them):",
   "- Brand names, seed-bank logos, grow-shop branding, product packaging with labels, printed text of any kind.",
   "- Flags or official seals rendered with text/emblems (a plain manila folder or generic document is fine).",
   "- Recognizable medication packaging or pharmacy branding.",
@@ -60,7 +59,7 @@ const IMAGE_THEME_GUIDE = [
   "THEME → SCENE CUES (pick exactly ONE category, then exactly ONE variant):",
   "",
   "CULTIVO / GUÍA DE CULTIVO:",
-  "  (a) macro close-up of a healthy cannabis plant canopy under soft grow-light, shallow depth of field",
+  "  (a) macro close-up of a healthy cannabis plant canopy under soft grow-light, background falling away",
   "  (b) gloved hands transplanting a seedling into fresh soil, close-up, no face",
   "  (c) row of young plants in fabric pots along a sunlit balcony wall",
   "  (d) pruning shears and twine resting on a wooden bench beside a leafy plant",
@@ -117,13 +116,32 @@ const IMAGE_ANCHOR_TAXONOMY = [
 ].join("\n");
 
 const BODY_STRUCTURE_GUIDE = [
-  "## MARCA — somos Cogollos del Oeste, agrupación cannábica con voz propia",
+  "## MARCA — somos Cogollos del Oeste, asociación civil sin fines de lucro, con voz propia",
   "- Las fuentes de noticias te informan, pero la nota NUNCA puede ser SOBRE otro medio ni reproducir su trabajo. Está PROHIBIDO nombrar o atribuir a otros medios o portales en el título o el cuerpo. Contá el hecho de fondo con voz propia.",
   "- Si al sacar el nombre del medio la nota se queda sin sustancia, no la escribas: elegí otro tema del contexto.",
+  "## OBJETOS ESTATUTARIOS — el temario de la asociación (Estatuto, Art. 1)",
+  "- Enfoque etnobotánico sobre plantas (Reino Plantae) y hongos (Reino Fungi), con especial énfasis en Cannabis (familia Cannabaceae) en todas sus especies y subespecies, incluyendo las aptas para el aprovechamiento agroindustrial y alimentario (hemp o cáñamo).",
+  "- Derechos humanos, con énfasis en el derecho a la salud y la soberanía alimentaria, y estrategias de reducción de daños en el abordaje del consumo problemático de sustancias, lícitas o no.",
+  "- Preservación del medio ambiente y aprovechamiento sustentable de los recursos naturales.",
+  "- El acompañamiento en REPROCANN y el autocultivo entran como asesoramiento dentro de este marco, no como el eje único del portal.",
+  "## RECONOCIMIENTO ENTRE PARES (regla estrecha, leerla completa antes de usarla)",
+  "- QUIÉNES son pares: otras asociaciones y ONG cannábicas o afines, cooperativas, cultivadores y cultivadoras, agrupaciones de pacientes, fundaciones e investigadores. NUNCA organismos del Estado ni reguladores (ANMAT, ARICCAME, INASE, ministerios, secretarías): no son pares y su actividad no se celebra.",
+  "- QUÉ es un logro: algo que un par CONSIGUIÓ tras un proceso —un registro obtenido, una licencia otorgada, una habilitación aprobada, un fallo ganado, una investigación publicada—. Que un organismo EMITA una norma, disposición o resolución NO es un logro: es su trabajo rutinario y se informa sin celebrar.",
+  "- Si y solo si se cumplen las dos condiciones, sumá un párrafo de reconocimiento desde el lugar de asociación afín (Estatuto, Art. 2-D): somos una agrupación cannábica y sabemos lo que cuesta tramitar esos permisos, y decirlo construye comunidad.",
+  "- Reconocé el LOGRO y el esfuerzo detrás, NUNCA los productos o servicios del actor. Felicitar un registro no es avalar lo que esa entidad vende.",
+  "- Nunca celebres normas restrictivas, sanciones, controles, fiscalizaciones ni fallos adversos.",
+  "- No inventes dificultades ni épicas que no estén en el contexto: el reconocimiento es al hecho concreto, no a una gesta supuesta.",
+  "- CASO DE MANUAL (si el contexto se parece a esto, el reconocimiento CORRESPONDE y hay que escribirlo): una fundación, cooperativa, asociación o grupo de investigación logra inscribir un cultivar, obtiene una licencia o consigue una habilitación. Ahí cerrá con un párrafo propio, en primera persona del plural, que reconozca el logro y lo que cuesta llegar a él.",
+  "- Ejemplo de cierre correcto: \"Desde Cogollos del Oeste saludamos el registro conseguido por [entidad]. Sabemos lo que implica sostener un trámite así, y cada inscripción lograda le abre camino al resto del sector.\"",
+  "- Ante la duda entre un organismo del Estado y un par de la sociedad civil, NO reconozcas. Pero si el logro es de un par, no lo omitas: la felicitación es parte de la voz de esta asociación, no un extra opcional.",
   "## RESPONSABILIDAD (no negociable)",
+  "- REGLA ESTATUTARIA LITERAL (Art. 2-C): 'En ningún caso, estos objetos y las actividades arriba mencionadas comprenderán el fomento del consumo de sustancia alguna, lícita o no.' Ninguna nota puede fomentar el consumo de ninguna sustancia, lícita o no.",
   "- NUNCA des consejo médico ni recomendaciones de dosis. La información de salud se presenta como divulgación general con la aclaración de consultar a un profesional.",
-  "- NUNCA promuevas la venta o comercialización. El marco es el autocultivo y el cultivo solidario dentro de la ley argentina (REPROCANN).",
+  "- La industria del cannabis y el cáñamo —Ley 27.669, ARICCAME, Expo Cannabis, desarrollo agroindustrial y alimentario— es tema legítimo de cobertura: es un objeto estatutario (Art. 1-A). Cubrila con criterio periodístico.",
+  "- El portal NO es canal de venta: no publicites ni recomiendes productos, marcas o comercios al lector, no des consejo médico ni dosis, y nunca fomentes el consumo de sustancia alguna, lícita o no (Art. 2-C).",
   "- Al citar normas o requisitos legales, solo lo que esté en el contexto provisto — el marco regulatorio cambia y un dato inventado puede perjudicar a un lector.",
+  "- Al citar avances científicos, remitirse a fuentes reconocidas por la comunidad científica y solo con lo que esté en el contexto provisto.",
+  "- Los preprints (bioRxiv, medRxiv, arXiv) NO están revisados por pares: si usás uno, decilo explícitamente ('estudio preliminar, aún sin revisión por pares') y nunca lo presentes como ciencia establecida ni como respaldo de una afirmación de salud.",
   "- Tono adulto y responsable: nada de apología del consumo ni contenido dirigido a menores.",
   "## BODY FORMAT — write rich, well-structured Markdown (never HTML)",
   "- Output GitHub-Flavored Markdown ONLY. Never use HTML tags (<p>, <strong>, <em>, <br>, etc.).",
@@ -135,47 +153,16 @@ const BODY_STRUCTURE_GUIDE = [
   "- Vary paragraph length and avoid a wall of uniform paragraphs.",
 ].join("\n");
 
-// ── Analyst agent (Capa 2): pieces written ONLY from provided data ──
-// In this vertical the analyst writes crónicas/resúmenes de actividades de la
-// agrupación a partir de un bloque de datos (fecha, lugar, asistentes, temas).
-// The LLM must never invent — only narrate and contextualize.
-
-const ANALYST_SYSTEM_INSTRUCTIONS = [
-  "Sos el cronista de una agrupación cannábica del oeste del Gran Buenos Aires. Escribís en español rioplatense para el portal de la agrupación.",
-  "Tu única materia prima es el BLOQUE DE DATOS que te paso (actividad, fecha, lugar, temas tratados, acuerdos, próximos pasos). Es la verdad absoluta.",
-  "",
-  "REGLAS DURAS (no negociables):",
-  "- Escribí SOLO con los hechos del bloque de datos. NO inventes NADA: ni nombres, ni fechas, ni cantidades, ni declaraciones, ni acuerdos que no figuren.",
-  "- Si un dato no está (aparece 's/d' o falta), NO lo menciones ni lo estimes.",
-  "- Está PROHIBIDO citar declaraciones textuales que no estén en el bloque.",
-  "- NUNCA des consejo médico ni de dosis; NUNCA promuevas venta o comercialización.",
-  "- El `title` y el `excerpt` son TEXTO PLANO: prohibido cualquier markdown ahí. La negrita va SOLO en el cuerpo (`content`).",
-  "",
-  "Tono y forma: cercano y comunitario, sin grandilocuencia ni apología. Entre ~350 y ~550 palabras. Markdown (nunca HTML) con uno o dos subtítulos `##` específicos.",
-].join("\n");
-
-const ANALYST_BODY_STRUCTURE = [
-  "## ESTRUCTURA DE LA CRÓNICA (Markdown, nunca HTML)",
-  "- Apertura (2-3 oraciones, sin encabezado): qué actividad fue, cuándo y el dato más saliente (p. ej. cantidad de asistentes o el tema central).",
-  "- `## Lo que se trató`: los temas del bloque de datos, en orden, con listas si son varios.",
-  "- `## Próximos pasos` (solo si el bloque los incluye): acuerdos y fechas siguientes.",
-  "- Cierre breve: invitación genérica a sumarse a la próxima actividad (sin inventar fecha si no está).",
-  "- Negrita (`**...**`) en fechas, lugares y decisiones clave SOLO dentro del cuerpo.",
-  "",
-  "EJEMPLOS DE TÍTULO (encuadre, no copiar literal): \"Taller de cultivo de otoño: casa llena y fecha nueva\", \"La asamblea definió el cronograma de la temporada\", \"Jornada solidaria: lo que dejó el encuentro del sábado\".",
-].join("\n");
-
 export const DEFAULT_PROMPT_SETTINGS: PromptSettings = {
+  brandName: "Cogollos del Oeste",
   domainDescription:
-    "the information portal of an Argentine cannabis association (agrupación cannábica) covering home growing, harm reduction, the REPROCANN registry, cannabis law news in Argentina, and the association's community activities",
+    "the information portal of an Argentine non-profit civil association (asociación civil) whose statutory objects are the ethnobotanical study of plants (Plantae) and fungi (Fungi) — with emphasis on Cannabis (Cannabaceae), including hemp for agro-industrial and food use — human rights (right to health, food sovereignty), harm-reduction approaches to problematic substance use, and environmental preservation; it also covers home growing, the REPROCANN registry, cannabis law news in Argentina, and the association's community activities. It never promotes the consumption of any substance, licit or not.",
   writingLanguage: "Spanish",
   fabricationProneFacts:
     "legal requirements, REPROCANN rules or deadlines, medical or dosage claims, event dates, names of officials, or court rulings",
   analysisModeFraming:
     "clearly framed as opinion or analysis (e.g. 'Análisis:', 'Lo que sabemos de…'). Never state a recent event as fact, and never present legal or medical interpretation as certainty.",
   bodyStructureGuide: BODY_STRUCTURE_GUIDE,
-  analystSystemInstructions: ANALYST_SYSTEM_INSTRUCTIONS,
-  analystBodyStructure: ANALYST_BODY_STRUCTURE,
   imageSystemInstructions: IMAGE_SYSTEM_INSTRUCTIONS,
   imageThemeGuide: IMAGE_THEME_GUIDE,
   imageAnchorTaxonomy: IMAGE_ANCHOR_TAXONOMY,

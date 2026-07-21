@@ -24,7 +24,7 @@ const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
   headers: {
     Authorization: `Bearer ${apiKey}`,
     "Content-Type": "application/json",
-    "HTTP-Referer": "https://cogollosdeloeste.example",
+    "HTTP-Referer": "https://cogollosdeloeste.com.ar",
     "X-Title": "codelo-cms",
   },
   body: JSON.stringify({

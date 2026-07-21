@@ -42,7 +42,7 @@ async function once(
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
       // Attribution headers (surface the app in the OpenRouter dashboard).
-      "HTTP-Referer": "https://cogollosdeloeste.example",
+      "HTTP-Referer": "https://cogollosdeloeste.com.ar",
       "X-Title": "codelo-cms",
     },
     body: JSON.stringify({

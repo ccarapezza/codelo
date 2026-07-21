@@ -5,7 +5,7 @@
     "singularName": "prompt-setting",
     "pluralName": "prompt-settings",
     "displayName": "Prompt Settings",
-    "description": "Vertical-level (domain-specific) overrides for the AI agent prompts. The generic scaffolding lives in code; these fields make the FULBO-specific parts editable so the same codebase can be retargeted to other verticals. Empty fields fall back to DEFAULT_PROMPT_SETTINGS (src/lib/prompt-defaults.ts)."
+    "description": "Vertical-level (domain-specific) overrides for the AI agent prompts. The generic scaffolding lives in code; these fields make the vertical-specific parts editable so the same codebase can be retargeted to other verticals. Empty fields fall back to DEFAULT_PROMPT_SETTINGS (src/lib/prompt-defaults.ts)."
   },
   "options": {
     "draftAndPublish": false
@@ -19,6 +19,9 @@
     }
   },
   "attributes": {
+    "brandName": {
+      "type": "string"
+    },
     "domainDescription": {
       "type": "text"
     },

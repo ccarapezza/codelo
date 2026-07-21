@@ -224,6 +224,6 @@ export const OVERLAY_FIELDS: Record<OverlayType, Array<{ key: string; label: str
     { key: "pre", label: "Texto previo", placeholder: "Faltan" },
     { key: "big", label: "Número grande", placeholder: "8" },
     { key: "unit", label: "Unidad", placeholder: "días" },
-    { key: "label", label: "Etiqueta", placeholder: "para el Mundial 2026" },
+    { key: "label", label: "Etiqueta", placeholder: "para la Expo Cannabis" },
   ],
 };

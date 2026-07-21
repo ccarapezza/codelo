@@ -1,5 +1,5 @@
 import type { Core } from "@strapi/strapi";
-import { getRecentNewsForTopic, isMundialRelevant, type NewsItem } from "./rss-fetcher";
+import { getRecentNewsForTopic, type NewsItem } from "./rss-fetcher";
 
 // ---------------------------------------------------------------------------
 // Deterministic assignment of news items to redactors.
@@ -24,7 +24,7 @@ export interface BatchPlan {
   assignments: BatchAssignment[];
   /** Items intentionally skipped because they duplicated a chosen subject. */
   skippedDupes: number;
-  /** Total Mundial-relevant pool before dedup. */
+  /** Total recent-news pool before dedup. */
   poolSize: number;
   /** Items requested vs items actually assigned. */
   requested: number;
@@ -54,7 +54,7 @@ export function titleSimilarity(a: string, b: string): number {
 }
 
 // Keep only the first item from each "subject cluster". Threshold tuned so
-// that "Campana lesión Ecuador" and "Campana baja por lesión Mundial" cluster
+// so that two write-ups of the same norm or study cluster together
 // together but "Neymar lesionado" and "Yamal lesionado" do not.
 export const DEDUP_THRESHOLD = 0.4;
 
@@ -79,19 +79,20 @@ export async function planBatch(
   const totalRequested = agents.reduce((s, a) => s + a.notesCount, 0);
 
   // Pull a wide pool of recent news (the topic is empty → no topic filter).
-  // We want to consider ALL Mundial-relevant news, not just per-agent topic.
-  const raw = await getRecentNewsForTopic(strapi, "", 200);
-  const mundial = raw.filter(isMundialRelevant);
+  // Batch mode deliberately ignores per-agent topics: it distributes whatever
+  // is fresh round-robin. For beat-based coverage use per-agent schedules,
+  // which DO filter by `agent.topic`.
+  const pool = await getRecentNewsForTopic(strapi, "", 200);
 
   // Sort by recency (most recent first) so dedup keeps the freshest version
   // when multiple sources cover the same event.
-  mundial.sort((a, b) => {
+  pool.sort((a, b) => {
     const ta = a.itemPublishedAt?.getTime() ?? 0;
     const tb = b.itemPublishedAt?.getTime() ?? 0;
     return tb - ta;
   });
 
-  const { kept, dropped } = dedupBySubject(mundial);
+  const { kept, dropped } = dedupBySubject(pool);
   const selected = kept.slice(0, totalRequested);
 
   // Initialize assignments with empty item lists.
@@ -122,7 +123,7 @@ export async function planBatch(
   return {
     assignments,
     skippedDupes: dropped,
-    poolSize: mundial.length,
+    poolSize: pool.length,
     requested: totalRequested,
     assigned: selected.length,
   };

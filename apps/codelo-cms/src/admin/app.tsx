@@ -1,6 +1,9 @@
 import { Magic, Cog, Cast, ChartBubble, Pencil, Images, Feather } from "@strapi/icons";
 import type { StrapiApp } from "@strapi/strapi/admin";
 import SocialStudioPanel from "./components/SocialStudioPanel";
+// Oculta "Marketplace" del menú; ver el comentario del propio archivo para
+// por qué no se puede resolver por configuración ni por permisos.
+import "./hide-marketplace.css";
 
 export default {
   config: {},

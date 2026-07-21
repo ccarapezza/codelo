@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CmsPageView } from "@/components/CmsPageView";
 import { getPageBySlug } from "@/lib/content";
 import { localizedAlternates } from "@/lib/seo";
@@ -20,9 +20,14 @@ export async function generateMetadata({
   };
 }
 
+async function pageEyebrow(lang: string) {
+  const t = await getTranslations({ locale: lang, namespace: "pages" });
+  return t("eyebrowReprocann");
+}
+
 export default async function ReprocannPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
   setRequestLocale(lang);
   const page = await getPageBySlug(SLUG);
-  return <CmsPageView page={page} />;
+  return <CmsPageView page={page} eyebrow={await pageEyebrow(lang)} />;
 }

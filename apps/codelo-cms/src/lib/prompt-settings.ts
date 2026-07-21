@@ -29,13 +29,12 @@ export async function getPromptSettings(strapi: StrapiLike): Promise<PromptSetti
   };
 
   return {
+    brandName: pick("brandName"),
     domainDescription: pick("domainDescription"),
     writingLanguage: pick("writingLanguage"),
     fabricationProneFacts: pick("fabricationProneFacts"),
     analysisModeFraming: pick("analysisModeFraming"),
     bodyStructureGuide: pick("bodyStructureGuide"),
-    analystSystemInstructions: pick("analystSystemInstructions"),
-    analystBodyStructure: pick("analystBodyStructure"),
     imageSystemInstructions: pick("imageSystemInstructions"),
     imageThemeGuide: pick("imageThemeGuide"),
     imageAnchorTaxonomy: pick("imageAnchorTaxonomy"),

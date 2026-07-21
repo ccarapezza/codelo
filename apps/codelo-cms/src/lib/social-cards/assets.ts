@@ -10,8 +10,8 @@ const MIME: Record<string, string> = {
 
 // Los assets (fuentes .woff + logo) viven en src/ y NO se copian a dist/ con
 // `strapi build`. Resolvemos relativo a la raíz de la app: process.cwd() ===
-// apps/fulbo-cms tanto en `strapi develop` (dev) como en el contenedor
-// (WORKDIR /repo/apps/fulbo-cms), y el runtime Docker copia todo src/.
+// apps/codelo-cms tanto en `strapi develop` (dev) como en el contenedor
+// (WORKDIR /repo/apps/codelo-cms), y el runtime Docker copia todo src/.
 export function assetPath(...segments: string[]): string {
   return join(process.cwd(), "src/lib/social-cards/assets", ...segments);
 }
@@ -25,9 +25,9 @@ export function dataUriFromBuffer(buf: Buffer, mime = "image/png"): string {
   return `data:${mime};base64,${Buffer.from(buf).toString("base64")}`;
 }
 
-// Logo con contorno blanco: se lee bien sobre fondo oscuro. Cacheado en memoria.
+// Logo de la asociación (PNG con fondo transparente). Cacheado en memoria.
 let _logoMark: string | undefined;
 export function logoMark(): string {
-  if (!_logoMark) _logoMark = dataUriFromFile(assetPath("logo", "fulbostudio.2.png"));
+  if (!_logoMark) _logoMark = dataUriFromFile(assetPath("logo", "cogollosdeloeste.png"));
   return _logoMark;
 }

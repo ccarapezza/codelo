@@ -1,6 +1,6 @@
 // Admin-only routes. Auth enforced inside the controller via requireAdmin().
 // Internal routes use a shared-secret header (x-internal-key) checked inside
-// the controller — same pattern as api-football-setting internal endpoints.
+// the controller — same pattern as the other internal admin endpoints.
 export default {
   routes: [
     {

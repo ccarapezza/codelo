@@ -69,7 +69,7 @@ function root(size: Size, ...layers: unknown[]): SatoriNode {
   );
 }
 
-// Countdown hype: "Faltan / 8 / días / para el Mundial 2026".
+// Countdown hype: "Faltan / 8 / días / para la Expo Cannabis".
 export function countdownOverlay(o: CountdownOverlayFields, size: Size): SatoriNode {
   const { width, height } = size;
 
@@ -110,7 +110,7 @@ export function countdownOverlay(o: CountdownOverlayFields, size: Size): SatoriN
       {
         style: {
           display: "flex", fontFamily: BRAND.fontDisplay, fontSize: 520, lineHeight: 0.82,
-          color: BRAND.flame, letterSpacing: 2,
+          color: BRAND.terracotta, letterSpacing: 2,
         },
       },
       String(o.big),
@@ -157,7 +157,7 @@ export function titleOverlay(o: TitleOverlayFields, size: Size): SatoriNode {
           {
             style: {
               display: "flex", fontFamily: BRAND.fontBody, fontWeight: 700, fontSize: 34,
-              letterSpacing: 8, textTransform: "uppercase", color: BRAND.orange,
+              letterSpacing: 8, textTransform: "uppercase", color: BRAND.greenLight,
               marginBottom: 22, textShadow: SHADOW,
             },
           },

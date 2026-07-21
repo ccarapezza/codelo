@@ -160,9 +160,10 @@ type Agent = {
   id: number;
   documentId: string;
   name: string;
-  role: "director" | "redactor" | "image-generator" | "analyst";
+  role: "director" | "redactor" | "image-generator";
   instructions: string;
   topic: string | null;
+  requireNewsContext?: boolean;
   enabled: boolean;
   schedules: ScheduleEntry[];
   lastRunAt: string | null;
@@ -173,9 +174,10 @@ type Agent = {
 
 type FormData = {
   name: string;
-  role: "director" | "redactor" | "image-generator" | "analyst";
+  role: "director" | "redactor" | "image-generator";
   instructions: string;
   topic: string;
+  requireNewsContext: boolean;
   enabled: boolean;
   schedules: ScheduleEntry[];
   imagePromptTemplate: string;
@@ -188,6 +190,7 @@ const EMPTY_FORM: FormData = {
   role: "redactor",
   instructions: "",
   topic: "",
+  requireNewsContext: false,
   enabled: true,
   schedules: [],
   imagePromptTemplate: "",
@@ -210,6 +213,7 @@ function agentToForm(a: Agent): FormData {
     role: a.role,
     instructions: a.instructions ?? "",
     topic: a.topic ?? "",
+    requireNewsContext: a.requireNewsContext ?? false,
     enabled: a.enabled,
     schedules: a.schedules.map((s) => ({
       id: s.id,
@@ -507,6 +511,7 @@ function AgentFormModal({
         role: form.role,
         instructions: isImageGen ? null : form.instructions.trim(),
         topic: form.role === "redactor" ? form.topic.trim() : null,
+        requireNewsContext: form.role === "redactor" ? form.requireNewsContext : false,
         enabled: form.enabled,
         schedules: isImageGen
           ? []
@@ -545,21 +550,17 @@ function AgentFormModal({
   const instructionsLabel =
     form.role === "director"
       ? "Instrucciones editoriales del Director"
-      : form.role === "analyst"
-      ? "Tono y enfoque del Analista"
       : "Tono y estilo del Redactor";
 
   const instructionsHint =
     form.role === "director"
       ? "Lineamientos que el Director aplicará al revisar y publicar borradores."
-      : form.role === "analyst"
-      ? "Describí la voz y el enfoque del analista. Escribe SOLO con los datos del partido; no define el tema (descubre los partidos finalizados solo)."
       : "Describí la voz, el estilo y la personalidad del redactor.";
 
   return (
     <Modal.Root open={open} onOpenChange={(v: boolean) => !v && onClose()}>
       {/*
-        Notes on Strapi 5 Modal internals (apps/fulbo-cms/node_modules/@strapi/design-system):
+        Notes on Strapi 5 Modal internals (apps/codelo-cms/node_modules/@strapi/design-system):
           - Modal.Content (ContentImpl) is already display:flex, flex-direction:column with max-width: 83rem.
             We widen it via inline style — width wins over the styled-component class because of inline-style specificity.
             We do NOT override max-height: 90vh; letting the modal grow to fit content and cap there prevents the
@@ -600,8 +601,6 @@ function AgentFormModal({
                     ? "El Director revisa los borradores generados por los Redactores y los publica."
                     : form.role === "image-generator"
                     ? "El Generador de imágenes provee configuración para generar portadas con IA."
-                    : form.role === "analyst"
-                    ? "El Analista descubre partidos finalizados y genera análisis en borrador a partir de sus estadísticas."
                     : "El Redactor genera artículos en borrador según su tema y estilo."
                 }
               >
@@ -609,7 +608,7 @@ function AgentFormModal({
                 <SingleSelect
                   value={form.role}
                   onChange={(val: string | number) =>
-                    set("role", String(val) as "director" | "redactor" | "image-generator" | "analyst")
+                    set("role", String(val) as "director" | "redactor" | "image-generator")
                   }
                 >
                   <SingleSelectOption value="redactor" startIcon={<Feather />}>
@@ -620,9 +619,6 @@ function AgentFormModal({
                   </SingleSelectOption>
                   <SingleSelectOption value="image-generator" startIcon={<Magic />}>
                     Generador de imágenes
-                  </SingleSelectOption>
-                  <SingleSelectOption value="analyst" startIcon={<Magic />}>
-                    Analista
                   </SingleSelectOption>
                 </SingleSelect>
                 <Field.Hint />
@@ -645,7 +641,7 @@ function AgentFormModal({
                   <Field.Label>Tema del redactor</Field.Label>
                   <Textarea
                     rows={4}
-                    placeholder="Ej: Artículos sobre la Selección Argentina: convocatorias, análisis tácticos, figuras del equipo..."
+                    placeholder="Palabras clave del beat, separadas por espacios. Ej: cannabis cannábico cáñamo REPROCANN ARICCAME autocultivo"
                     value={form.topic}
                     onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                       set("topic", e.target.value)
@@ -653,6 +649,30 @@ function AgentFormModal({
                   />
                   <Field.Hint />
                 </Field.Root>
+              ) : null}
+
+              {form.role === "redactor" ? (
+                <Box padding={4} background="neutral100" hasRadius>
+                  <Flex justifyContent="space-between" alignItems="center" gap={3}>
+                    <Box>
+                      <Typography variant="omega" fontWeight="semiBold">
+                        Exigir fuentes
+                      </Typography>
+                      <Box>
+                        <Typography variant="pi" textColor="neutral500">
+                          Si no hay noticias que matcheen el tema, no escribe nada. Sin
+                          fuentes el modelo redacta de memoria e inventa datos.
+                          Recomendado en legales y salud.
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <Switch
+                      checked={form.requireNewsContext}
+                      onCheckedChange={(v: boolean) => set("requireNewsContext", v)}
+                      aria-label="Exigir contexto de noticias"
+                    />
+                  </Flex>
+                </Box>
               ) : null}
 
               {form.role === "image-generator" ? (
@@ -776,7 +796,7 @@ function AgentFormModal({
                   <Field.Label>Instrucciones de estilo visual</Field.Label>
                   <Textarea
                     rows={18}
-                    placeholder={`Ej: Focus on football trophies and equipment with dramatic studio lighting. Prefer dark backgrounds with golden accents. Always include the World Cup 2026 aesthetic. No people, no faces.`}
+                    placeholder={`Ej: Prefer botanical plate illustrations over photographs for this beat. Warm ochre inks on cream stock, herbarium-sheet layout. No consumption imagery, no people, no faces.`}
                     value={form.imagePromptTemplate}
                     onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                       set("imagePromptTemplate", e.target.value)
@@ -793,8 +813,6 @@ function AgentFormModal({
                       placeholder={
                         form.role === "director"
                           ? "Ej: Asegurate de que los títulos sean atractivos, el contenido sea preciso y la redacción sea en español rioplatense..."
-                          : form.role === "analyst"
-                          ? "Ej: Analista táctico, tono sobrio y periodístico, español rioplatense. Apoya cada afirmación en los números del partido..."
                           : "Ej: Escribí en primera persona, con un tono apasionado y experto en fútbol argentino..."
                       }
                       value={form.instructions}
@@ -1172,7 +1190,6 @@ export default function AgentsPage() {
   const director = agents.find((a) => a.role === "director") ?? null;
   const imageGenerator = agents.find((a) => a.role === "image-generator") ?? null;
   const redactors = agents.filter((a) => a.role === "redactor");
-  const analysts = agents.filter((a) => a.role === "analyst");
 
   // Backfill English translations for every published Spanish post that lacks
   // one. Fire-and-forget on the server (sequential, respects rate limits);
@@ -1340,38 +1357,6 @@ export default function AgentsPage() {
             )}
           </RoleSection>
 
-          {/* Analysts */}
-          <RoleSection
-            icon={<Magic aria-hidden />}
-            title="Analistas"
-            description="Cada Analista descubre partidos finalizados y genera análisis en borrador a partir de sus estadísticas (xG, posesión, puntajes)."
-            accent="secondary"
-            count={analysts.length}
-            countLabel={`Analista${analysts.length !== 1 ? "s" : ""} configurado${analysts.length !== 1 ? "s" : ""}`}
-            canCreate
-            onCreate={openCreate}
-          >
-            {analysts.length > 0 ? (
-              <Flex direction="column" alignItems="stretch" gap={3}>
-                {analysts.map((a) => (
-                  <AgentItem
-                    key={a.documentId}
-                    agent={a}
-                    onEdit={() => openEdit(a)}
-                    onDelete={() => setDeleteTarget(a)}
-                    onRunNow={() => openRunNow(a)}
-                  />
-                ))}
-              </Flex>
-            ) : (
-              <EmptySectionState
-                icon={<Magic aria-hidden />}
-                message="Sin Analistas configurados. Agregá uno para generar análisis de partidos a partir de las estadísticas."
-                actionLabel="Crear Analista"
-                onAction={openCreate}
-              />
-            )}
-          </RoleSection>
         </Box>
       )}
 
@@ -1424,8 +1409,6 @@ export default function AgentsPage() {
               <Typography textAlign="center" textColor="neutral600">
                 {runNowTarget?.role === "redactor"
                   ? "¿Cuántas notas generar?"
-                  : runNowTarget?.role === "analyst"
-                  ? "¿Cuántos partidos analizar?"
                   : "¿Cuántos borradores revisar y publicar?"}
               </Typography>
               <Flex justifyContent="center">

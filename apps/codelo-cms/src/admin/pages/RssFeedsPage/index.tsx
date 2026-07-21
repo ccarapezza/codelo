@@ -180,7 +180,7 @@ function FeedFormModal({
             <Field.Root required>
               <Field.Label>Nombre</Field.Label>
               <TextInput
-                placeholder="Ej: BBC Sport Football"
+                placeholder="Ej: Boletín Oficial — Salud"
                 value={form.name}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => set("name", e.target.value)}
               />
@@ -190,7 +190,7 @@ function FeedFormModal({
               <Flex gap={2} alignItems="flex-start">
                 <Box style={{ flex: 1 }}>
                   <TextInput
-                    placeholder="https://feeds.bbci.co.uk/sport/football/rss.xml"
+                    placeholder="https://www.thclab.com.ar/feed/"
                     value={form.url}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                       set("url", e.target.value)

@@ -91,11 +91,11 @@ services:
       OPENAI_IMAGE_API_KEY: ${OPENAI_IMAGE_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://cogollosdeloeste.example}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://cogollosdeloeste.com.ar}
       RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
       RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-60}
       # Public URL behind Caddy (used in admin emails, oembeds, etc.)
-      URL: ${CMS_PUBLIC_URL:-https://cms.cogollosdeloeste.example}
+      URL: ${CMS_PUBLIC_URL:-https://cms.cogollosdeloeste.com.ar}
       ADMIN_URL: /admin
       STRAPI_TELEMETRY_DISABLED: "true"
       NODE_ENV: production
@@ -121,8 +121,8 @@ services:
           memory: 256M
     environment:
       CMS_URL: http://cms:1337
-      NEXT_PUBLIC_CMS_URL: ${CMS_PUBLIC_URL:-https://cms.cogollosdeloeste.example}
-      NEXT_PUBLIC_SITE_URL: ${SITE_PUBLIC_URL:-https://cogollosdeloeste.example}
+      NEXT_PUBLIC_CMS_URL: ${CMS_PUBLIC_URL:-https://cms.cogollosdeloeste.com.ar}
+      NEXT_PUBLIC_SITE_URL: ${SITE_PUBLIC_URL:-https://cogollosdeloeste.com.ar}
       NODE_ENV: production
     depends_on:
       cms:

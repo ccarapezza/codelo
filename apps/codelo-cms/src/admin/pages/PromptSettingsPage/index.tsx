@@ -352,7 +352,7 @@ export default function PromptSettingsPage() {
               />
               <Field.Hint />
               <ReferenceNote>
-                {`Forma fija del JSON: { "country": string|null, "teamColors": string|null, "jerseyNumber": number|null, "eventType": string|null, "venue": string|null } — solo las reglas de cada campo son editables.`}
+                {`Forma fija del JSON: { "topic": string|null, "palette": string|null, "eventType": string|null, "venue": string|null, "season": string|null } — solo las reglas de cada campo son editables. Si renombrás un campo acá, el parser lo descarta.`}
               </ReferenceNote>
             </Field.Root>
           </Flex>

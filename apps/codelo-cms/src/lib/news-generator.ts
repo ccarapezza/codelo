@@ -1,7 +1,7 @@
 // Manual news generator — the backend behind the admin "Generador de notas"
 // screen. It is the human-driven alternative to the redactor agents: an admin
 // types a prompt, the model (optionally) searches the web for current context,
-// and we generate / refine a Fulbo-branded article. All the strict-JSON article
+// and we generate / refine a branded article. All the strict-JSON article
 // generation reuses `generatePost`/`stripInlineMarkdown` from ./openai; this
 // module only adds the web-search research step and the refine helper, plus the
 // shared prompt construction (which reuses the brand guardrails in PromptSettings).
@@ -35,7 +35,7 @@ export async function researchWithWebSearch(
         {
           role: "system",
           content:
-            "Sos un investigador de noticias de fútbol. Buscá en la web los hechos más " +
+            "Sos un investigador de noticias. Buscá en la web los hechos más " +
             "recientes y verificables sobre el pedido del usuario. Respondé SOLO con un " +
             "briefing breve en texto plano de los hechos concretos (qué pasó, quién, " +
             "cuándo, resultado, declaraciones textuales si las hay), con su contexto. " +
@@ -73,14 +73,14 @@ export async function researchWithWebSearch(
 /**
  * System prompt shared by generate & refine. Reuses the resolved PromptSettings
  * exactly like the redactor — most importantly `bodyStructureGuide`, which holds
- * the no-rival-media brand guardrail (never name Olé/Marca/ESPN…, use Fulbo's
- * own ratings) plus the Markdown structure rules.
+ * the no-rival-media brand guardrail (never name another outlet as the subject
+ * or authority; official sources are exempt) plus the Markdown structure rules.
  */
 export function buildNewsSystemPrompt(s: PromptSettings): string {
   return [
     `Sos un periodista que escribe en ${s.writingLanguage} para ${s.domainDescription}.`,
     "La nota se genera a partir del prompt manual de un editor (y opcionalmente de una investigación web).",
-    "Voz: editorial propia de Fulbo, independiente y con criterio futbolero, sin grandilocuencia.",
+    `Voz: editorial propia de ${s.brandName}, independiente y con criterio, sin grandilocuencia.`,
     "",
     "## REGLAS FACTUALES (duras)",
     `- NUNCA inventes ${s.fabricationProneFacts}. Si un dato no está en el bloque de investigación ni en el pedido del editor, no lo afirmes como hecho.`,
@@ -106,7 +106,7 @@ export function buildGenerateUserPrompt(
     ? [
         "\n## INVESTIGACIÓN WEB VERIFICADA (basá CADA hecho concreto SOLO en esto)",
         research.context,
-        "\nRecordatorio: NO nombres ni atribuyas a ningún medio de la investigación; reportá el hecho de fondo con voz propia de Fulbo.",
+        `\nRecordatorio: NO nombres ni atribuyas a ningún MEDIO de la investigación; reportá el hecho de fondo con voz propia de ${s.brandName}. Las fuentes OFICIALES (Boletín Oficial, normas, reguladores, revistas científicas) sí se citan.`,
       ].join("\n")
     : "\n(Sin investigación web — escribí en clave análisis/preview; no afirmes eventos recientes como hechos.)";
   return [
@@ -131,7 +131,7 @@ export async function refinePost(
   context?: ResearchResult | null,
 ): Promise<GeneratedPost> {
   const system = [
-    `Sos un editor que revisa una nota de fútbol existente en ${s.writingLanguage} para ${s.domainDescription}.`,
+    `Sos un editor que revisa una nota existente en ${s.writingLanguage} para ${s.domainDescription}.`,
     "Aplicá la instrucción de modificación del editor a la nota. Mantené intacto todo lo demás.",
     "Conservá los hechos correctos; no inventes datos nuevos más allá de la instrucción o del bloque de investigación.",
     "",

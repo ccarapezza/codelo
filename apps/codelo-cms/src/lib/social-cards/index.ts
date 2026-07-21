@@ -1,5 +1,5 @@
-// Motor de generación de placas para redes (Fulbo Studio).
-// Portado del prototipo externo fulbo-social-cards: satori + resvg para el
+// Motor de generación de placas para redes (Cogollos del Oeste).
+// Portado de un prototipo externo: satori + resvg para el
 // render, y composer LLM para armar el deck desde un artículo.
 export { BRAND, FIRE, SIZES, type Size } from "./brand";
 export { renderToPng } from "./render";

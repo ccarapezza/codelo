@@ -32,7 +32,7 @@ const ADMIN_API = "/api/agent-action/admin-list";
 type AuditItem = {
   id: number;
   documentId: string;
-  agentRole: "director" | "redactor" | "image-generator" | "analyst" | "system";
+  agentRole: "director" | "redactor" | "image-generator" | "system";
   agentName: string | null;
   agentDocumentId: string | null;
   action: string;
@@ -54,7 +54,6 @@ const ROLE_LABEL: Record<AuditItem["agentRole"], string> = {
   director: "Director",
   redactor: "Redactor",
   "image-generator": "Generador IMG",
-  analyst: "Analista",
   system: "Sistema",
 };
 
@@ -62,7 +61,6 @@ const ROLE_COLOR: Record<AuditItem["agentRole"], string> = {
   director: "primary",
   redactor: "secondary",
   "image-generator": "success",
-  analyst: "alternative",
   system: "neutral",
 };
 
@@ -77,6 +75,7 @@ const ACTION_LABEL: Record<string, string> = {
   post_translated: "Traducido (EN)",
   translation_failed: "Traducción fallida",
   agent_failed: "Error",
+  redactor_idle: "Sin fuentes",
   director_idle: "Sin drafts",
 };
 
@@ -91,6 +90,7 @@ const ACTION_COLOR: Record<string, "success" | "danger" | "neutral" | "warning">
   post_translated: "success",
   translation_failed: "danger",
   agent_failed: "danger",
+  redactor_idle: "neutral",
   director_idle: "neutral",
 };
 
@@ -312,7 +312,6 @@ export default function AuditPage() {
               <SingleSelectOption value="director">Director</SingleSelectOption>
               <SingleSelectOption value="redactor">Redactor</SingleSelectOption>
               <SingleSelectOption value="image-generator">Generador IMG</SingleSelectOption>
-              <SingleSelectOption value="analyst">Analista</SingleSelectOption>
               <SingleSelectOption value="system">Sistema</SingleSelectOption>
             </SingleSelect>
           </Field.Root>
@@ -332,6 +331,7 @@ export default function AuditPage() {
               <SingleSelectOption value="cover_failed">Cover fallido</SingleSelectOption>
               <SingleSelectOption value="cover_manual">Cover manual</SingleSelectOption>
               <SingleSelectOption value="agent_failed">Error</SingleSelectOption>
+              <SingleSelectOption value="redactor_idle">Sin fuentes</SingleSelectOption>
               <SingleSelectOption value="director_idle">Sin drafts</SingleSelectOption>
             </SingleSelect>
           </Field.Root>

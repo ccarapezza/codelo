@@ -51,7 +51,7 @@ function kicker(text?: string): SatoriNode | null {
         fontSize: 30,
         letterSpacing: 6,
         textTransform: "uppercase",
-        color: BRAND.orange,
+        color: BRAND.greenLight,
       },
     },
     text,
@@ -256,7 +256,7 @@ const templates: Record<TemplateName, TemplateFn> = {
                   fontSize: 34,
                   letterSpacing: 8,
                   textTransform: "uppercase",
-                  color: BRAND.orange,
+                  color: BRAND.greenLight,
                   marginBottom: 18,
                 },
               },
@@ -352,7 +352,7 @@ const templates: Record<TemplateName, TemplateFn> = {
               fontFamily: BRAND.fontDisplay,
               fontSize: slide.numberSize || 380,
               lineHeight: 0.9,
-              color: BRAND.flame,
+              color: BRAND.terracotta,
               letterSpacing: 2,
             },
           },
@@ -432,7 +432,7 @@ const templates: Record<TemplateName, TemplateFn> = {
       scrim: 0.6,
       justify: "center",
       children: [
-        h("div", { style: { display: "flex", fontFamily: BRAND.fontDisplay, fontSize: 200, lineHeight: 0.7, color: BRAND.orange } }, "“"),
+        h("div", { style: { display: "flex", fontFamily: BRAND.fontDisplay, fontSize: 200, lineHeight: 0.7, color: BRAND.greenLight } }, "“"),
         h(
           "div",
           {
@@ -479,7 +479,7 @@ const templates: Record<TemplateName, TemplateFn> = {
           },
           slide.pre || "Faltan",
         ),
-        h("div", { style: { display: "flex", fontFamily: BRAND.fontDisplay, fontSize: 460, lineHeight: 0.85, color: BRAND.flame } }, String(slide.big)),
+        h("div", { style: { display: "flex", fontFamily: BRAND.fontDisplay, fontSize: 460, lineHeight: 0.85, color: BRAND.terracotta } }, String(slide.big)),
         h(
           "div",
           {
@@ -534,7 +534,7 @@ const templates: Record<TemplateName, TemplateFn> = {
           : null,
         fireBar(180),
         h("div", { style: { display: "flex", marginTop: 44, fontFamily: BRAND.fontDisplay, fontSize: 96, color: BRAND.white } }, "@" + BRAND.handle),
-        h("div", { style: { display: "flex", marginTop: 8, fontSize: 38, fontWeight: 600, color: BRAND.orange } }, slide.url || BRAND.handle),
+        h("div", { style: { display: "flex", marginTop: 8, fontSize: 38, fontWeight: 600, color: BRAND.greenLight } }, slide.url || BRAND.handle),
       ],
     });
   },

@@ -23,7 +23,11 @@
     },
     "role": {
       "type": "enumeration",
-      "enum": ["director", "redactor", "image-generator", "analyst"],
+      "enum": [
+        "director",
+        "redactor",
+        "image-generator"
+      ],
       "required": true,
       "default": "redactor"
     },
@@ -43,6 +47,15 @@
     },
     "topic": {
       "type": "text"
+    },
+    "requireNewsContext": {
+      "type": "boolean",
+      "default": false
+    },
+    "defaultTag": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::tag.tag"
     },
     "enabled": {
       "type": "boolean",

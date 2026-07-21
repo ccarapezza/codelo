@@ -44,10 +44,10 @@ pipeline {
             POSTGRES_DB:             'codelo',
             POSTGRES_USER:           'codelo',
             // Public origins (domain TBD — update when the real domain lands)
-            SITE_PUBLIC_URL:         'https://cogollosdeloeste.example',
-            CMS_PUBLIC_URL:          'https://cms.cogollosdeloeste.example',
+            SITE_PUBLIC_URL:         'https://cogollosdeloeste.com.ar',
+            CMS_PUBLIC_URL:          'https://cms.cogollosdeloeste.com.ar',
             // Strapi CORS allowlist + rate-limit defaults
-            CORS_ALLOWED_ORIGINS:    'https://cogollosdeloeste.example',
+            CORS_ALLOWED_ORIGINS:    'https://cogollosdeloeste.com.ar',
             RATE_LIMIT_WINDOW_MS:    '60000',
             RATE_LIMIT_MAX:          '60',
           ],

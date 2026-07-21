@@ -284,7 +284,7 @@ export default ({ strapi }: { strapi: any }) => ({
           strapi,
           png,
           `studio-historia-${Date.now()}.png`,
-          slides[0].title || slides[0].label || "Historia Fulbo Studio",
+          slides[0].title || slides[0].label || "Historia Cogollos del Oeste",
         );
         const file = await strapi.db.query("plugin::upload.file").findOne({ where: { id: fileId } });
         ctx.body = { ok: true, fileId, url: file?.url ?? null };
@@ -304,7 +304,7 @@ export default ({ strapi }: { strapi: any }) => ({
           strapi,
           fs.readFileSync(file),
           `studio-reel-${Date.now()}.mp4`,
-          "Reel Fulbo Studio",
+          "Reel Cogollos del Oeste",
           { mime: "video/mp4" },
         );
         const row = await strapi.db.query("plugin::upload.file").findOne({ where: { id: fileId } });

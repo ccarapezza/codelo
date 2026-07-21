@@ -21,7 +21,12 @@
   "attributes": {
     "agentRole": {
       "type": "enumeration",
-      "enum": ["director", "redactor", "image-generator", "analyst", "system"],
+      "enum": [
+        "director",
+        "redactor",
+        "image-generator",
+        "system"
+      ],
       "required": true
     },
     "agentName": {
@@ -45,6 +50,7 @@
         "post_translated",
         "translation_failed",
         "agent_failed",
+        "redactor_idle",
         "director_idle",
         "studio_portada",
         "studio_carrusel",

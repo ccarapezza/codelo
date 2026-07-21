@@ -1,3 +1,4 @@
+import type { Core } from "@strapi/strapi";
 import { factories } from "@strapi/strapi";
 import { requireAdmin } from "../../../lib/admin-auth";
 import { logAgentAction } from "../../../lib/audit";
@@ -87,11 +88,19 @@ async function regenerateCoverFor(
   let imagePrompt = "";
   let imageBuffer: Buffer | undefined;
   const MAX_PROMPT_TRIES = 3;
+  // El seedKey lleva un componente que cambia en cada corrida. Antes era
+  // `documentId|title|tryN`: como ninguno de los tres varía entre regeneradas,
+  // el hash daba siempre el mismo número y por lo tanto SIEMPRE el mismo
+  // tratamiento visual para esa nota. Regenerar una portada devolvía otra
+  // escena, sí, pero eternamente linograbado (o eternamente foto).
+  // El hash sigue repartiendo parejo entre notas; lo que se pierde es la
+  // reproducibilidad por nota, que acá no aporta: regenerar ES pedir otra.
+  const rotation = Date.now();
   for (let tryN = 1; tryN <= MAX_PROMPT_TRIES; tryN++) {
     imagePrompt = await chooseImagePrompt(textClient, textModel, {
       title: post.title,
       excerpt: post.excerpt ?? "",
-      seedKey: `${documentId}|${post.title}|${tryN}`,
+      seedKey: `${documentId}|${post.title}|${rotation}|${tryN}`,
       recentDescriptions,
       systemInstructions: imgAgent.imagePromptTemplate?.trim() || promptSettings.imageSystemInstructions,
       themeGuide: promptSettings.imageThemeGuide,
@@ -105,7 +114,12 @@ async function regenerateCoverFor(
       break;
     } catch (err) {
       const empty = ((err as Error).message ?? "").includes("no inline image data");
-      if (!empty || tryN === MAX_PROMPT_TRIES) throw err;
+      if (!empty || tryN === MAX_PROMPT_TRIES) {
+        // Log the offending prompt before giving up: a moderation rejection is
+        // otherwise undiagnosable, since the prompt is only persisted on success.
+        strapi.log.error(`[post] cover generation failed for ${documentId}; prompt was: ${imagePrompt}`);
+        throw err;
+      }
       strapi.log.warn(
         `[post] cover image came back empty for ${documentId}; regenerating prompt (try ${tryN}/${MAX_PROMPT_TRIES})`,
       );
@@ -227,7 +241,138 @@ async function buildCarouselFor(
   });
 }
 
+
+/** Etiqueta tal como la espera la web (ver mapTags en apps/codelo-web/lib/cms.ts). */
+type TagShape = { name: string; slug: string; kind: string; reference?: string | null };
+
+/**
+ * Adjunta las etiquetas a una respuesta ya sanitizada de `find`/`findOne`.
+ * Una sola consulta para todos los posts de la página, no una por post.
+ */
+async function attachTags(
+  strapi: Core.Strapi,
+  ctx: { query?: Record<string, unknown> },
+  response: { data?: unknown },
+): Promise<void> {
+  const rows = Array.isArray(response?.data)
+    ? (response.data as Array<Record<string, unknown>>)
+    : response?.data
+      ? [response.data as Record<string, unknown>]
+      : [];
+  const ids = rows.map((r) => r.documentId).filter((v): v is string => typeof v === "string");
+  if (ids.length === 0) return;
+
+  // Se respetan locale y status del pedido original: si no, una home en `es`
+  // recibiría las etiquetas de la versión borrador o de otro idioma.
+  const status = ctx.query?.status === "draft" ? "draft" : "published";
+  const locale = typeof ctx.query?.locale === "string" ? ctx.query.locale : undefined;
+
+  try {
+    const withTags = (await strapi.documents("api::post.post").findMany({
+      filters: { documentId: { $in: ids } },
+      populate: { tags: { fields: ["name", "slug", "kind", "reference"] } },
+      status,
+      ...(locale ? { locale } : {}),
+      limit: ids.length,
+    })) as unknown as Array<{ documentId: string; tags?: TagShape[] }>;
+
+    const byDoc = new Map(withTags.map((p) => [p.documentId, p.tags ?? []]));
+    for (const row of rows) {
+      row.tags = byDoc.get(row.documentId as string) ?? [];
+    }
+  } catch (err) {
+    // Falla suave: sin etiquetas la home pierde las secciones por área, pero
+    // el listado de notas sigue funcionando.
+    strapi.log.warn(`[post] No se pudieron adjuntar las etiquetas: ${(err as Error).message}`);
+  }
+}
+
+/** Lee `filters[tags][slug][$eq]=x` (o `filters[tags][slug]=x`) si vino. */
+function readTagSlugFilter(ctx: { query?: Record<string, unknown> }): string | null {
+  const filters = ctx.query?.filters as Record<string, unknown> | undefined;
+  const tags = filters?.tags as Record<string, unknown> | undefined;
+  const slug = tags?.slug;
+  if (typeof slug === "string") return slug;
+  const eq = (slug as Record<string, unknown> | undefined)?.$eq;
+  return typeof eq === "string" ? eq : null;
+}
+
+/**
+ * Listado filtrado por etiqueta, servido por el Document Service.
+ *
+ * Devuelve la MISMA forma que `super.find` (`{ data, meta.pagination }`) para
+ * que la web no tenga que distinguir de dónde viene la respuesta.
+ */
+async function findByTag(
+  strapi: Core.Strapi,
+  ctx: { query?: Record<string, unknown> },
+  tagSlug: string,
+): Promise<{ data: unknown[]; meta: { pagination: { page: number; pageSize: number; total: number } } }> {
+  const q = ctx.query ?? {};
+  const pag = (q.pagination ?? {}) as Record<string, unknown>;
+  const pageSize = Math.min(Math.max(Number(pag.pageSize) || 25, 1), 100);
+  const locale = typeof q.locale === "string" ? q.locale : undefined;
+  const status = q.status === "draft" ? ("draft" as const) : ("published" as const);
+
+  try {
+    const rows = (await strapi.documents("api::post.post").findMany({
+      filters: { tags: { slug: tagSlug } },
+      populate: {
+        tags: { fields: ["name", "slug", "kind", "reference"] },
+        coverImage: true,
+      },
+      sort: { publishedAt: "desc" },
+      status,
+      ...(locale ? { locale } : {}),
+      limit: pageSize,
+    })) as unknown as unknown[];
+
+    return {
+      data: rows,
+      meta: { pagination: { page: 1, pageSize, total: rows.length } },
+    };
+  } catch (err) {
+    strapi.log.warn(`[post] Filtro por etiqueta "${tagSlug}" falló: ${(err as Error).message}`);
+    return { data: [], meta: { pagination: { page: 1, pageSize, total: 0 } } };
+  }
+}
+
 export default factories.createCoreController("api::post.post", ({ strapi }) => ({
+  /**
+   * `find` y `findOne` propios que reinyectan las etiquetas.
+   *
+   * Las rutas públicas de post declaran `auth: false` para saltear la cadena de
+   * users-permissions. El efecto colateral es que el sanitizador de Strapi 5
+   * DESCARTA las relaciones a otros content-types: `tags` no vuelve vacío,
+   * vuelve ausente, con cualquier sintaxis de populate, en ambas direcciones y
+   * con o sin token. `coverImage` sobrevive porque es media, no una relación a
+   * content-type. Verificado también contra `generatedByAgent`, que falla igual.
+   *
+   * En vez de desnormalizar la etiqueta en un campo string, se resuelve acá: se
+   * consultan las etiquetas por separado con el Document Service —que no pasa
+   * por ese sanitizador— y se adjuntan al resultado ya sanitizado. El modelo
+   * relacional queda intacto y la web sigue leyendo `post.tags` como siempre.
+   */
+  async find(ctx) {
+    // Filtering by the `tags` relation is rejected by Strapi's query validator
+    // ("Invalid key tags") for the same reason populate was: these routes are
+    // auth:false, so the relation is not in the permitted query shape. Same fix
+    // as attachTags — serve the filtered list from the Document Service, which
+    // is not subject to that validator.
+    const tagSlug = readTagSlugFilter(ctx);
+    if (tagSlug) return findByTag(strapi, ctx, tagSlug);
+
+    const response = await super.find(ctx);
+    await attachTags(strapi, ctx, response);
+    return response;
+  },
+
+  async findOne(ctx) {
+    const response = await super.findOne(ctx);
+    await attachTags(strapi, ctx, response);
+    return response;
+  },
+
   // Admin endpoint — single post, fire-and-forget, returns 202 immediately.
   async generateCover(ctx) {
     if (!(await requireAdmin(ctx, strapi))) return;
@@ -691,7 +836,7 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
           ...(Array.isArray(tags) && tags.length ? { tags } : {}),
           // Admin-authored: no generatedByAgent → the Director's draft pool
           // (filters generatedByAgent != null) will never re-touch it.
-          authorName: authorName?.trim() || (ctx.state.user?.firstname as string) || "Redacción Fulbo",
+          authorName: authorName?.trim() || (ctx.state.user?.firstname as string) || "Redacción Cogollos del Oeste",
         } as never,
         status: "draft",
       })) as unknown as { documentId: string; slug: string };

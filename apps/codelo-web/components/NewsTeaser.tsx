@@ -50,11 +50,11 @@ export function NewsTeaser({ items, intervalMs = 5000 }: Props) {
 
   return (
     // Anchored to the hero's content column — the SAME mx-auto max-w-7xl px-6
-    // box as the "World Cup 2026" title — so the card's left edge lines up
+    // box as the section title — so the card's left edge lines up
     // with the title instead of the viewport edge.
     // `absolute` (not `fixed`): the card lives inside the hero and scrolls
     // away with it instead of following the viewport. The page root is
-    // `relative`, so this anchors to the top of the page CONTENT. The Fulbo
+    // `relative`, so this anchors to the top of the page CONTENT. The
     // logo is `self-start h-28` (112px on lg) so it overflows downward as a
     // masthead — top-32 (128px) drops the card clear below it.
     // pointer-events-none on the full-width strip so only the card is

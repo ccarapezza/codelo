@@ -11,7 +11,7 @@ import type { Core } from "@strapi/strapi";
 
 const UID = "api::agent-action.agent-action";
 
-export type AgentRole = "director" | "redactor" | "image-generator" | "analyst" | "system";
+export type AgentRole = "director" | "redactor" | "image-generator" | "system";
 
 export type AgentAction =
   | "draft_created"
@@ -26,6 +26,7 @@ export type AgentAction =
   | "post_translated"
   | "translation_failed"
   | "agent_failed"
+  | "redactor_idle"
   | "director_idle"
   | "studio_portada"
   | "studio_carrusel"

@@ -29,7 +29,7 @@ REDIS_URL=redis://:REPLACE_WITH_REDIS_PASSWORD_ABOVE@redis:6379
 OPENAI_API_KEY=sk-replace-with-real-key
 
 # Strapi CORS — set to your production origin(s), comma-separated.
-CORS_ALLOWED_ORIGINS=https://cogollosdeloeste.example
+CORS_ALLOWED_ORIGINS=https://cogollosdeloeste.com.ar
 
 # Reminders:
 #  - Replace REPLACE_WITH_POSTGRES_PASSWORD_ABOVE in DATABASE_URL with the actual value.

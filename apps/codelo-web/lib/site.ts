@@ -1,7 +1,7 @@
 // Single source of truth for site identity. Everything imports from here.
-// The real domain is TBD; override via env.
+// Domain per the association's statute (Art. 2-B); override via env.
 export const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://cogollosdeloeste.example"
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://cogollosdeloeste.com.ar"
 ).replace(/\/$/, "");
 export const SITE_NAME = "Cogollos del Oeste";
 export const SITE_LOGO = `${SITE_URL}/icon.png`;
