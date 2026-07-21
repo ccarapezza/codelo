@@ -1,7 +1,7 @@
 {
   "site": {
-    "title": "Cogollos del Oeste — agrupación cannábica",
-    "description": "Portal de la agrupación cannábica Cogollos del Oeste: información de cultivo responsable, REPROCANN, actividades y noticias."
+    "title": "Cogollos del Oeste — asociación civil",
+    "description": "Portal de Cogollos del Oeste, asociación civil sin fines de lucro del oeste de CABA: etnobotánica, derechos humanos, reducción de daños, ambiente y actividades."
   },
   "common": {
     "loading": "Cargando…",
@@ -12,6 +12,7 @@
     "home": "Inicio",
     "about": "Quiénes somos",
     "reprocann": "REPROCANN",
+    "seeds": "Semillas",
     "events": "Actividades",
     "blog": "Noticias",
     "contact": "Contacto"
@@ -23,38 +24,167 @@
     "themeLabel": "Tema"
   },
   "footer": {
-    "sectionSite": "La agrupación",
+    "sectionSite": "La asociación",
     "sectionInfo": "Información",
     "sectionEditorial": "Editorial",
-    "tagline": "Agrupación cannábica del oeste del Gran Buenos Aires: cultivo responsable, información y comunidad.",
+    "tagline": "Asociación civil sin fines de lucro del oeste de la Ciudad de Buenos Aires: etnobotánica, derechos humanos, reducción de daños y ambiente.",
     "ariaNav": "Mapa del sitio",
     "copyright": "© {year} Cogollos del Oeste.",
     "disclaimer": "Información de divulgación · +18"
   },
   "home": {
+    "kicker": "Asociación civil · Oeste de CABA",
     "title": "Cogollos del Oeste",
-    "intro": "Somos una agrupación cannábica del oeste del Gran Buenos Aires. Acá vas a encontrar información de cultivo responsable, el marco legal vigente y nuestras actividades.",
-    "upcomingEvents": "Próximas actividades",
+    "intro": "Somos una asociación civil sin fines de lucro del oeste de la Ciudad de Buenos Aires (CABA). Trabajamos sobre el conocimiento etnobotánico de plantas y hongos, los derechos humanos, la reducción de daños y el cuidado del ambiente.",
+    "ctaAbout": "Conocé la asociación",
+    "ctaReprocann": "REPROCANN",
+    "axesTitle": "Nuestros ejes",
+    "axisEthnoTitle": "Etnobotánica",
+    "axisEthnoBody": "Conocimiento y relevamiento bibliográfico de plantas y hongos, con énfasis en Cannabis y en el cáñamo para uso agroindustrial y alimentario.",
+    "axisRightsTitle": "Derechos humanos y salud",
+    "axisRightsBody": "Derecho a la salud, soberanía alimentaria y estrategias de reducción de daños frente al consumo problemático de sustancias.",
+    "axisEnvTitle": "Ambiente",
+    "axisEnvBody": "Preservación del medio ambiente y aprovechamiento sustentable de los recursos naturales.",
+    "axesNote": "En ningún caso promovemos el consumo de sustancia alguna, lícita o no.",
+    "upcomingEvents": "Agenda",
     "allEvents": "Ver todas",
-    "noEvents": "No hay actividades programadas por ahora.",
+    "noEvents": "No hay eventos agendados por ahora.",
     "latestNews": "Últimas noticias",
     "allNews": "Ver todas",
-    "noPosts": "Todavía no hay notas publicadas."
+    "noPosts": "Todavía no hay notas publicadas.",
+    "boletinTitle": "Boletín Oficial",
+    "boletinEmpty": "Sin novedades normativas en el período.",
+    "featured": "Destacada",
+    "readMore": "Leer",
+    "mission": "Asociación civil sin fines de lucro del oeste de CABA. Etnobotánica de plantas y hongos, derechos humanos, reducción de daños y ambiente.",
+    "boletinEyebrow": "Vigilancia normativa",
+    "boletinExplain": "Rastreamos todos los días el Boletín Oficial y traemos acá las normas que tocan al cannabis, el cáñamo, los estupefacientes y las políticas de drogas. Cada entrada lleva al texto original.",
+    "boletinSource": "Ver en boletinoficial.gob.ar",
+    "sectionsIntro": "Por área",
+    "beatNotes": {
+      "legales": "Normas, trámites y fallos que cambian las reglas.",
+      "ciencia": "Estudios sobre plantas, hongos y salud, leídos con lupa.",
+      "industria": "Cáñamo, cadena productiva y marco regulatorio argentino.",
+      "cultura": "Historia, activismo y la vida de la comunidad.",
+      "ambiente": "Cultivo, agroecología y uso sustentable de los recursos.",
+      "politica-drogas": "Prohibicionismo, reformas y debates más allá de Argentina.",
+      "hongos": "Reino Fungi: micología, etnomicología y cultivo.",
+      "historia": "De dónde viene todo esto: relatos, mitos y memoria.",
+      "personajes": "Historias de quienes cruzaron su vida con la planta."
+    },
+    "latestRail": "Últimas",
+    "latestRailEmpty": "Todo lo publicado ya está en esta portada.",
+    "byArea": "Por área",
+    "serviceTitle": "Asesoramiento",
+    "serviceNote": "Somos una asociación civil: acompañamos consultas. No vendemos ni recomendamos productos.",
+    "serviceReprocann": "REPROCANN: requisitos y plazos",
+    "serviceAbout": "Quiénes somos y qué hacemos",
+    "serviceContact": "Escribinos una consulta",
+    "wx": {
+      "eyebrow": "Termohigrómetro",
+      "temperatura": "Temperatura",
+      "humedad": "Humedad relativa",
+      "hora": "Hora local",
+      "vpd": "DPV",
+      "vpdExplain": "DPV: déficit de presión de vapor, cuánta humedad más admitiría el aire antes de saturarse.",
+      "estado": {
+        "despejado": "Despejado",
+        "parcial": "Parcialmente nublado",
+        "nublado": "Nublado",
+        "niebla": "Niebla",
+        "llovizna": "Llovizna",
+        "lluvia": "Lluvia",
+        "nieve": "Nieve",
+        "tormenta": "Tormenta"
+      },
+      "usarUbicacion": "Usar mi ubicación",
+      "volverDefault": "Volver a Buenos Aires",
+      "pidiendo": "Buscando…",
+      "denegado": "Permiso de ubicación denegado",
+      "errorUbicacion": "No se pudo obtener la ubicación",
+      "sinLectura": "Sin lectura",
+      "sinLecturaExplain": "No se pudo consultar el estado del aire en este momento.",
+      "avisos": {
+        "helada": {
+          "texto": "Helada. El daño por congelamiento del tejido es probable, sobre todo en plantas jóvenes.",
+          "accion": "Cubrir con material permeable, o adelantar la cosecha si las flores están maduras."
+        },
+        "riesgoHelada": {
+          "texto": "Riesgo de helada: con cielo despejado y sin viento, la superficie del cultivo puede estar 2 a 4 °C por debajo de esta lectura.",
+          "accion": "Conviene cubrir al anochecer."
+        },
+        "calorExtremo": {
+          "texto": "Calor extremo. Cerca de los 40 °C la fotosíntesis cae entre 16 % y 38 % según la variedad.",
+          "accion": "Sombra parcial en las horas centrales y riego a primera hora."
+        },
+        "botrytisVentana": {
+          "texto": "Ventana de infección para moho gris: con más de 8 a 12 horas de hoja mojada en este rango de temperatura, Botrytis germina.",
+          "accion": "Mejorar la circulación de aire y evitar mojar el follaje."
+        },
+        "condensacion": {
+          "texto": "Condensación probable sobre las hojas esta noche. El rocío prolongado es el principal disparador del moho gris.",
+          "accion": "Priorizar la aireación y revisar los cogollos más densos por la mañana."
+        },
+        "hongosFavorable": {
+          "texto": "Condiciones favorables para hongos foliares: en cannabis se describe desarrollo de moho gris desde 70 % de humedad entre 17 y 24 °C.",
+          "accion": "Espaciar las plantas y evitar que el follaje quede mojado más de 12 horas."
+        },
+        "oidio": {
+          "texto": "Humedad alta con follaje seco: el oídio se favorece justo así y no necesita hoja mojada para infectar.",
+          "accion": "Revisar el envés de las hojas y mejorar la ventilación entre plantas."
+        },
+        "demandaMuyAlta": {
+          "texto": "Demanda evaporativa muy alta: la planta pierde agua más rápido de lo que la raíz puede reponer si el suelo está seco.",
+          "accion": "Verificar la humedad del suelo; regar temprano o al atardecer."
+        },
+        "demandaAlta": {
+          "texto": "Demanda evaporativa elevada: por encima de 2 kPa la transpiración empieza a reducirse en la mayoría de los cultivos.",
+          "accion": "Con el suelo bien provisto de agua no es un problema; controlar el riego."
+        },
+        "aireQuieto": {
+          "texto": "Aire casi saturado: la transpiración se frena y la humedad se acumula en el follaje.",
+          "accion": "Favorecer el movimiento de aire alrededor de las plantas."
+        },
+        "favorable": {
+          "texto": "Condiciones favorables: buena demanda evaporativa y baja presión de enfermedades.",
+          "accion": "Sin acciones particulares."
+        },
+        "neutro": {
+          "texto": "Sin alertas activas.",
+          "accion": "El valor del aire subestima la humedad dentro de los cogollos densos: conviene revisarlos igual."
+        }
+      },
+      "avisoNota": "Los valores son del aire exterior. Dentro de una inflorescencia densa la humedad es mayor, y una hoja al sol puede superar por varios grados la temperatura del aire. Las tablas de VPD por etapa que circulan en internet son de cultivo en interior con ambiente controlado y no se trasladan a campo.",
+      "titulo": "Termohigrómetro en tiempo real",
+      "ayudaLabel": "Qué significan estos valores",
+      "subtitulo": "Datos para cultivo exterior"
+    },
+    "carouselPrev": "Nota destacada anterior",
+    "carouselNext": "Nota destacada siguiente",
+    "carouselGoTo": "Ir a la nota destacada",
+    "carouselOf": "de"
   },
   "pages": {
-    "missing": "Esta página todavía no tiene contenido cargado en el CMS."
+    "missing": "Esta página todavía no tiene contenido cargado en el CMS.",
+    "eyebrowAbout": "La asociación",
+    "eyebrowReprocann": "Información",
+    "eyebrowContact": "Contacto"
   },
   "events": {
-    "title": "Actividades",
-    "upcomingTitle": "Próximas",
-    "pastTitle": "Pasadas",
-    "upcoming": "Próxima",
-    "past": "Realizada",
-    "emptyUpcoming": "No hay actividades programadas por ahora. Seguinos en redes para enterarte de las próximas."
+    "title": "Agenda",
+    "eyebrow": "Agenda del sector",
+    "tagline": "Encuentros, ferias y jornadas de interés para la comunidad. Los organizan terceros; acá los reunimos para que no se te pasen.",
+    "upcomingTitle": "Próximos",
+    "pastTitle": "Pasados",
+    "upcoming": "Próximo",
+    "past": "Realizado",
+    "organizedBy": "Organiza",
+    "officialSite": "Sitio oficial",
+    "emptyUpcoming": "No hay eventos agendados por ahora."
   },
   "blog": {
     "title": "Noticias",
-    "tagline": "Notas, guías y novedades de la agrupación.",
+    "tagline": "Notas, guías y novedades de la asociación.",
     "eyebrow": "Editorial",
     "empty": "Todavía no hay notas publicadas.",
     "emptyContent": "Esta nota no tiene contenido.",
@@ -75,5 +205,60 @@
   },
   "postListItem": {
     "read": "Leer"
+  },
+  "tags": {
+    "eyebrow": "Área",
+    "count": "{count, plural, one {# nota} other {# notas}}",
+    "backToBlog": "Ver todas las noticias"
+  },
+  "seeds": {
+    "title": "Semillas",
+    "eyebrow": "Registros públicos de INASE",
+    "tagline": "Consultá qué cultivares de cannabis y cáñamo están inscriptos en el Catálogo Nacional, y qué operadores figuran en el padrón oficial de semillas.",
+    "disclaimerTitle": "Cómo leer esta información",
+    "disclaimer": "Estos datos son un espejo de los registros públicos de INASE, actualizado periódicamente. No somos INASE ni reemplazamos su consulta oficial: ante cualquier duda, verificá en la fuente.",
+    "syncedAt": "Datos de INASE al",
+    "officialSource": "Consulta oficial en INASE",
+    "cultivaresTitle": "Cultivares inscriptos",
+    "cultivaresTagline": "Variedades de cannabis y cáñamo con inscripción en el Registro Nacional de Cultivares (RNC) y/o título de propiedad (RNPC).",
+    "cultivaresCount": "cultivares de cannabis y cáñamo",
+    "cultivaresEmpty": "No hay cultivares cargados todavía.",
+    "searchCultivares": "Buscar por cultivar u obtentor",
+    "operadoresTitle": "Operadores del padrón",
+    "operadoresTagline": "Empresas y personas inscriptas en el Registro Nacional de Comercio y Fiscalización de Semillas (RNCyFS).",
+    "searchOperadores": "Buscar por razón social, CUIT o número de inscripción",
+    "operadoresEmpty": "No encontramos operadores con ese criterio.",
+    "operadoresHint": "Escribí al menos dos caracteres para buscar.",
+    "notListed": "No figura en el padrón vigente de INASE",
+    "notListedHelp": "Que no aparezca no significa que el operador sea irregular: puede tratarse de una baja posterior, un rótulo viejo, un error de lectura del número, o del desfasaje del padrón, que INASE actualiza cada 48 horas. Verificá en la consulta oficial antes de sacar conclusiones.",
+    "registro": "Registro",
+    "cultivar": "Cultivar",
+    "especie": "Especie",
+    "nombreCientifico": "Nombre botánico",
+    "pais": "País de origen",
+    "obtentor": "Obtentor",
+    "obtentorHelp": "Quien registró la genética. No es necesariamente quien fracciona y rotula el paquete.",
+    "identificador": "Identificador",
+    "identificadorHelp": "Quien fracciona y rotula. Es el número de inscripción RNCyFS que figura en el rótulo.",
+    "representante": "Representante",
+    "altaRnc": "Alta en RNC",
+    "altaRnpc": "Título RNPC",
+    "validezRnpc": "Vigencia del título",
+    "rncHelp": "El RNC habilita la comercialización de la variedad.",
+    "rnpcHelp": "El RNPC es el título de propiedad del obtentor. Dura 20 años y no habilita por sí solo la venta.",
+    "sinRnc": "Sin inscripción en RNC",
+    "sinRnpc": "Sin título de propiedad",
+    "categorias": "Categorías habilitadas",
+    "categoriasHelp": "Las categorías describen la actividad habilitada, no las especies: un operador puede operar sólo con las especies para las que está inscripto, dato que el padrón no publica.",
+    "localidad": "Localidad",
+    "cuit": "CUIT",
+    "numeroInscripcion": "N° de inscripción",
+    "verCultivar": "Ver cultivar",
+    "verOperador": "Ver operador",
+    "cultivaresDelOperador": "Cultivares inscriptos a su nombre",
+    "volver": "Volver a semillas",
+    "categoriasSource": "Ver las categorías del RNCyFS en INASE (PDF)",
+    "verTodos": "más",
+    "verMenos": "Ver menos"
   }
 }

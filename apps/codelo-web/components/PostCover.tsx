@@ -8,6 +8,9 @@ type Props = {
   className?: string;
   sizes?: string;
   priority?: boolean;
+  /** Carga inmediata sin preload. Para el carrusel: las diapositivas fuera de
+      pantalla quedan lazy y al avanzar se ve el hueco negro del contenedor. */
+  eager?: boolean;
   /**
    * Best Strapi-generated format to request given the rendered context.
    * "large" (~1000px) for hero, "medium" (~750px) for featured cards,
@@ -21,7 +24,15 @@ function pickUrl(image: CmsImage, format: Props["format"]): string {
   return image.formats?.[format] ?? image.url;
 }
 
-export function PostCover({ image, alt, className, sizes, priority, format = "medium" }: Props) {
+export function PostCover({
+  image,
+  alt,
+  className,
+  sizes,
+  priority,
+  eager,
+  format = "medium",
+}: Props) {
   const src = pickUrl(image, format);
   const width = image.width ?? 1536;
   const height = image.height ?? 1024;
@@ -35,6 +46,9 @@ export function PostCover({ image, alt, className, sizes, priority, format = "me
       height={height}
       sizes={sizes ?? "(min-width: 1024px) 50vw, 100vw"}
       priority={priority}
+      // `eager` sin `priority`: empieza a bajar ya, pero no compite con la
+      // primera portada por el preload y no degrada el LCP.
+      loading={!priority && eager ? "eager" : undefined}
       quality={70}
       className={cn("object-cover", className)}
       // Optimize through Next: Strapi serves big PNGs with no caching

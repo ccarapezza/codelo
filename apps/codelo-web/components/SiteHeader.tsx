@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import { SITE_NAME } from "@/lib/site";
 import { MobileNav, type NavItem } from "./MobileNav";
@@ -10,6 +11,7 @@ export async function SiteHeader() {
     { href: "/", label: tNav("home") },
     { href: "/quienes-somos", label: tNav("about") },
     { href: "/reprocann", label: tNav("reprocann") },
+    { href: "/semillas", label: tNav("seeds") },
     { href: "/actividades", label: tNav("events") },
     { href: "/blog", label: tNav("blog") },
     { href: "/contacto", label: tNav("contact") },
@@ -18,17 +20,29 @@ export async function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/30 bg-background/55 backdrop-blur-md supports-[backdrop-filter]:bg-background/45">
       <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-6 sm:h-16">
-        {/* Text wordmark placeholder until real branding exists. */}
+        {/* Marca: el sello del logo + el nombre. El sello es la única forma
+            circular de todo el sitio, así que funciona como ancla de identidad
+            contra una maqueta hecha de filetes y ángulos rectos. */}
         <Link
           href="/"
           aria-label={tHeader("logoAlt")}
-          className="flex shrink-0 items-center text-xl font-bold tracking-tight"
+          className="flex shrink-0 items-center font-wordmark text-2xl font-extrabold tracking-tight uppercase"
         >
+          <Image
+            src="/icons/logo.png"
+            alt=""
+            width={36}
+            height={36}
+            className="mr-2.5 h-9 w-9"
+            priority
+          />
           {SITE_NAME}
         </Link>
 
-        {/* Desktop nav — hidden on mobile (< md). */}
-        <nav className="hidden items-center gap-1 md:flex">
+        {/* `lg` y no `md`: con siete ítems más el conmutador de tema el nav
+            no entra a 768 px y empujaba el ancho del documento. Entre md y lg
+            manda el menú hamburguesa. */}
+        <nav className="hidden items-center gap-1 lg:flex">
           {NAV.map(item => (
             <Link
               key={item.href}

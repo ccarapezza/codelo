@@ -5,17 +5,27 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Constantes de marca. A diferencia de los tokens de tema, estas NO se
+   invierten: son las dos tintas físicas del logo. Las usan el duotono y la
+   banda del pie, que son tratamientos de impresión y no superficies de UI. */
+:root {
+  --brand-ink: #00001c;
+  --brand-sun: #e4b569;
+  --brand-paper: #f6e6cc;
+}
+
 /* Default shadcn tokens (neutral palette) — real branding/theme comes later.
    font-display/serif/mono map to the sans stack so copied components keep
    working; swap in real fonts when the visual identity lands. */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-sans);
-  --font-heading: var(--font-sans);
-  --font-display: var(--font-sans);
-  --font-serif: var(--font-sans);
+  --font-sans: var(--font-serif);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-display);
+  --font-display: var(--font-display);
+  --font-wordmark: var(--font-wordmark);
+  --font-serif: var(--font-serif);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -49,6 +59,12 @@
   --color-live-foreground: var(--live-foreground);
   --color-gold: var(--gold);
   --color-gold-foreground: var(--gold-foreground);
+  --color-cta: var(--cta);
+  --color-cta-foreground: var(--cta-foreground);
+  --color-ink: var(--ink);
+  --color-sun: var(--sun);
+  --color-ember: var(--ember);
+  --color-rule: var(--rule);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -58,83 +74,128 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Light theme — shadcn neutral defaults. */
+/* ── Dirección "Dos Tintas" ──────────────────────────────────────────────
+   Tomada del logo: NO es negro neutro sobre crema. La tinta es #00001C, un
+   negro azulado (0,0,28) muestreado del propio logo, y la luz es el ámbar
+   #E4B569 del sol. Dos tintas sobre papel cálido, como una serigrafía.
+   Muestreo: 34.6% tinta · 34.2% ámbar · 22% ocre.                          */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --live: oklch(0.577 0.245 27.325);
-  --live-foreground: oklch(0.985 0 0);
-  --gold: oklch(0.828 0.189 84.429);
-  --gold-foreground: oklch(0.205 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --ink: oklch(0.145 0.045 275); /* #00001C — azul-negro del logo   */
+  --sun: oklch(0.807 0.104 76); /* #E4B569 — ámbar, la luz         */
+  --ember: oklch(0.715 0.113 52); /* #D89457 — ocre, acento cálido   */
+  --rule: oklch(0.145 0.045 275 / 18%); /* filete: tinta al 18%            */
+
+  /* ---- Tintas de DATO (gráficos de /semillas) --------------------------
+     Dos series, y las dos salen de la marca: el ocre del logo y la MISMA
+     tinta pero "abierta". El negro de codelo no es neutro —es azul, hue
+     275—, así que abrirlo da un hue a 199° del ocre sin traer un color
+     ajeno a la paleta. Eso es lo que permite tener color sin romper las
+     dos tintas ni meter el verde que el logo no tiene.
+
+     Significado FIJO en todo el sitio: ámbar = RNC (comercialización),
+     tinta = RNPC (propiedad). El color sigue a la entidad, nunca al orden
+     ni al valor.
+
+     Pasos validados con el validador del skill de dataviz (no elegidos a
+     ojo). Claro sobre papel #f6e6cc: CVD ΔE 20.3, visión normal 24.0,
+     contraste ≥3:1. El ocre está DELIBERADAMENTE más oscuro que --ember:
+     el ocre de interfaz da 2.13:1 sobre el papel y no llega al piso de
+     3:1 que exige una superficie de dato.                              */
+  --data-rnc: #b96831;
+  --data-rnpc: #525ca1;
+
+  --background: oklch(0.931 0.039 80); /* #F6E6CC papel tintado con el ámbar */
+  --foreground: oklch(0.145 0.045 275);
+  --card: oklch(0.972 0.022 80);
+  --card-foreground: oklch(0.145 0.045 275);
+  --popover: oklch(0.972 0.022 80);
+  --popover-foreground: oklch(0.145 0.045 275);
+  --primary: oklch(0.145 0.045 275); /* la tinta ES el color primario   */
+  --primary-foreground: oklch(0.931 0.039 80);
+  --secondary: oklch(0.893 0.05 80);
+  --secondary-foreground: oklch(0.145 0.045 275);
+  --muted: oklch(0.893 0.05 80);
+  --muted-foreground: oklch(0.44 0.035 275);
+  --accent: oklch(0.807 0.104 76);
+  --accent-foreground: oklch(0.145 0.045 275);
+  --destructive: oklch(0.55 0.2 27);
+  --border: oklch(0.145 0.045 275 / 18%);
+  --input: oklch(0.145 0.045 275 / 22%);
+  --ring: oklch(0.715 0.113 52);
+  --cta: oklch(0.715 0.113 52);
+  --cta-foreground: oklch(0.145 0.045 275);
+  --live: oklch(0.55 0.2 27);
+  --live-foreground: oklch(0.972 0.022 80);
+  --gold: oklch(0.807 0.104 76);
+  --gold-foreground: oklch(0.145 0.045 275);
+  --chart-1: oklch(0.145 0.045 275);
+  --chart-2: oklch(0.807 0.104 76);
+  --chart-3: oklch(0.715 0.113 52);
+  --chart-4: oklch(0.44 0.035 275);
+  --chart-5: oklch(0.6 0.09 140);
+  --radius: 0.125rem; /* casi cero: registro de imprenta */
+  --sidebar: oklch(0.931 0.039 80);
+  --sidebar-foreground: oklch(0.145 0.045 275);
+  --sidebar-primary: oklch(0.145 0.045 275);
+  --sidebar-primary-foreground: oklch(0.931 0.039 80);
+  --sidebar-accent: oklch(0.893 0.05 80);
+  --sidebar-accent-foreground: oklch(0.145 0.045 275);
+  --sidebar-border: oklch(0.145 0.045 275 / 18%);
+  --sidebar-ring: oklch(0.715 0.113 52);
 }
 
-/* Dark theme — shadcn neutral defaults. */
+/* Oscuro: se invierte la serigrafía — la tinta pasa a ser el lienzo y el
+   papel queda como texto. El ámbar sigue siendo la única fuente de luz.   */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --live: oklch(0.704 0.191 22.216);
-  --live-foreground: oklch(0.985 0 0);
-  --gold: oklch(0.828 0.189 84.429);
-  --gold-foreground: oklch(0.205 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --ink: oklch(0.931 0.039 80);
+  --sun: oklch(0.842 0.112 76);
+  --ember: oklch(0.762 0.124 52);
+  --rule: oklch(0.949 0.017 78 / 16%);
+
+  /* Pasos oscuros ELEGIDOS, no invertidos: la banda de luminosidad del
+     modo oscuro (L 0.48–0.67) es distinta de la clara, y el ocre claro
+     se sale por arriba. Revalidados sobre #090c20: CVD ΔE 23.1, visión
+     normal 25.7, contraste ≥3:1. */
+  --data-rnc: #ce773e;
+  --data-rnpc: #6977d3;
+
+  --background: oklch(0.165 0.042 275);
+  --foreground: oklch(0.93 0.015 78);
+  --card: oklch(0.205 0.04 275);
+  --card-foreground: oklch(0.93 0.015 78);
+  --popover: oklch(0.205 0.04 275);
+  --popover-foreground: oklch(0.93 0.015 78);
+  --primary: oklch(0.842 0.112 76);
+  --primary-foreground: oklch(0.165 0.042 275);
+  --secondary: oklch(0.26 0.04 275);
+  --secondary-foreground: oklch(0.93 0.015 78);
+  --muted: oklch(0.26 0.04 275);
+  --muted-foreground: oklch(0.72 0.03 78);
+  --accent: oklch(0.3 0.05 275);
+  --accent-foreground: oklch(0.93 0.015 78);
+  --destructive: oklch(0.65 0.19 27);
+  --border: oklch(0.949 0.017 78 / 16%);
+  --input: oklch(0.949 0.017 78 / 20%);
+  --ring: oklch(0.842 0.112 76);
+  --cta: oklch(0.762 0.124 52);
+  --cta-foreground: oklch(0.165 0.042 275);
+  --live: oklch(0.65 0.19 27);
+  --live-foreground: oklch(0.93 0.015 78);
+  --gold: oklch(0.842 0.112 76);
+  --gold-foreground: oklch(0.165 0.042 275);
+  --chart-1: oklch(0.842 0.112 76);
+  --chart-2: oklch(0.762 0.124 52);
+  --chart-3: oklch(0.93 0.015 78);
+  --chart-4: oklch(0.72 0.03 78);
+  --chart-5: oklch(0.7 0.1 140);
+  --sidebar: oklch(0.205 0.04 275);
+  --sidebar-foreground: oklch(0.93 0.015 78);
+  --sidebar-primary: oklch(0.842 0.112 76);
+  --sidebar-primary-foreground: oklch(0.165 0.042 275);
+  --sidebar-accent: oklch(0.3 0.05 275);
+  --sidebar-accent-foreground: oklch(0.93 0.015 78);
+  --sidebar-border: oklch(0.949 0.017 78 / 16%);
+  --sidebar-ring: oklch(0.842 0.112 76);
 }
 
 @layer base {
@@ -147,9 +208,581 @@
   html {
     @apply font-sans;
   }
+  /* Titulares en la display (Fraunces). El cuerpo queda en Literata. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
 }
 
 /* Live indicator red glow — used on LIVE chips/badges. */
 .live-glow {
   box-shadow: 0 0 12px color-mix(in oklch, var(--live) 55%, transparent);
 }
+
+/* Editorial drop cap on the opening paragraph of a long-form article
+   (Editorial Grid / Magazine treatment). Scoped to .article-body so it only
+   affects the post body, never excerpts or teasers. */
+.article-body > p:first-of-type::first-letter {
+  float: left;
+  margin-right: 0.5rem;
+  padding-top: 0.35rem;
+  font-family: var(--font-serif);
+  font-size: 3.75rem;
+  font-weight: 600;
+  line-height: 0.8;
+  /* La capitular va en la segunda tinta: en una impresión a dos colores es
+     justo lo que se imprime aparte. */
+  color: var(--ember);
+}
+
+/* Small screens: a full-size drop cap eats too much of the measure. */
+@media (max-width: 480px) {
+  .article-body > p:first-of-type::first-letter {
+    font-size: 2.75rem;
+  }
+}
+
+/* ── FIRMA: portadas a dos tintas ────────────────────────────────────────
+   Toda imagen de portada se imprime en las dos tintas del logo. No es un
+   filtro decorativo: (a) unifica portadas generadas por IA que si no
+   parecerían banco de imágenes suelto, (b) abstrae la fotografía, lo que
+   juega a favor de la regla editorial de no mostrar caras ni consumo, y
+   (c) hace que el sitio se reconozca de un vistazo.
+
+   Técnica: la imagen en escala de grises va en `screen` sobre la tinta —las
+   sombras adoptan el azul-negro— y encima el ámbar en `multiply` tiñe las
+   luces. Resultado: dos tintas, sin tonos intermedios ajenos a la marca. */
+.duotone {
+  position: relative;
+  background-color: var(--brand-ink);
+  isolation: isolate;
+}
+.duotone > img,
+.duotone > * > img {
+  /* Duotono PARCIAL, no pleno. Al 100% unificaba las portadas pero dejaba el
+     sitio apagado: todo caía en una sola banda de color. Dejando pasar parte
+     del color original siguen siendo de la misma familia —todo tirado hacia
+     el atardecer del logo— pero conservan profundidad. Sigue abstrayendo lo
+     suficiente para que ninguna foto se lea como retrato.
+
+     Estos valores son los de MODO CLARO; el oscuro los pisa más abajo. El
+     problema que resuelven: `contrast(1.5)` no aplanaba las portadas claras
+     (0.592 → 0.594 de luminancia) pero APLASTABA las oscuras (0.102 → 0.036),
+     y desde que las portadas rotan tratamiento hay fotos nocturnas de fábrica.
+     Sobre papel #F6E6CC ese bloque casi negro se leía como un agujero.
+     Medido sobre las 8 portadas más recientes:
+       antes:  luz 0.395 · saturación 0.364 · más oscura 0.022
+       ahora:  luz 0.505 · saturación 0.522 · más oscura 0.166
+     El `saturate` alto compensa el gris y el velo ámbar: la saturación final
+     (0.522) queda casi en la de la imagen original (0.542), no por encima. */
+  filter: grayscale(0.35) brightness(1.26) saturate(1.9);
+}
+.dark .duotone > img,
+.dark .duotone > * > img {
+  /* En oscuro el bloque entintado apoya sobre un fondo que lo acompaña, así
+     que el tratamiento fuerte original sigue siendo el correcto. */
+  filter: grayscale(0.55) contrast(1.5) brightness(1.06) saturate(1.15);
+}
+
+.duotone::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: var(--brand-sun);
+  mix-blend-mode: multiply;
+  opacity: 0.34;
+  pointer-events: none;
+  z-index: 1;
+}
+.dark .duotone::after {
+  opacity: 0.45;
+}
+
+/* Velo de papel en `screen`, solo en claro. `multiply` y `brightness` no pueden
+   levantar un negro —multiplican— así que sin esta capa la portada nocturna se
+   quedaba en 0.118. Con 6% sube a 0.166 y además ata la imagen al papel del
+   fondo. Va por encima del velo ámbar (z-index 2) para levantar el resultado
+   final, no la imagen cruda. */
+.duotone::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: var(--brand-paper);
+  mix-blend-mode: screen;
+  opacity: 0.06;
+  pointer-events: none;
+  z-index: 2;
+}
+.dark .duotone::before {
+  content: none;
+}
+
+/* Etiquetas de sección/metadata: el registro de ficha que separa dato de
+   relato. Mono, versalitas, tracking abierto. */
+.label {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Filete de sección: regla gruesa en ámbar sobre la que se apoya el título,
+   tomado de la gramática de las secciones de un diario. */
+.section-rule {
+  border-top: 3px solid var(--sun);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Banda de pie: la tinta del logo. Se fija en los mismos valores en claro y
+   en oscuro —no usa los tokens que se invierten con el tema— porque es el
+   remate de identidad, no una superficie más de la interfaz. */
+.footer-ink {
+  background-color: var(--brand-ink);
+  color: var(--brand-paper);
+}
+
+/* Panel del Boletín Oficial: la segunda superficie en tinta del sitio, después
+   del pie. Se le da peso propio porque no es una barra lateral de enlaces sino
+   la pieza que distingue al portal — vigilancia normativa en fuente primaria.
+   Igual que el pie y el duotono, usa las constantes de marca y NO se invierte
+   con el tema: es una pieza impresa, no una superficie de interfaz. */
+.boletin-panel {
+  /* Recuadro entintado, NO bloque de tinta plena. Con el fondo en #00001C el
+     salto de luminancia contra el papel era de 0.145 a 0.931 —un agujero negro
+     en la página—. Un tono más profundo que el papel, con barra ámbar arriba y
+     filete de tinta, destaca el panel sin partir la composición: es el recurso
+     de un recuadro de diario. */
+  background-color: oklch(0.885 0.052 80);
+  border: 1px solid oklch(0.145 0.045 275 / 22%);
+  border-top: 5px solid var(--sun);
+}
+.dark .boletin-panel {
+  background-color: oklch(0.235 0.045 275);
+  border-color: oklch(0.949 0.017 78 / 18%);
+  border-top-color: var(--sun);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TERMOHIGRÓMETRO
+
+   Igual que el pie, el duotono y el panel del Boletín, usa las constantes de
+   marca y NO se invierte con el tema: es un objeto impreso, no una superficie
+   de interfaz.
+
+   El bisel va en tinta plena y SIN barra ámbar arriba, a diferencia de
+   `.boletin-panel`. Los dos viven pegados en el mismo riel: repetir el gesto
+   ámbar hacía que el aside se leyera como dos cajas peleándose por el mismo
+   rol. Acá el contraste de material (objeto en tinta / recuadro entintado)
+   es lo que los separa.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.termo-bisel {
+  /* Cuerpo moldeado. La luz viene de arriba, igual que en el sello: filo
+     superior iluminado, canto inferior en sombra. Todo con `inset`, es decir
+     modelado del propio material — no una tarjeta flotando. */
+  background-color: var(--brand-ink);
+  /* Sombreado del cuerpo: la cara de arriba recibe la luz, la de abajo queda
+     en sombra. Es modelado de material, no un gradiente decorativo — el mismo
+     criterio con el que el reflejo del cristal está permitido. */
+  /* La CARA va iluminada y el canto queda en la tinta pura: un objeto negro
+     mirado de frente tiene la cara más clara que su pared lateral, y si la cara
+     ya está en el piso de luminancia no queda rango para dibujar el espesor.
+     Por eso `--brand-ink` pasó a ser el color del canto, no el de la cara. */
+  background-image: linear-gradient(180deg, oklch(0.245 0.052 275) 0%, oklch(0.19 0.048 275) 62%);
+  color: var(--brand-paper);
+  border-radius: calc(var(--radius) * 4);
+  padding: 0.75rem;
+  /* ESPESOR REAL, no elevación. Una sombra difusa solo dice "esto flota"; lo
+     que hace leer un objeto como grueso es ver su PARED LATERAL. Se dibuja con
+     una pila de sombras sin desenfoque, cada una 1 px más abajo y un poco más
+     oscura: leídas juntas forman un canto sólido de 9 px que sigue el radio de
+     las esquinas, como el lomo de la carcasa vista casi de frente.
+     Recién debajo de ese canto va la sombra proyectada, que ahora arranca a
+     10 px porque el objeto apoya sobre su base, no sobre su cara. */
+  box-shadow:
+    inset 0 1px 0 oklch(0.949 0.017 78 / 22%),
+    inset 0 -1px 0 oklch(0 0 0 / 55%),
+    inset 0 0 0 1px oklch(0 0 0 / 32%),
+    0 1px 0 oklch(0.145 0.045 275),
+    0 2px 0 oklch(0.138 0.044 275),
+    0 3px 0 oklch(0.131 0.043 275),
+    0 4px 0 oklch(0.124 0.042 275),
+    0 5px 0 oklch(0.117 0.041 275),
+    0 6px 0 oklch(0.11 0.04 275),
+    0 7px 0 oklch(0.103 0.038 275),
+    0 8px 0 oklch(0.096 0.036 275),
+    0 9px 0 oklch(0.089 0.034 275),
+    0 10px 0 oklch(0.082 0.032 275),
+    0 11px 6px -2px oklch(0.145 0.045 275 / 38%),
+    0 18px 26px -8px oklch(0.145 0.045 275 / 42%);
+}
+
+/* En oscuro el fondo de la página (L 0.165) y la tinta del bisel (L 0.145)
+   casi coinciden: sin filete el aparato pierde el contorno y el cristal queda
+   flotando. Mismo problema, y misma solución, que `.dark .boletin-panel`. */
+.dark .termo-bisel {
+  border: 1px solid oklch(0.949 0.017 78 / 16%);
+}
+
+.termo-vidrio {
+  /* El único gradiente permitido es el del atardecer del logo: sol → brasa. */
+  background-image: linear-gradient(160deg, oklch(0.885 0.058 82), oklch(0.83 0.072 68));
+  color: var(--brand-ink);
+  border-radius: calc(var(--radius) * 2);
+  position: relative;
+  overflow: hidden;
+  /* El cristal está HUNDIDO bajo el marco: sombra marcada en el borde de
+     arriba, donde el bisel lo tapa, y rebote de luz en el de abajo. Es lo que
+     da la sensación de que el marco tiene espesor. */
+  box-shadow:
+    inset 0 3px 6px -1px oklch(0.145 0.045 275 / 45%),
+    inset 0 -1px 0 oklch(1 0 0 / 30%);
+}
+/* Reflejo del cristal. No es un gradiente decorativo: es la propiedad óptica
+   de una superficie vidriada, y por eso va casi al ras y en una sola esquina.
+   Más marcado empezaba a leerse como un brillo de tarjeta. */
+.termo-vidrio::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(146deg, oklch(1 0 0 / 16%) 0 20%, transparent 44%);
+}
+
+/* Rótulo serigrafiado sobre el vidrio. Mismo rol que `.label` pero siempre en
+   tinta de marca, porque el vidrio no se invierte. */
+.termo-rotulo {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: oklch(0.145 0.045 275 / 62%);
+}
+
+/* El display: DSEG7 Classic (ver components/termohigrometro/dseg.ts). El
+   tamaño se fija por font-size, así todas las lecturas comparten el mismo
+   cuerpo de dígito pase lo que pase con el ancho de su columna. */
+.termo-seg {
+  font-family: var(--font-dseg), monospace;
+  font-size: 2.5rem;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  /* La caja es inline-block y encoge al ancho de la cifra, así que centrarla
+     alinea cada casilla con la de arriba por el eje de la columna. Sin esto
+     quedaban pegadas al borde izquierdo y el rótulo, que sí se centra, se veía
+     desfasado. */
+  text-align: center;
+}
+.termo-seg-chico {
+  font-size: 1.6rem;
+}
+.termo-seg-micro {
+  font-size: 1rem;
+}
+
+/* La unidad en segmentos (`°C`). Al mismo cuerpo que las cifras tapaba la
+   lectura, así que va reducida y apoyada arriba, como en los aparatos reales.
+   En `em` para que siga al tamaño del display. */
+.termo-seg-unidad {
+  font-size: 0.42em;
+  vertical-align: top;
+  margin-left: 0.12em;
+}
+
+/* La unidad que DSEG no tiene (`%`). Hereda tamaño y alineación de
+   .termo-seg-unidad; solo cambia la fuente, porque de segmentos no existe —
+   igual que en un aparato real, donde el `%` es una leyenda del cristal. */
+.termo-seg-legenda {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+/* La capa fantasma ocupa el flujo y define la caja; la lectura va encima. */
+.termo-seg-caja {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+.termo-seg-fantasma {
+  opacity: 0.055;
+}
+.termo-seg-valor {
+  position: absolute;
+  inset: 0;
+  white-space: pre;
+}
+
+/* Serigrafía del bisel: sello, nombre y especie, como la cara de un aparato
+   real. Va en las constantes de marca porque el bisel no se invierte. */
+.termo-marca {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.4rem 0.2rem;
+  font-family: var(--font-mono);
+  font-size: 0.5625rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: oklch(0.949 0.017 78 / 55%);
+}
+.termo-marca-accion {
+  margin-left: auto;
+  flex: none;
+}
+/* Sello moldeado en el plástico del bisel.
+
+   Dos capas, y no es opcional: el `filter` se aplica ANTES que la máscara, así
+   que si van en el mismo nodo el drop-shadow se dibuja sobre el cuadrado sin
+   enmascarar y después la máscara lo recorta entero — el relieve desaparece.
+   La forma se enmascara adentro; el bisel de luz y sombra va en el padre.
+
+   La máscara es por LUMINANCIA y no por alfa: el alfa del PNG es solo el
+   recorte circular, mientras que por luminancia el atardecer (claro) queda
+   opaco y la silueta de la planta (oscura) se vuelve hueco. Si un navegador no
+   soporta `mask-mode`, cae a alfa y queda un disco liso en relieve: degrada
+   sin romperse. */
+.termo-sello {
+  flex: none;
+  filter: drop-shadow(0 -1.5px 0 oklch(0.949 0.017 78 / 75%))
+    drop-shadow(0 2px 3px oklch(0 0 0 / 100%));
+}
+.termo-sello-forma {
+  display: block;
+  width: 2.75rem;
+  height: 2.75rem;
+  /* Más claro que el bisel: el plástico moldeado es el mismo material, pero
+     devuelve más luz que la superficie plana. Los valores están calibrados
+     mirando el sello A SU TAMAÑO REAL (44 px) — ampliado engaña, y una primera
+     versión que se veía bien al doble quedaba imperceptible en la página. */
+  background-color: oklch(0.245 0.055 275);
+  -webkit-mask-image: url("/icons/logo.png");
+  mask-image: url("/icons/logo.png");
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  mask-mode: luminance;
+}
+
+/* El `?` de ayuda. <details> en vez de tooltip: en touch un tooltip no
+   existe, y esta salvedad es justo lo que alguien consulta desde el teléfono. */
+.termo-ayuda {
+  position: relative;
+}
+.termo-ayuda > summary {
+  list-style: none;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border: 1px solid var(--rule);
+  border-radius: 9999px;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--ember);
+}
+.termo-ayuda > summary::-webkit-details-marker {
+  display: none;
+}
+.termo-ayuda > summary:hover {
+  border-color: var(--sun);
+}
+.termo-ayuda[open] > p {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  width: min(19rem, 78vw);
+  padding: 0.7rem 0.8rem;
+  background-color: var(--background);
+  border: 1px solid var(--rule);
+  border-top: 3px solid var(--sun);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 20px -10px oklch(0.145 0.045 275 / 45%);
+}
+
+/* El icono del tiempo ocupa la casilla que dejó el reloj: se alinea con la
+   altura de una lectura chica para que la fila no se descuadre. */
+.termo-icono-grande {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 3.25rem;
+  margin-top: 0.4rem;
+}
+.termo-icono-grande svg {
+  width: 3.25rem;
+  height: 3.25rem;
+  /* A tinta plena pesaba más que las cifras de al lado, y en esa fila el dato
+     es el número: el icono acompaña. */
+  opacity: 0.78;
+}
+
+/* Aviso agronómico. La severidad va en el filete de la izquierda y en el
+   icono, NO en color: la paleta es de dos tintas y no tiene rojo — un semáforo
+   verde/amarillo/rojo rompería la dirección visual del sitio. */
+.termo-aviso {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem 0.65rem;
+  align-items: start;
+  padding: 0.8rem 0.9rem;
+  /* Recuadro, no tarjeta flotante: filete fino alrededor, canto grueso en la
+     tinta del tono y radio corto. Es el mismo recurso que `.boletin-panel`
+     (borde + barra de color), no el de una card con sombra y hover. */
+  border: 1px solid var(--rule);
+  border-left: 5px solid transparent;
+  border-radius: calc(var(--radius) * 3);
+  /* Un velo del propio tono: refuerza la lectura de color sin tocar el texto. */
+  background-color: color-mix(in oklab, var(--aviso-color) 6%, transparent);
+}
+.termo-aviso-icono {
+  width: 1.35rem;
+  height: 1.35rem;
+  margin-top: 0.05rem;
+}
+/* Lamparita de la recomendación: más chica que el icono de causa, para que se
+   lea como marca de anotación y no compita con el diagnóstico. */
+.termo-aviso-tip {
+  width: 0.9rem;
+  height: 0.9rem;
+  margin-top: 0.15rem;
+  justify-self: center;
+  color: var(--ember);
+}
+/* Tonos por CAUSA del aviso. Salen del ámbito de las dos tintas a propósito:
+   un sistema de alertas donde todo es del mismo color obliga a leer el texto
+   para saber de qué se trata. Están desaturados para convivir con la paleta, y
+   solo pintan icono y filete — el texto va siempre en la tinta, así el
+   contraste de lectura no depende nunca del tono. */
+.termo-tono-frio {
+  --aviso-color: oklch(0.52 0.12 245);
+}
+.termo-tono-calor {
+  --aviso-color: oklch(0.55 0.16 40);
+}
+.termo-tono-hongo {
+  /* Violeta apagado y no verde: el verde ya es "condiciones favorables", y
+     eran los dos avisos que menos pueden confundirse entre sí. */
+  --aviso-color: oklch(0.5 0.1 315);
+}
+.termo-tono-agua {
+  --aviso-color: oklch(0.52 0.09 220);
+}
+.termo-tono-ok {
+  --aviso-color: oklch(0.5 0.11 145);
+}
+.termo-tono-neutro {
+  --aviso-color: var(--muted-foreground);
+}
+/* En oscuro, los mismos matices subidos de luminancia: mantienen el contraste
+   de icono sobre fondo oscuro sin cambiar de identidad. */
+.dark .termo-tono-frio {
+  --aviso-color: oklch(0.76 0.1 245);
+}
+.dark .termo-tono-calor {
+  --aviso-color: oklch(0.77 0.13 45);
+}
+.dark .termo-tono-hongo {
+  --aviso-color: oklch(0.76 0.09 315);
+}
+.dark .termo-tono-agua {
+  --aviso-color: oklch(0.76 0.08 220);
+}
+.dark .termo-tono-ok {
+  --aviso-color: oklch(0.76 0.1 145);
+}
+
+.termo-aviso-icono {
+  color: var(--aviso-color);
+}
+.termo-aviso-alerta {
+  border-left-color: var(--aviso-color);
+}
+.termo-aviso-atencion {
+  border-left-color: color-mix(in oklab, var(--aviso-color) 70%, transparent);
+}
+.termo-aviso-ok,
+.termo-aviso-info {
+  border-left-color: color-mix(in oklab, var(--aviso-color) 45%, transparent);
+}
+
+/* Botón sobre el bisel: contorno, no relleno. Va en las constantes de marca
+   porque el bisel no se invierte con el tema. Radio casi cero como todo el
+   sitio — nada de píldoras ni sombras (ver anti-patrones del MASTER). */
+.termo-boton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid oklch(0.949 0.017 78 / 22%);
+  border-radius: calc(var(--radius) * 2);
+  color: var(--brand-sun);
+  /* Tecla saliente: cara superior más clara, filo de luz arriba y sombra
+     apoyada abajo. Al pulsar baja 1 px y la luz se invierte hacia adentro,
+     que es lo que hace que se sienta como un botón y no como un rectángulo. */
+  background-image: linear-gradient(180deg, oklch(0.275 0.05 275), oklch(0.185 0.045 275));
+  box-shadow:
+    inset 0 1px 0 oklch(0.949 0.017 78 / 22%),
+    0 1px 0 oklch(0 0 0 / 65%),
+    0 2px 4px oklch(0 0 0 / 45%);
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.1s ease,
+    transform 0.1s ease;
+}
+.termo-boton:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow:
+    inset 0 2px 4px oklch(0 0 0 / 70%),
+    0 0 0 oklch(0 0 0 / 0%);
+}
+.termo-boton:hover:not(:disabled) {
+  background-color: oklch(0.949 0.017 78 / 10%);
+  border-color: oklch(0.807 0.104 76 / 65%);
+}
+.termo-boton:disabled {
+  opacity: 0.55;
+}
+
+/* Los dos puntos del reloj laten a 1 Hz, como en el aparato real. CSS puro,
+   cero React. Va bajo `no-preference` a propósito: el bloque global de
+   reduced-motion fuerza `animation-duration: 0.01ms !important`, lo que
+   congelaría los puntos en un frame arbitrario —posiblemente el invisible—.
+   Así, con reduced-motion, quedan sólidos, que es el comportamiento correcto. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes termo-parpadeo {
+    0%,
+    49% {
+      opacity: 1;
+    }
+    50%,
+    100% {
+      opacity: 0.15;
+    }
+  }
+  .termo-colon {
+    animation: termo-parpadeo 2s steps(1, end) infinite;
+  }
+}
+/* ═══════════ FIN TERMOHIGRÓMETRO ═══════════ */

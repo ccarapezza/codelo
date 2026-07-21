@@ -28,12 +28,7 @@ export function MobileNav({ items }: Props) {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label={t("mobileMenu")}
-          className="md:hidden"
-        >
+        <Button variant="ghost" size="icon" aria-label={t("mobileMenu")} className="lg:hidden">
           <Menu className="size-5" />
         </Button>
       </SheetTrigger>
@@ -45,7 +40,7 @@ export function MobileNav({ items }: Props) {
         </SheetHeader>
 
         <nav className="flex flex-col gap-1 px-3 py-4">
-          {items.map((item) => (
+          {items.map(item => (
             <SheetClose key={item.href} asChild>
               <Link
                 href={item.href}

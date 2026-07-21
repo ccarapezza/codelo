@@ -1,0 +1,72 @@
+{
+  "kind": "collectionType",
+  "collectionName": "cultivares",
+  "info": {
+    "singularName": "cultivar",
+    "pluralName": "cultivares",
+    "displayName": "Cultivar (INASE)",
+    "description": "Espejo de los cultivares de cannabis/cáñamo del Catálogo Nacional de Cultivares. Se sincroniza por cron; no editar a mano."
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {
+    "content-manager": {
+      "visible": true
+    },
+    "content-type-builder": {
+      "visible": false
+    }
+  },
+  "attributes": {
+    "numeroRegistro": {
+      "type": "integer",
+      "required": true,
+      "unique": true
+    },
+    "nombre": {
+      "type": "string",
+      "required": true
+    },
+    "especie": {
+      "type": "string"
+    },
+    "nombreCientifico": {
+      "type": "string"
+    },
+    "condicionGenetica": {
+      "type": "string"
+    },
+    "grupoEspecie": {
+      "type": "string"
+    },
+    "inscripcionRnc": {
+      "type": "date"
+    },
+    "inscripcionRnpc": {
+      "type": "date"
+    },
+    "validezRnpc": {
+      "type": "date"
+    },
+    "codPais": {
+      "type": "string"
+    },
+    "solicitanteRnc": {
+      "type": "string"
+    },
+    "representanteRnc": {
+      "type": "string"
+    },
+    "solicitanteRnpc": {
+      "type": "string"
+    },
+    "representanteRnpc": {
+      "type": "string"
+    },
+    "syncedAt": {
+      "type": "datetime",
+      "required": true
+    }
+  }
+}

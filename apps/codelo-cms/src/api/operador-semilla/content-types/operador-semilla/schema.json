@@ -1,0 +1,58 @@
+{
+  "kind": "collectionType",
+  "collectionName": "operadores_semilla",
+  "info": {
+    "singularName": "operador-semilla",
+    "pluralName": "operador-semillas",
+    "displayName": "Operador RNCyFS (INASE)",
+    "description": "Espejo del padrón de operadores inscriptos en el RNCyFS. Se sincroniza por cron; no editar a mano. La columna de email del export NO se persiste a propósito."
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {
+    "content-manager": {
+      "visible": true
+    },
+    "content-type-builder": {
+      "visible": false
+    }
+  },
+  "attributes": {
+    "numeroInscripcion": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "numero": {
+      "type": "integer"
+    },
+    "categorias": {
+      "type": "json"
+    },
+    "razonSocial": {
+      "type": "string",
+      "required": true
+    },
+    "razonSocialNormalizada": {
+      "type": "string"
+    },
+    "localidad": {
+      "type": "string"
+    },
+    "provincia": {
+      "type": "string"
+    },
+    "cuit": {
+      "type": "string"
+    },
+    "vigente": {
+      "type": "boolean",
+      "default": true
+    },
+    "syncedAt": {
+      "type": "datetime",
+      "required": true
+    }
+  }
+}
