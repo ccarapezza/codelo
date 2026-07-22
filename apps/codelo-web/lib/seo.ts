@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import { routing } from "@/i18n/routing";
 
 export { SITE_URL, SITE_NAME, SITE_LOGO } from "@/lib/site";
 import { SITE_URL, SITE_NAME, SITE_LOGO } from "@/lib/site";
+
+export const OG_LOCALE: Record<string, string> = {
+  es: "es_AR",
+  en: "en_US",
+};
 
 /**
  * Locales we deliberately keep OUT of Google's index until they carry original
@@ -61,6 +67,61 @@ export function localizedAlternates(
     : clean;
   languages["x-default"] = `/${routing.defaultLocale}${defaultPath}`;
   return { canonical: `/${lang}${localePaths?.[lang] ?? clean}`, languages };
+}
+
+/**
+ * Metadata estándar de una página: título, description, canonical/hreflang y
+ * las cabeceras de preview al compartir (Open Graph + Twitter card).
+ *
+ * El bloque `openGraph` existe acá porque Next NO lo mergea campo por campo
+ * entre layout y página: si la página define `title` pero no un `openGraph`
+ * COMPLETO, hereda el del layout entero — y toda preview compartida muestra el
+ * título y la URL de la home (verificado contra el HTML servido). Lo mismo
+ * vale para `twitter`. Una página con requisitos extra (p. ej. og:type
+ * "article" en las notas) arma su propio bloque en lugar de usar este helper.
+ */
+export function pageMetadata(o: {
+  lang: string;
+  /** Ruta SIN el prefijo de locale — igual que en {@link localizedAlternates}. */
+  path: string;
+  title?: string | null;
+  description?: string | null;
+}): Metadata {
+  const title = o.title ?? undefined;
+  const description = o.description ?? undefined;
+  // La card por defecto (app/[lang]/opengraph-image.tsx) hay que declararla acá
+  // a mano: la inyección automática del file convention vive en el metadata del
+  // layout, y este bloque `openGraph` lo reemplaza entero — sin `images`
+  // explícito la página queda SIN miniatura (verificado contra el HTML).
+  const images = [
+    {
+      url: `/${o.lang}/opengraph-image`,
+      width: 1200,
+      height: 630,
+      type: "image/png",
+      alt: SITE_NAME,
+    },
+  ];
+  return {
+    title,
+    description,
+    alternates: localizedAlternates(o.lang, o.path),
+    openGraph: {
+      type: "website",
+      siteName: SITE_NAME,
+      locale: OG_LOCALE[o.lang] ?? OG_LOCALE[routing.defaultLocale],
+      url: `/${o.lang}${o.path}`,
+      title,
+      description,
+      images,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images,
+    },
+  };
 }
 
 // ---- JSON-LD (schema.org) builders ----

@@ -5,7 +5,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ArrowUpRight, ArrowLeft } from "lucide-react";
 import { getCultivar, searchOperadores, type Operador } from "@/lib/semillas";
 import { JsonLd } from "@/components/JsonLd";
-import { breadcrumbSchema, localizedAlternates, SITE_NAME, SITE_URL } from "@/lib/seo";
+import { breadcrumbSchema, pageMetadata, SITE_NAME, SITE_URL } from "@/lib/seo";
 
 type Params = Promise<{ lang: string; registro: string }>;
 
@@ -14,13 +14,14 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const cultivar = await getCultivar(Number(registro));
   if (!cultivar) return {};
   const t = await getTranslations({ locale: lang, namespace: "seeds" });
-  return {
+  return pageMetadata({
+    lang,
+    path: `/semillas/${cultivar.numeroRegistro}`,
     title: `${cultivar.nombre} — ${t("title")}`,
     description: `${t("registro")} ${cultivar.numeroRegistro}${
       cultivar.solicitanteRnc ? ` · ${t("obtentor")}: ${cultivar.solicitanteRnc}` : ""
     }`,
-    alternates: localizedAlternates(lang, `/semillas/${cultivar.numeroRegistro}`),
-  };
+  });
 }
 
 const INASE_CATALOGO = "https://gestion.inase.gob.ar/registroCultivares/publico/catalogo";

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ArrowUpRight, ArrowLeft, Info } from "lucide-react";
 import { searchOperadores } from "@/lib/semillas";
-import { localizedAlternates } from "@/lib/seo";
+import { pageMetadata } from "@/lib/seo";
 import { Categorias } from "../categorias";
 
 type Params = Promise<{ lang: string }>;
@@ -12,11 +12,12 @@ type Search = Promise<{ q?: string }>;
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { lang } = await params;
   const t = await getTranslations({ locale: lang, namespace: "seeds" });
-  return {
+  return pageMetadata({
+    lang,
+    path: "/semillas/operadores",
     title: t("operadoresTitle"),
     description: t("operadoresTagline"),
-    alternates: localizedAlternates(lang, "/semillas/operadores"),
-  };
+  });
 }
 
 const INASE_EMPRESAS = "https://gestion.inase.gob.ar/empresas/empresas";

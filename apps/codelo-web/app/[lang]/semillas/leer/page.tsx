@@ -4,7 +4,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ArrowLeft, ArrowUpRight, Info } from "lucide-react";
 import { getCultivares, getOperadorByNumero, type Cultivar, type Operador } from "@/lib/semillas";
 import { bestMatches, numeroDeInscripcion, parseSerie } from "@/lib/match";
-import { localizedAlternates } from "@/lib/seo";
+import { pageMetadata } from "@/lib/seo";
 import { ReaderForm } from "./reader-form";
 import { Categorias } from "../categorias";
 
@@ -13,12 +13,13 @@ type Search = Promise<{ cultivar?: string; rncyfs?: string; serie?: string }>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { lang } = await params;
-  return {
+  return pageMetadata({
+    lang,
+    path: "/semillas/leer",
     title: "Leer un rótulo",
     description:
       "Consultá el cultivar y el operador de un paquete de semillas contra los registros públicos de INASE.",
-    alternates: localizedAlternates(lang, "/semillas/leer"),
-  };
+  });
 }
 
 const INASE_EMPRESAS = "https://gestion.inase.gob.ar/empresas/empresas";

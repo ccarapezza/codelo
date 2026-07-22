@@ -13,14 +13,9 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { resolveGaId, resolveClarityId } from "@/lib/analytics";
 import { getSiteSettings } from "@/lib/cms";
 import { JsonLd } from "@/components/JsonLd";
-import { organizationSchema, robotsForLocale, websiteSchema } from "@/lib/seo";
+import { OG_LOCALE, organizationSchema, robotsForLocale, websiteSchema } from "@/lib/seo";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
-
-const OG_LOCALE: Record<string, string> = {
-  es: "es_AR",
-  en: "en_US",
-};
 
 export function generateStaticParams() {
   return routing.locales.map(lang => ({ lang }));

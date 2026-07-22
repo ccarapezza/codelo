@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CmsPageView } from "@/components/CmsPageView";
 import { getPageBySlug } from "@/lib/content";
-import { localizedAlternates } from "@/lib/seo";
+import { pageMetadata } from "@/lib/seo";
 
 const SLUG = "contacto";
 
@@ -13,11 +13,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { lang } = await params;
   const page = await getPageBySlug(SLUG);
-  return {
+  return pageMetadata({
+    lang,
+    path: `/${SLUG}`,
     title: page?.title ?? "Contacto y cómo sumarse",
-    description: page?.seoDescription ?? undefined,
-    alternates: localizedAlternates(lang, `/${SLUG}`),
-  };
+    description: page?.seoDescription,
+  });
 }
 
 async function pageEyebrow(lang: string) {

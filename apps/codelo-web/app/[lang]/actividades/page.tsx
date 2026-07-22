@@ -5,7 +5,7 @@ import { getEvents, type CmsEvent } from "@/lib/content";
 import type { Locale } from "@/i18n/routing";
 import { markdownToSafeHtml, markdownToPlainText } from "@/lib/markdown";
 import { JsonLd } from "@/components/JsonLd";
-import { eventSchema, localizedAlternates } from "@/lib/seo";
+import { eventSchema, pageMetadata } from "@/lib/seo";
 
 export async function generateMetadata({
   params,
@@ -14,11 +14,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { lang } = await params;
   const t = await getTranslations({ locale: lang, namespace: "events" });
-  return {
+  return pageMetadata({
+    lang,
+    path: "/actividades",
     title: t("title"),
     description: t("tagline"),
-    alternates: localizedAlternates(lang, "/actividades"),
-  };
+  });
 }
 
 const TZ = "America/Argentina/Buenos_Aires";

@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { formatShortDate } from "@/lib/intl";
 import type { Locale } from "@/i18n/routing";
 import type { Metadata } from "next";
-import { localizedAlternates } from "@/lib/seo";
+import { pageMetadata } from "@/lib/seo";
 
 export async function generateMetadata({
   params,
@@ -16,11 +16,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { lang } = await params;
   const t = await getTranslations({ locale: lang, namespace: "blog" });
-  return {
-    title: t("title"),
-    description: t("tagline"),
-    alternates: localizedAlternates(lang, "/blog"),
-  };
+  return pageMetadata({ lang, path: "/blog", title: t("title"), description: t("tagline") });
 }
 
 function tagChipClass(tag: CmsTag): string {

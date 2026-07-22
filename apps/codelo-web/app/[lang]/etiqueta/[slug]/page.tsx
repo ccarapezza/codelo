@@ -7,7 +7,7 @@ import { PostCoverFallback } from "@/components/PostCoverFallback";
 import { formatShortDate } from "@/lib/intl";
 import type { Locale } from "@/i18n/routing";
 import type { Metadata } from "next";
-import { localizedAlternates } from "@/lib/seo";
+import { pageMetadata } from "@/lib/seo";
 
 // El nombre de la etiqueta no vive en una tabla propia accesible por slug desde
 // la web: se resuelve desde las notas que la llevan. Con una sola llamada
@@ -31,11 +31,12 @@ export async function generateMetadata({
   // La bajada editorial de la sección (beatNotes) es la mejor description
   // posible; para etiquetas sin bajada declarada hay un genérico con el nombre.
   const notes = tHome.raw("beatNotes") as Record<string, string>;
-  return {
-    title: name ?? undefined,
+  return pageMetadata({
+    lang,
+    path: `/etiqueta/${slug}`,
+    title: name,
     description: notes[slug] ?? (name ? t("seoDescription", { name }) : undefined),
-    alternates: localizedAlternates(lang, `/etiqueta/${slug}`),
-  };
+  });
 }
 
 export default async function TagPage({

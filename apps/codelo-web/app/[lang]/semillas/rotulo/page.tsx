@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { setRequestLocale } from "next-intl/server";
 import { ArrowUpRight, ArrowLeft } from "lucide-react";
-import { localizedAlternates } from "@/lib/seo";
+import { pageMetadata } from "@/lib/seo";
 
 export async function generateMetadata({
   params,
@@ -10,12 +10,13 @@ export async function generateMetadata({
   params: Promise<{ lang: string }>;
 }): Promise<Metadata> {
   const { lang } = await params;
-  return {
+  return pageMetadata({
+    lang,
+    path: "/semillas/rotulo",
     title: "Cómo leer un rótulo de semillas",
     description:
       "Qué campos debe llevar por ley el rótulo de un paquete de semillas de cannabis o cáñamo en Argentina, y cómo verificarlos en los registros públicos de INASE.",
-    alternates: localizedAlternates(lang, "/semillas/rotulo"),
-  };
+  });
 }
 
 const INASE_ROTULADO = "https://www.argentina.gob.ar/inase/rotulado-de-semillas";

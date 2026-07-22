@@ -10,7 +10,7 @@ import {
   porOrigen,
   topObtentores,
 } from "@/lib/semillas-stats";
-import { localizedAlternates } from "@/lib/seo";
+import { pageMetadata } from "@/lib/seo";
 import { CultivaresBrowser } from "./cultivares-browser";
 import {
   BarrasHorizontales,
@@ -32,11 +32,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { lang } = await params;
   const t = await getTranslations({ locale: lang, namespace: "seeds" });
-  return {
+  return pageMetadata({
+    lang,
+    path: "/semillas",
     title: t("title"),
     description: t("tagline"),
-    alternates: localizedAlternates(lang, "/semillas"),
-  };
+  });
 }
 
 const INASE_CATALOGO = "https://gestion.inase.gob.ar/registroCultivares/publico/catalogo";
