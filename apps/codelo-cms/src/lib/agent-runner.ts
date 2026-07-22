@@ -11,6 +11,7 @@ import {
   type GeneratedPost,
 } from "./openai";
 import { getRecentNewsForTopic, type NewsItem } from "./rss-fetcher";
+import { findEchoedHeadline } from "./headline-similarity";
 import {
   getOpenRouterImageKey,
   getOpenAIImageKey,
@@ -229,6 +230,8 @@ export async function runRedactor(
         "- The title MUST NOT contradict the body of the article. If the body says 'X wants to play', the title cannot say 'X will not play'.",
         "- The title MUST NOT contradict the source. If the source headline says 'the ruling recognises the right to self-cultivation', the title cannot imply it was denied.",
         "- Prefer factual, neutral titles over sensationalist clickbait.",
+        "- The title must be an ORIGINAL headline written in your own words. NEVER copy or closely paraphrase a source's headline: cover the same fact with different wording AND different structure. Reproducing another outlet's headline is plagiarism and grounds for rejection.",
+        "- The excerpt must also be written fresh in your own words — never lifted from the source's headline or lede.",
         "- If the title mentions a player, the named action (injury, transfer, statement) must be literally about THAT player in the source.",
         "",
         "## SELF-CHECK before returning",
@@ -349,7 +352,46 @@ export async function runRedactor(
       : hasContext
         ? `Write a news article in ${lang} based on the verified context above (${today}).${dedupBlock}\nReturn only the JSON.`
         : `Write an analysis or preview article in ${lang} for today (${today}). No invented facts.${dedupBlock}\nReturn only the JSON.`;
-    const generated = await generatePost(client, model, systemPrompt, userPrompt);
+    let generated = await generatePost(client, model, systemPrompt, userPrompt);
+
+    // Compuerta anti-calco: la regla del prompt ("original headline") sola no
+    // alcanza — las TITLE RULES empujan a títulos literales a la fuente y el
+    // modelo resuelve la tensión copiando el titular (pasó con el de Revista
+    // THC sobre REPROCANN, publicado casi idéntico). Se compara contra los
+    // titulares del contexto y se regenera con feedback explícito; si tras los
+    // reintentos sigue calcado, la nota NO se crea (mismo criterio que el gate
+    // de duplicados: mejor un slot vacío que un titular ajeno).
+    const sourceHeadlines = recentNews.map((n) => n.title);
+    for (let retry = 0; retry < 2; retry++) {
+      const echoed = findEchoedHeadline(generated.title, sourceHeadlines);
+      if (!echoed) break;
+      strapi.log.warn(
+        `[agent] "${agent.name}": título calcado de la fuente ("${generated.title}" ≈ ` +
+          `"${echoed}"); regenerando (${retry + 1}/2)`,
+      );
+      generated = await generatePost(
+        client,
+        model,
+        systemPrompt,
+        `${userPrompt}\n\nIMPORTANT: your previous title "${generated.title}" nearly copies the source headline "${echoed}". That is plagiarism. Write a COMPLETELY different headline — same facts, but your own wording and structure (change the opening words, the syntax, the angle). Rewrite the excerpt in your own words too.`,
+      );
+    }
+    const stillEchoed = findEchoedHeadline(generated.title, sourceHeadlines);
+    if (stillEchoed) {
+      strapi.log.warn(
+        `[agent] "${agent.name}": skipped post "${generated.title}" — sigue calcando ` +
+          `el titular fuente "${stillEchoed}" tras 2 reintentos`,
+      );
+      await logAgentAction(strapi, {
+        agentRole: "redactor",
+        action: "redactor_idle",
+        agentName: agent.name,
+        agentDocumentId: agent.documentId,
+        summary: `Redactor "${agent.name}" no generó: título calcaba el titular fuente`,
+        metadata: { title: generated.title, sourceHeadline: stillEchoed },
+      });
+      continue;
+    }
 
     // HARD dedup gate: the LLM hint is advisory and absent in assigned/batch mode,
     // so a reworded headline of the same event still slips through. A semantic

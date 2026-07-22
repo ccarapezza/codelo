@@ -48,3 +48,4 @@ apps/codelo-cms/types/generated/
 
 # TypeScript incremental build info
 *.tsbuildinfo
+.secret
