@@ -56,8 +56,8 @@ export default async function Image({
           height: "100%",
           display: "flex",
           position: "relative",
-          backgroundColor: "#07120c",
-          color: "#ffffff",
+          backgroundColor: "#00001C",
+          color: "#F6E6CC",
           fontFamily: "sans-serif",
         }}
       >
@@ -79,7 +79,7 @@ export default async function Image({
             height: "100%",
             display: "flex",
             backgroundImage:
-              "linear-gradient(0deg, rgba(7,18,12,0.97) 0%, rgba(7,18,12,0.86) 32%, rgba(7,18,12,0.5) 66%, rgba(7,18,12,0.28) 100%)",
+              "linear-gradient(0deg, rgba(0,0,28,0.97) 0%, rgba(0,0,28,0.86) 32%, rgba(0,0,28,0.5) 66%, rgba(0,0,28,0.28) 100%)",
           }}
         />
         <div
@@ -90,7 +90,7 @@ export default async function Image({
             width: "100%",
             height: 4,
             display: "flex",
-            backgroundImage: "linear-gradient(90deg, transparent 0%, #16a34a 50%, transparent 100%)",
+            backgroundImage: "linear-gradient(90deg, transparent 0%, #E4B569 50%, transparent 100%)",
           }}
         />
         <div
@@ -109,7 +109,7 @@ export default async function Image({
               display: "flex",
               fontSize: 12,
               fontWeight: 700,
-              color: "#16a34a",
+              color: "#E4B569",
               letterSpacing: "0.12em",
               textTransform: "uppercase",
               marginBottom: 7,
@@ -132,7 +132,7 @@ export default async function Image({
             display: "flex",
             fontSize: 10,
             fontWeight: 600,
-            color: "#a3b3a8",
+            color: "#d9c9a8",
             letterSpacing: "0.32em",
           }}
         >

@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ArrowUpRight, ArrowLeft } from "lucide-react";
 import { getCultivar, searchOperadores, type Operador } from "@/lib/semillas";
-import { localizedAlternates } from "@/lib/seo";
+import { JsonLd } from "@/components/JsonLd";
+import { breadcrumbSchema, localizedAlternates, SITE_NAME, SITE_URL } from "@/lib/seo";
 
 type Params = Promise<{ lang: string; registro: string }>;
 
@@ -77,6 +78,16 @@ export default async function CultivarPage({ params }: { params: Params }) {
 
   return (
     <main className="mx-auto w-full max-w-[1400px] px-5 pb-24 sm:px-8">
+      <JsonLd
+        data={breadcrumbSchema([
+          { name: SITE_NAME, url: `${SITE_URL}/${lang}` },
+          { name: t("title"), url: `${SITE_URL}/${lang}/semillas` },
+          {
+            name: cultivar.nombre,
+            url: `${SITE_URL}/${lang}/semillas/${cultivar.numeroRegistro}`,
+          },
+        ])}
+      />
       <Link
         href="/semillas"
         className="label mt-6 inline-flex items-center gap-1 text-ember hover:underline"

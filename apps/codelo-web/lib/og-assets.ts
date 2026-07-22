@@ -14,8 +14,9 @@ async function fileDataUri(absPath: string, mime = "image/png"): Promise<string 
   }
 }
 
-// Site logo for OG cards. Returns null until real branding assets exist —
-// callers must render a text wordmark fallback.
+// Site logo for OG cards (the real logo the palette was sampled from). If the
+// asset ever goes missing this returns null — callers must render a text
+// wordmark fallback.
 export function logoDataUri(): Promise<string | null> {
-  return fileDataUri(pub("logo", "codelo.png"));
+  return fileDataUri(pub("icons", "logo.png"));
 }

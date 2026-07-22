@@ -119,6 +119,36 @@ export function articleSchema(o: {
   };
 }
 
+/**
+ * schema.org Event para la agenda. Son eventos de TERCEROS (ver CLAUDE.md):
+ * `organizer` sale del campo del CMS y NUNCA se rellena con la asociación —
+ * omitir la atribución equivaldría a atribuirnos el evento también ante Google.
+ */
+export function eventSchema(o: {
+  title: string;
+  description?: string | null;
+  lang: string;
+  startsAt: string;
+  endsAt?: string | null;
+  place?: string | null;
+  organizer?: string | null;
+  sourceUrl?: string | null;
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: o.title,
+    description: o.description ?? undefined,
+    inLanguage: o.lang,
+    startDate: o.startsAt,
+    endDate: o.endsAt ?? undefined,
+    eventStatus: "https://schema.org/EventScheduled",
+    location: o.place ? { "@type": "Place", name: o.place } : undefined,
+    organizer: o.organizer ? { "@type": "Organization", name: o.organizer } : undefined,
+    url: o.sourceUrl ?? undefined,
+  };
+}
+
 export function breadcrumbSchema(items: Array<{ name: string; url: string }>) {
   return {
     "@context": "https://schema.org",

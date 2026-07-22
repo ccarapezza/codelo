@@ -23,9 +23,17 @@ export async function generateMetadata({
   params: Promise<{ lang: string; slug: string }>;
 }): Promise<Metadata> {
   const { lang, slug } = await params;
-  const name = await resolveTagName(slug, lang as Locale);
+  const [name, t, tHome] = await Promise.all([
+    resolveTagName(slug, lang as Locale),
+    getTranslations({ locale: lang, namespace: "tags" }),
+    getTranslations({ locale: lang, namespace: "home" }),
+  ]);
+  // La bajada editorial de la sección (beatNotes) es la mejor description
+  // posible; para etiquetas sin bajada declarada hay un genérico con el nombre.
+  const notes = tHome.raw("beatNotes") as Record<string, string>;
   return {
     title: name ?? undefined,
+    description: notes[slug] ?? (name ? t("seoDescription", { name }) : undefined),
     alternates: localizedAlternates(lang, `/etiqueta/${slug}`),
   };
 }

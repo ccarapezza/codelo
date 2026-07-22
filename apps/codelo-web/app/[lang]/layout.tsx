@@ -12,7 +12,8 @@ import { NavigationProgress } from "@/components/NavigationProgress";
 import { SiteFooter } from "@/components/SiteFooter";
 import { resolveGaId, resolveClarityId } from "@/lib/analytics";
 import { getSiteSettings } from "@/lib/cms";
-import { robotsForLocale } from "@/lib/seo";
+import { JsonLd } from "@/components/JsonLd";
+import { organizationSchema, robotsForLocale, websiteSchema } from "@/lib/seo";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -140,6 +141,10 @@ export default async function RootLayout({
         <Script id="codelo-theme-init" strategy="beforeInteractive">
           {THEME_SCRIPT}
         </Script>
+        {/* Identidad del sitio para el Knowledge Graph: quién publica y qué
+            sitio es. Los esquemas por contenido (BlogPosting, Event) los
+            renderiza cada página. */}
+        <JsonLd data={[organizationSchema(), websiteSchema(lang)]} />
         {gaId ? (
           <>
             <Script

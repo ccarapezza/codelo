@@ -15,7 +15,12 @@ export async function generateMetadata({
   params: Promise<{ lang: string }>;
 }): Promise<Metadata> {
   const { lang } = await params;
-  return { alternates: localizedAlternates(lang, "/blog") };
+  const t = await getTranslations({ locale: lang, namespace: "blog" });
+  return {
+    title: t("title"),
+    description: t("tagline"),
+    alternates: localizedAlternates(lang, "/blog"),
+  };
 }
 
 function tagChipClass(tag: CmsTag): string {

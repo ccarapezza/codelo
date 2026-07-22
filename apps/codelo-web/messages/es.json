@@ -209,7 +209,8 @@
   "tags": {
     "eyebrow": "Área",
     "count": "{count, plural, one {# nota} other {# notas}}",
-    "backToBlog": "Ver todas las noticias"
+    "backToBlog": "Ver todas las noticias",
+    "seoDescription": "Notas y novedades sobre {name} en el portal de Cogollos del Oeste."
   },
   "seeds": {
     "title": "Semillas",

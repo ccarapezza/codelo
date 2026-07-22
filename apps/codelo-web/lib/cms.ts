@@ -36,6 +36,8 @@ export type CmsPostListItem = {
 
 export type CmsPostDetail = CmsPostListItem & {
   content?: string | null;
+  /** Última edición en el CMS — alimenta dateModified/og:modified_time. */
+  updatedAt?: string | null;
   /** Slug of this post in each locale where a published version exists. */
   alternates: Partial<Record<CmsLocale, string>>;
 };
@@ -93,6 +95,7 @@ type StrapiPost = {
   excerpt?: string | null;
   content?: string | null;
   publishedAt?: string | null;
+  updatedAt?: string | null;
   authorName?: string | null;
   tags?: Array<{
     id: number;
@@ -443,6 +446,7 @@ export async function getPostBySlug(slug: string, locale: CmsLocale): Promise<Cm
   return {
     ...toListItem(post),
     content: post.content ?? null,
+    updatedAt: post.updatedAt ?? null,
     alternates,
   };
 }

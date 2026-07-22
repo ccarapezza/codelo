@@ -50,6 +50,7 @@ export async function generateMetadata({
       title: post.title,
       description,
       publishedTime: post.publishedAt ?? undefined,
+      modifiedTime: post.updatedAt ?? undefined,
       authors: post.authorName ? [post.authorName] : undefined,
     },
     twitter: {
@@ -140,6 +141,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ lang:
       slug: post.slug,
       image: absImage,
       datePublished: post.publishedAt,
+      dateModified: post.updatedAt,
       authorName: post.authorName,
     }),
     breadcrumbSchema([

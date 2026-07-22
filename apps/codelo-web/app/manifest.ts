@@ -11,8 +11,10 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Portal de Cogollos del Oeste: información de cultivo, REPROCANN y actividades.",
     start_url: "/",
     display: "standalone",
-    background_color: "#0a0a0a",
-    theme_color: "#0a0a0a",
+    lang: "es",
+    // Dos Tintas: papel de fondo, tinta azul-negra de acento (ver MASTER.md).
+    background_color: "#F6E6CC",
+    theme_color: "#00001C",
     icons: [
       {
         src: "/icons/icon-192.png",

@@ -3,8 +3,9 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ArrowUpRight } from "lucide-react";
 import { getEvents, type CmsEvent } from "@/lib/content";
 import type { Locale } from "@/i18n/routing";
-import { markdownToSafeHtml } from "@/lib/markdown";
-import { localizedAlternates } from "@/lib/seo";
+import { markdownToSafeHtml, markdownToPlainText } from "@/lib/markdown";
+import { JsonLd } from "@/components/JsonLd";
+import { eventSchema, localizedAlternates } from "@/lib/seo";
 
 export async function generateMetadata({
   params,
@@ -114,8 +115,24 @@ export default async function ActividadesPage({ params }: { params: Promise<{ la
 
   const labels = { organizedBy: t("organizedBy"), officialSite: t("officialSite") };
 
+  // Sólo los próximos: un Event pasado no produce rich results y sólo agrega
+  // ruido. La descripción va en texto plano (el campo trae markdown).
+  const jsonLd = upcoming.map(e =>
+    eventSchema({
+      title: e.title,
+      description: e.description ? markdownToPlainText(e.description) : null,
+      lang,
+      startsAt: e.startsAt,
+      endsAt: e.endsAt,
+      place: e.place,
+      organizer: e.organizer,
+      sourceUrl: e.sourceUrl,
+    }),
+  );
+
   return (
     <main className="mx-auto w-full max-w-[1400px] px-5 pb-24 sm:px-8">
+      {jsonLd.length > 0 ? <JsonLd data={jsonLd} /> : null}
       <header className="section-rule pt-5 pb-8">
         <p className="label text-ember">{t("eyebrow")}</p>
         <h1 className="mt-3 text-[clamp(2.25rem,5vw,4rem)] leading-[0.98] font-semibold tracking-tight">
