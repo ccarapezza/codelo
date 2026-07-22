@@ -2,11 +2,22 @@ import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { markdownToSafeHtml } from "@/lib/markdown";
 import type { CmsPage } from "@/lib/content";
+import { LAMINAS_TRANS, type LaminaId } from "@/lib/laminas";
 import { cn } from "@/lib/utils";
 
 // Renderer compartido de las páginas estáticas del CMS (quiénes somos,
 // REPROCANN, contacto…). El contenido es markdown escrito en el admin.
-export async function CmsPageView({ page, eyebrow }: { page: CmsPage | null; eyebrow?: string }) {
+// `lamina` es la portada de la casa cuando la página no tiene coverImage:
+// cada ruta fija la suya para que no cambie con el contenido.
+export async function CmsPageView({
+  page,
+  eyebrow,
+  lamina,
+}: {
+  page: CmsPage | null;
+  eyebrow?: string;
+  lamina?: LaminaId;
+}) {
   const t = await getTranslations("pages");
 
   if (!page) {
@@ -46,6 +57,25 @@ export async function CmsPageView({ page, eyebrow }: { page: CmsPage | null; eye
             fill
             sizes="(min-width: 768px) 768px, 100vw"
             className="object-cover"
+          />
+        </div>
+      ) : lamina ? (
+        // Lámina transparente impresa directo sobre el papel de la página
+        // (sin marco ni duotone). Dos bakes por tema — ver lib/laminas.ts.
+        <div className="relative mb-10 aspect-[2/1] w-full">
+          <Image
+            src={LAMINAS_TRANS[lamina].light}
+            alt=""
+            fill
+            sizes="(min-width: 768px) 768px, 100vw"
+            className="object-contain dark:hidden"
+          />
+          <Image
+            src={LAMINAS_TRANS[lamina].dark}
+            alt=""
+            fill
+            sizes="(min-width: 768px) 768px, 100vw"
+            className="hidden object-contain dark:block"
           />
         </div>
       ) : null}

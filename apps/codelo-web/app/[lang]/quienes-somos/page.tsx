@@ -34,5 +34,5 @@ export default async function QuienesSomosPage({
   const { lang } = await params;
   setRequestLocale(lang);
   const page = await getPageBySlug(SLUG);
-  return <CmsPageView page={page} eyebrow={await pageEyebrow(lang)} />;
+  return <CmsPageView page={page} eyebrow={await pageEyebrow(lang)} lamina="sol" />;
 }

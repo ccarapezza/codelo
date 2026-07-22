@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ArrowUpRight, ScanQrCode, Building2, FileText } from "lucide-react";
@@ -10,6 +11,7 @@ import {
   porOrigen,
   topObtentores,
 } from "@/lib/semillas-stats";
+import { LAMINAS_TRANS } from "@/lib/laminas";
 import { pageMetadata } from "@/lib/seo";
 import { CultivaresBrowser } from "./cultivares-browser";
 import {
@@ -103,14 +105,34 @@ export default async function SemillasPage({ params }: { params: Promise<{ lang:
 
   return (
     <main className="mx-auto w-full max-w-[1400px] px-5 pb-24 sm:px-8">
-      <header className="section-rule pt-5 pb-8">
-        <p className="label text-ember">{t("eyebrow")}</p>
-        <h1 className="mt-3 text-[clamp(2.25rem,5vw,4rem)] leading-[0.98] font-semibold tracking-tight">
-          {t("title")}
-        </h1>
-        <p className="mt-3 max-w-2xl font-serif text-lg leading-relaxed text-muted-foreground">
-          {t("tagline")}
-        </p>
+      <header className="section-rule grid pt-5 pb-8 lg:grid-cols-[1fr_minmax(280px,400px)] lg:items-end lg:gap-12">
+        <div>
+          <p className="label text-ember">{t("eyebrow")}</p>
+          <h1 className="mt-3 text-[clamp(2.25rem,5vw,4rem)] leading-[0.98] font-semibold tracking-tight">
+            {t("title")}
+          </h1>
+          <p className="mt-3 max-w-2xl font-serif text-lg leading-relaxed text-muted-foreground">
+            {t("tagline")}
+          </p>
+        </div>
+        {/* Lámina de la casa en transparente, impresa sobre el fondo de la
+            página; dos bakes por tema — ver lib/laminas.ts. */}
+        <div className="relative hidden aspect-[16/9] lg:block">
+          <Image
+            src={LAMINAS_TRANS.semillas.light}
+            alt=""
+            fill
+            sizes="400px"
+            className="object-contain dark:hidden"
+          />
+          <Image
+            src={LAMINAS_TRANS.semillas.dark}
+            alt=""
+            fill
+            sizes="400px"
+            className="hidden object-contain dark:block"
+          />
+        </div>
       </header>
 
       {/* ---- Panel de cifras ------------------------------------------- */}

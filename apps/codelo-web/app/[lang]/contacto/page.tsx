@@ -30,5 +30,5 @@ export default async function ContactoPage({ params }: { params: Promise<{ lang:
   const { lang } = await params;
   setRequestLocale(lang);
   const page = await getPageBySlug(SLUG);
-  return <CmsPageView page={page} eyebrow={await pageEyebrow(lang)} />;
+  return <CmsPageView page={page} eyebrow={await pageEyebrow(lang)} lamina="tallo" />;
 }
