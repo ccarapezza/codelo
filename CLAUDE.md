@@ -274,7 +274,10 @@ Gotchas:
   `NEXT_PUBLIC_CMS_URL` en `apps/codelo-web/.env` (los fetchers fail-soft
   devuelven vacío/null en silencio).
 - Tras tocar content-types del CMS: `cd apps/codelo-cms && pnpm exec strapi
-  ts:generate-types` (los generados están gitignoreados).
+  ts:generate-types` (los generados están gitignoreados). El Dockerfile del CMS
+  lo corre solo antes de `strapi build`: un build limpio parte de un checkout
+  sin `types/generated/`, y sin eso el typecheck falla en cada `.update()`
+  contra el `ContentType` genérico. El comando no necesita base de datos.
 - **`ENOSPC` / dev servers que se caen solos**: VS Code agota los watchers de
   inotify vigilando `node_modules` y `dist` (llegó a 63.000 de 65.536). Hay un
   `files.watcherExclude` en `.vscode/settings.json`; si aparece igual, revisar

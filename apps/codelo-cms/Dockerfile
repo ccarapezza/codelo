@@ -18,7 +18,15 @@ RUN pnpm install --frozen-lockfile --filter "codelo-cms..."
 FROM deps AS build
 COPY apps/codelo-cms apps/codelo-cms
 ENV NODE_ENV=production
-RUN cd apps/codelo-cms && pnpm exec strapi build
+# `types/generated/` está gitignoreado: son artefactos derivados de los schemas.
+# En local aparecen al correr el comando a mano, pero un build limpio de Docker
+# parte de un checkout que NO los tiene, y sin ellos `strapi build` typechequea
+# contra el `ContentType` genérico y falla con TS2559/TS2353 en cada `.update()`
+# — incluidos los de código que nunca se tocó.
+#
+# El comando no necesita base de datos (lee los schemas del disco), así que
+# puede correr acá dentro sin depender de Postgres.
+RUN cd apps/codelo-cms && pnpm exec strapi ts:generate-types && pnpm exec strapi build
 
 # ---- runtime ----
 FROM node:22-alpine AS runtime
