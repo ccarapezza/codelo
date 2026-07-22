@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 import { SITE_NAME } from "@/lib/site";
 
 // Web App Manifest. Next serves this at /manifest.webmanifest and injects the
-// <link rel="manifest"> automatically. Icons in /public/icons are placeholders
-// until real branding exists.
+// <link rel="manifest"> automatically. Icons in /public/icons derive from the
+// real logo (public/icons/logo.png) — same source as app/icon.png y afines.
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: SITE_NAME,
