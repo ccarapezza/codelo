@@ -94,6 +94,26 @@ Si el de cultivares aborta con «página vacía» o «respuesta inesperada», no
 bug del deploy: es la guarda que evita espejar un catálogo truncado cuando INASE
 cambia algo. Ver `src/lib/inase/cultivares.ts`.
 
+> El container del CMS no trae `curl`. Usar `wget`:
+> `docker exec codelo-cms wget -qO- -T 900 --header="x-internal-key: $KEY" --post-data="" http://localhost:1337/api/inase/sync-cultivares`
+
+### ⚠️ Y después, recrear el container web
+
+Los fetchers de la web cachean con `revalidate: 3600`. Si alguien —o un
+health check— toca `/semillas` mientras el sync todavía corre, Next guarda la
+respuesta VACÍA y la sirve por una hora: el CMS tiene los 67 cultivares y la
+web muestra cero. Pasó en el primer deploy.
+
+Un `restart` no alcanza, porque conserva el filesystem con `.next/cache`. Hay
+que recrear:
+
+```bash
+cd /opt/codelo && docker compose -f docker-compose.prod.yml up -d --force-recreate --no-deps web
+```
+
+Lo más simple es hacer los dos sync ANTES de mandar tráfico al sitio, y usar
+esto solo si quedó cacheado en vacío.
+
 ## Notas de configuración verificadas
 
 - **`CRON_ENABLED` no está en el compose y su default es `true`**, así que los
