@@ -24,9 +24,28 @@ ENV NODE_ENV=production
 # contra el `ContentType` genérico y falla con TS2559/TS2353 en cada `.update()`
 # — incluidos los de código que nunca se tocó.
 #
-# El comando no necesita base de datos (lee los schemas del disco), así que
-# puede correr acá dentro sin depender de Postgres.
-RUN cd apps/codelo-cms && pnpm exec strapi ts:generate-types && pnpm exec strapi build
+# `ts:generate-types` levanta la app para leer los schemas, así que exige la
+# misma configuración mínima que un boot — aunque no abra ninguna conexión:
+#
+#   - `DATABASE_CLIENT`: sin esto la config cae al default `sqlite`
+#     (config/database.ts) y revienta con "Cannot find module better-sqlite3",
+#     que no es dependencia del proyecto. Con `postgres` el cliente de knex se
+#     instancia sin conectarse, así que el build no necesita una base viva.
+#   - Los secretos de Strapi: `Strapi.register()` falla con "Missing
+#     admin.auth.secret" si no están.
+#
+# Son valores DESCARTABLES, solo para que el comando corra durante el build.
+# En runtime los pisa docker-compose.prod.yml con los reales de Jenkins.
+RUN cd apps/codelo-cms && \
+    DATABASE_CLIENT=postgres \
+    APP_KEYS=build-only,build-only-2 \
+    API_TOKEN_SALT=build-only \
+    ADMIN_JWT_SECRET=build-only \
+    TRANSFER_TOKEN_SALT=build-only \
+    ENCRYPTION_KEY=buildonlybuildonlybuildonly12345 \
+    JWT_SECRET=build-only \
+    pnpm exec strapi ts:generate-types && \
+    cd /repo/apps/codelo-cms && pnpm exec strapi build
 
 # ---- runtime ----
 FROM node:22-alpine AS runtime
