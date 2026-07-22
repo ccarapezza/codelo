@@ -1,5 +1,12 @@
 // The fixtures below are byte-faithful to the real export (checked 21/07/2026),
 // including its defects: BOM, wrapping quotes, and rows INASE itself damaged.
+//
+// ⚠️ The email column carries INVENTED addresses on purpose. The point of the
+// "never surfaces the email column" test is that those ~3.000 real addresses do
+// not get republished — copying one into the fixture would have done exactly
+// what the test exists to prevent. Company names, CUITs and registration
+// numbers are kept real: they identify businesses in a public registry and are
+// what makes the parser assertions meaningful.
 
 import { describe, expect, it } from "vitest";
 import { parseTsv } from "./operadores";
@@ -13,9 +20,9 @@ const BOM_LATIN1 = "ï»¿";
 
 const SAMPLE = [
   BOM_LATIN1 + HEADER,
-  '1FG\t"RIVARA S.A."\tALBERTI\t"BUENOS AIRES"\t30601191640\tmariano.olivero@rivara.com.ar',
+  '1FG\t"RIVARA S.A."\tALBERTI\t"BUENOS AIRES"\t30601191640\tcontacto@example.com',
   '13481EFK1\t"CS GROUP S. CAP I SECC IV"\tUSHUAIA\t"TIERRA DEL FUEGO"\t30718018850\tinfo@example.com',
-  '11238A\t"CANNABIS PATAGONICO S.A."\t"BAHIA BLANCA"\t"BUENOS AIRES"\t30717221857\tx@y.com',
+  '11238A\t"CANNABIS PATAGONICO S.A."\t"BAHIA BLANCA"\t"BUENOS AIRES"\t30717221857\tventas@example.com',
 ].join("\n");
 
 describe("parseTsv", () => {
