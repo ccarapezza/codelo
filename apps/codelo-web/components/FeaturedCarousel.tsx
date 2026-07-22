@@ -1,7 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+
+// useLayoutEffect avisa en el render del servidor; medir sólo tiene sentido en
+// el cliente, así que en SSR degrada a useEffect (que allí tampoco corre).
+const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 /**
  * Carousel for the front-page featured stories.
@@ -33,6 +37,8 @@ export function FeaturedCarousel({
   const [paused, setPaused] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [trackHeight, setTrackHeight] = useState<number | null>(null);
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -41,6 +47,22 @@ export function FeaturedCarousel({
     mq.addEventListener("change", apply);
     return () => mq.removeEventListener("change", apply);
   }, []);
+
+  // El riel es un flex, así que sin esto su alto lo fija la diapositiva MÁS
+  // ALTA y las demás quedan con un hueco debajo. En desktop apenas se nota; en
+  // mobile un titular de tres líneas contra uno de seis dejaba media pantalla
+  // vacía. Medimos la activa y el viewport sigue ese alto.
+  useIsomorphicLayoutEffect(() => {
+    const el = slideRefs.current[index];
+    if (!el) return;
+    const medir = () => setTrackHeight(el.getBoundingClientRect().height);
+    medir();
+    // El alto cambia al recargar fuentes, al llegar una portada o al rotar el
+    // teléfono; observar el nodo cubre los tres casos sin escuchar resize.
+    const ro = new ResizeObserver(medir);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [index, total]);
 
   const go = useCallback((n: number) => setIndex(((n % total) + total) % total), [total]);
   const next = useCallback(() => go(index + 1), [go, index]);
@@ -108,9 +130,18 @@ export function FeaturedCarousel({
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      <div ref={viewportRef} className="relative overflow-hidden">
+      <div
+        ref={viewportRef}
+        className="relative overflow-hidden"
+        style={{
+          // Sin medida todavía (SSR y primer paint) queda en auto: el alto de
+          // la más alta, que es exactamente el comportamiento previo.
+          height: trackHeight ?? undefined,
+          transition: reducedMotion ? "none" : "height 520ms cubic-bezier(0.22, 1, 0.36, 1)",
+        }}
+      >
         <div
-          className="flex"
+          className="flex items-start"
           style={{
             transform: `translate3d(-${index * 100}%, 0, 0)`,
             transition: reducedMotion ? "none" : "transform 520ms cubic-bezier(0.22, 1, 0.36, 1)",
@@ -119,6 +150,9 @@ export function FeaturedCarousel({
           {children.map((slide, i) => (
             <div
               key={i}
+              ref={el => {
+                slideRefs.current[i] = el;
+              }}
               className="w-full shrink-0"
               // The off-screen slides stay in the DOM for SEO and no-JS, but
               // must not be reachable by tab or announced as current.
