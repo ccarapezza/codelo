@@ -75,13 +75,25 @@ export function Leyenda({ series }: { series: Array<{ color: string; nombre: str
   );
 }
 
-export function Tabla({ head, rows }: { head: string[]; rows: Array<Array<string | number>> }) {
+export function Tabla({
+  head,
+  rows,
+  nowrap = false,
+}: {
+  head: string[];
+  rows: Array<Array<string | number>>;
+  /** Para tablas de valores cortos (fechas, cifras): nada envuelve — «22-jul»
+      partía en el guion dentro de un panel angosto. NO usarlo con celdas de
+      texto largo (los obtentores de /semillas), que sí deben envolver. */
+  nowrap?: boolean;
+}) {
+  const noWrapClass = nowrap ? " whitespace-nowrap" : "";
   return (
     <table className="w-full border-collapse text-left">
       <thead>
         <tr className="border-b border-rule">
           {head.map(h => (
-            <th key={h} className="label py-1.5 pr-4 font-medium text-muted-foreground">
+            <th key={h} className={`label py-1.5 pr-4 font-medium text-muted-foreground${noWrapClass}`}>
               {h}
             </th>
           ))}
@@ -93,7 +105,7 @@ export function Tabla({ head, rows }: { head: string[]; rows: Array<Array<string
             {r.map((cell, j) => (
               <td
                 key={j}
-                className={`py-1.5 pr-4 font-serif text-sm ${j === 0 ? "" : "tabular-nums"}`}
+                className={`py-1.5 pr-4 font-serif text-sm ${j === 0 ? "" : "tabular-nums"}${noWrapClass}`}
               >
                 {cell}
               </td>

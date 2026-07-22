@@ -396,6 +396,7 @@ async function TableroPronostico({
           className="md:col-span-6"
         >
           <Tabla
+            nowrap
             head={[t("dias.dia"), t("luz.duracion"), t("luz.dli")]}
             rows={dias.map(d => [
               diaCorto(d.fecha, locale),
