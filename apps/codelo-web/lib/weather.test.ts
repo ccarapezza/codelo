@@ -1,9 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
+  balanceHidrico,
+  bandaDli,
+  type Dia,
+  dliDesdeRadiacion,
   evaluarAviso,
+  evaluarAvisosPronostico,
+  fraccionDeSol,
+  type Horario,
+  horasDeLuz,
   type Lectura,
+  mapPronostico,
   parseLugarCookie,
   puntoDeRocio,
+  recortarDesdeAhora,
+  tendenciaFotoperiodo,
   type WmoGrupo,
 } from "./weather";
 
@@ -18,6 +29,14 @@ function lectura(over: Partial<Lectura>): Lectura {
     esDeDia: true,
     observadoEn: "2026-03-15T14:00",
     zona: "America/Argentina/Buenos_Aires",
+    // Solo llegan con el set extendido; con el de la home quedan en null.
+    rocio: null,
+    uv: null,
+    nubosidad: null,
+    presion: null,
+    rafaga: null,
+    vientoDir: null,
+    precipitacion: null,
     ...over,
   };
 }
@@ -146,5 +165,289 @@ describe("parseLugarCookie", () => {
   it("trunca etiquetas largas", () => {
     const larga = "a".repeat(200);
     expect(parseLugarCookie(`-34.61|-58.44|${larga}`)?.label).toHaveLength(48);
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Pronóstico                                                                  */
+/* -------------------------------------------------------------------------- */
+
+function dia(over: Partial<Dia> = {}): Dia {
+  return {
+    fecha: "2026-07-22",
+    maxima: 20,
+    minima: 10,
+    grupo: "despejado" as WmoGrupo,
+    amanece: "2026-07-22T07:54",
+    atardece: "2026-07-22T18:06",
+    luzHoras: 10.2,
+    solHoras: 6,
+    uvMax: 3,
+    lluviaMm: 0,
+    probLluvia: 0,
+    rafagaMax: 20,
+    radiacionMJ: 10,
+    et0: 1.2,
+    ...over,
+  };
+}
+
+function hora(over: Partial<Horario> = {}): Horario {
+  return {
+    hora: "2026-07-22T12:00",
+    temperatura: 18,
+    humedad: 60,
+    vpd: 0.8,
+    rocio: 10,
+    probLluvia: 0,
+    viento: 10,
+    uv: 2,
+    sueloTemp: 14,
+    sueloHumedad: 0.3,
+    grupo: "despejado" as WmoGrupo,
+    esDeDia: true,
+    ...over,
+  };
+}
+
+describe("mapPronostico", () => {
+  it("parsea arrays paralelos y convierte los segundos de luz a horas", () => {
+    const p = mapPronostico({
+      hourly: {
+        time: ["2026-07-22T00:00", "2026-07-22T01:00"],
+        temperature_2m: [8.3, 8.1],
+        relative_humidity_2m: [93, 94],
+        vapour_pressure_deficit: [0.08, 0.07],
+      },
+      daily: {
+        time: ["2026-07-22"],
+        temperature_2m_max: [13.7],
+        temperature_2m_min: [8],
+        daylight_duration: [36674.3],
+      },
+    });
+    expect(p?.horas).toHaveLength(2);
+    expect(p?.dias[0].luzHoras).toBeCloseTo(10.19, 2);
+  });
+
+  it("conserva el punto cuando falta una magnitud secundaria, como hueco", () => {
+    // Descartar la hora entera por un DPV faltante cortaría también la serie de
+    // temperatura, que sí llegó.
+    const p = mapPronostico({
+      hourly: {
+        time: ["2026-07-22T00:00"],
+        temperature_2m: [8.3],
+        vapour_pressure_deficit: [null],
+      },
+    });
+    expect(p?.horas).toHaveLength(1);
+    expect(p?.horas[0].vpd).toBeNull();
+    expect(p?.horas[0].temperatura).toBe(8.3);
+  });
+
+  it("descarta el punto si falta la hora o su magnitud principal", () => {
+    const p = mapPronostico({
+      hourly: {
+        time: ["2026-07-22T00:00", null, "2026-07-22T02:00"],
+        temperature_2m: [8.3, 8.1, null],
+      },
+    });
+    expect(p?.horas).toHaveLength(1);
+  });
+
+  it("no inventa filas si las columnas vienen de largos distintos", () => {
+    const p = mapPronostico({
+      hourly: {
+        time: ["2026-07-22T00:00", "2026-07-22T01:00", "2026-07-22T02:00"],
+        temperature_2m: [8.3],
+      },
+    });
+    expect(p?.horas).toHaveLength(1);
+  });
+
+  it("devuelve null solo si no quedó ningún punto usable", () => {
+    expect(mapPronostico({})).toBeNull();
+    expect(mapPronostico({ hourly: { time: [] } })).toBeNull();
+  });
+
+  it("un bloque roto no invalida al otro", () => {
+    const p = mapPronostico({
+      hourly: { time: [null], temperature_2m: [null] },
+      daily: { time: ["2026-07-22"], temperature_2m_max: [13.7], temperature_2m_min: [8] },
+    });
+    expect(p?.horas).toHaveLength(0);
+    expect(p?.dias).toHaveLength(1);
+  });
+});
+
+describe("recortarDesdeAhora", () => {
+  // El bloque `hourly` arranca a las 00:00 de hoy: sin recorte, a las 23:00
+  // casi toda la serie sería pasado.
+  const dia1 = Array.from({ length: 24 }, (_, i) =>
+    hora({ hora: `2026-07-22T${String(i).padStart(2, "0")}:00` }),
+  );
+  const dia2 = Array.from({ length: 24 }, (_, i) =>
+    hora({ hora: `2026-07-23T${String(i).padStart(2, "0")}:00` }),
+  );
+  const serie = [...dia1, ...dia2];
+
+  it("arranca en la hora en curso, no a la medianoche", () => {
+    const r = recortarDesdeAhora(serie, "2026-07-22T12:45");
+    expect(r[0].hora).toBe("2026-07-22T12:00");
+  });
+
+  it("a las 23:00 sigue devolviendo horas futuras y no se queda corto de golpe", () => {
+    const r = recortarDesdeAhora(serie, "2026-07-22T23:10");
+    expect(r[0].hora).toBe("2026-07-22T23:00");
+    expect(r.length).toBeGreaterThan(20);
+  });
+
+  it("sin cursor devuelve las primeras n sin tocar", () => {
+    expect(recortarDesdeAhora(serie, null, 5)).toHaveLength(5);
+    expect(recortarDesdeAhora(serie, null, 5)[0].hora).toBe("2026-07-22T00:00");
+  });
+
+  it("con un cursor posterior a toda la serie degrada en vez de vaciar", () => {
+    expect(recortarDesdeAhora(serie, "2027-01-01T00:00", 3)).toHaveLength(3);
+  });
+});
+
+describe("derivaciones de luz", () => {
+  it("convierte segundos a horas", () => {
+    expect(horasDeLuz(43200)).toBe(12);
+  });
+
+  it("aplica el factor documentado de radiación a DLI", () => {
+    // Fijado a propósito: si alguien toca el factor, este test lo dice.
+    expect(dliDesdeRadiacion(1)).toBeCloseTo(2.06, 2);
+    expect(dliDesdeRadiacion(0)).toBe(0);
+  });
+
+  it("da valores del orden correcto contra días reales de Buenos Aires", () => {
+    // Verano despejado ~30 MJ, invierno cerrado ~6,5 MJ (archivo de Open-Meteo).
+    expect(dliDesdeRadiacion(30.5)).toBeGreaterThan(50);
+    expect(dliDesdeRadiacion(30.5)).toBeLessThan(70);
+    expect(dliDesdeRadiacion(6.52)).toBeLessThan(20);
+  });
+
+  it("clasifica el día en bandas descriptivas", () => {
+    expect(bandaDli(8)).toBe("baja");
+    expect(bandaDli(15)).toBe("media");
+    expect(bandaDli(25)).toBe("alta");
+    expect(bandaDli(60)).toBe("muyAlta");
+  });
+
+  it("acota la fracción de sol a 1 aunque el modelo se pase", () => {
+    expect(fraccionDeSol(dia({ luzHoras: 10, solHoras: 11 }))).toBe(1);
+    expect(fraccionDeSol(dia({ luzHoras: 10, solHoras: 5 }))).toBe(0.5);
+    expect(fraccionDeSol(dia({ luzHoras: 0, solHoras: 0 }))).toBeNull();
+    expect(fraccionDeSol(dia({ solHoras: null }))).toBeNull();
+  });
+});
+
+describe("tendenciaFotoperiodo", () => {
+  it("detecta el día acortándose y su ritmo en minutos", () => {
+    const r = tendenciaFotoperiodo([dia({ luzHoras: 12 }), dia({ luzHoras: 11.9 })]);
+    expect(r?.sentido).toBe("acorta");
+    expect(r?.minutosPorDia).toBeCloseTo(-6, 1);
+  });
+
+  it("detecta el día alargándose", () => {
+    expect(tendenciaFotoperiodo([dia({ luzHoras: 10 }), dia({ luzHoras: 10.2 })])?.sentido).toBe(
+      "alarga",
+    );
+  });
+
+  it("no llama tendencia al ruido del solsticio", () => {
+    expect(tendenciaFotoperiodo([dia({ luzHoras: 14.48 }), dia({ luzHoras: 14.481 })])?.sentido).toBe(
+      "estable",
+    );
+  });
+
+  it("devuelve null sin datos suficientes", () => {
+    expect(tendenciaFotoperiodo([])).toBeNull();
+    expect(tendenciaFotoperiodo([dia()])).toBeNull();
+    expect(tendenciaFotoperiodo([dia({ luzHoras: null }), dia({ luzHoras: null })])).toBeNull();
+  });
+});
+
+describe("balanceHidrico", () => {
+  it("resta la lluvia a la demanda atmosférica", () => {
+    expect(balanceHidrico(3, 1)).toBe(2);
+    expect(balanceHidrico(3, 5)).toBe(-2);
+  });
+
+  it("trata la lluvia ausente como cero pero la demanda ausente como desconocida", () => {
+    expect(balanceHidrico(3, null)).toBe(3);
+    expect(balanceHidrico(null, 5)).toBeNull();
+  });
+});
+
+describe("evaluarAvisosPronostico", () => {
+  const sinNada = { horas: [hora()], dias: [dia()] };
+
+  it("avisa de helada con el día al que se refiere", () => {
+    const a = evaluarAvisosPronostico({ horas: [], dias: [dia({ minima: 2, fecha: "2026-08-01" })] });
+    expect(a[0]).toMatchObject({ clave: "heladaProxima", cuando: "2026-08-01" });
+  });
+
+  it("escala a alerta cuando la mínima perfora el cero", () => {
+    const templada = evaluarAvisosPronostico({ horas: [], dias: [dia({ minima: 2 })] });
+    const bajoCero = evaluarAvisosPronostico({ horas: [], dias: [dia({ minima: -1 })] });
+    expect(templada[0].severidad).toBe("atencion");
+    expect(bajoCero[0].severidad).toBe("alerta");
+  });
+
+  it("pide dos días seguidos de calor, no uno solo", () => {
+    const unDia = evaluarAvisosPronostico({ horas: [], dias: [dia({ maxima: 36 }), dia()] });
+    const dosDias = evaluarAvisosPronostico({
+      horas: [],
+      dias: [dia({ maxima: 36 }), dia({ maxima: 37 })],
+    });
+    expect(unDia.some(a => a.clave === "olaDeCalor")).toBe(false);
+    expect(dosDias.some(a => a.clave === "olaDeCalor")).toBe(true);
+  });
+
+  it("detecta la ventana de mojado solo con 8 horas seguidas", () => {
+    const corta = Array.from({ length: 7 }, () => hora({ humedad: 95 }));
+    const larga = Array.from({ length: 8 }, () => hora({ humedad: 95 }));
+    expect(
+      evaluarAvisosPronostico({ horas: corta, dias: [] }).some(a => a.clave === "mojadoProlongado"),
+    ).toBe(false);
+    expect(
+      evaluarAvisosPronostico({ horas: larga, dias: [] }).some(a => a.clave === "mojadoProlongado"),
+    ).toBe(true);
+  });
+
+  it("no cuenta como racha las horas húmedas salteadas", () => {
+    const salteadas = Array.from({ length: 20 }, (_, i) => hora({ humedad: i % 2 ? 95 : 40 }));
+    expect(
+      evaluarAvisosPronostico({ horas: salteadas, dias: [] }).some(
+        a => a.clave === "mojadoProlongado",
+      ),
+    ).toBe(false);
+  });
+
+  it("ordena por severidad y no devuelve más de cuatro", () => {
+    const a = evaluarAvisosPronostico({
+      horas: Array.from({ length: 10 }, () => hora({ humedad: 95 })),
+      dias: [
+        dia({ minima: -2 }),
+        dia({ maxima: 36 }),
+        dia({ maxima: 36 }),
+        dia({ lluviaMm: 30 }),
+        dia({ rafagaMax: 80 }),
+        dia({ uvMax: 10 }),
+      ],
+    });
+    expect(a.length).toBeLessThanOrEqual(4);
+    expect(a[0].severidad).toBe("alerta");
+  });
+
+  it("con todo en calma informa la ventana en vez de callarse", () => {
+    const a = evaluarAvisosPronostico(sinNada);
+    expect(a).toHaveLength(1);
+    expect(a[0].severidad).toBe("info");
+    expect(["ventanaSinLluvia", "sinNovedades"]).toContain(a[0].clave);
   });
 });

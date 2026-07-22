@@ -1,5 +1,6 @@
-import { MapPin } from "lucide-react";
+import { ArrowUpRight, Gauge, MapPin } from "lucide-react";
 import { getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
 import { SITE_NAME } from "@/lib/site";
 import { formatNumber } from "@/lib/intl";
 import { evaluarAviso } from "@/lib/weather";
@@ -145,6 +146,40 @@ export async function Panel({ lectura, lugar, horaServidor, locale }: PanelProps
             {t("wx.sinLecturaExplain")}
           </p>
         )}
+
+        {/* El aparato muestra el ahora; el pronóstico completo vive en /clima.
+            Va acá afuera por la misma razón que el aviso: un enlace dentro del
+            bisel rompería la ilusión de que es un objeto. */}
+        {/* La cara de otro aparato asomando debajo del que ya está en pantalla:
+            reusa el bisel para que se lea como "hay más instrumento acá abajo"
+            y no como un botón pegado a un objeto. */}
+        <Link href="/clima" className="instr-cta group mt-4">
+          <span className="instr-cta-icono" aria-hidden>
+            <Gauge className="size-5" strokeWidth={1.5} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-display text-base leading-tight font-semibold group-hover:underline">
+              {t("wx.verPronostico")}
+            </span>
+            <span className="mt-0.5 block font-mono text-[0.5625rem] tracking-[0.14em] uppercase opacity-70">
+              {t("wx.verPronosticoBajada")}
+            </span>
+          </span>
+          <ArrowUpRight className="size-4 shrink-0 text-sun" aria-hidden />
+        </Link>
+
+        {/* Crédito de la fuente. Open-Meteo publica bajo CC BY 4.0 y pide el
+            enlace junto a cada lugar donde se muestran sus datos, así que va
+            también acá y no solo en /clima. La explicación completa —que es un
+            modelo interpolado y no un sensor— vive en esa página. */}
+        <a
+          href="https://open-meteo.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="label mt-3 block text-muted-foreground hover:text-ember hover:underline"
+        >
+          {t("wx.fuente")}
+        </a>
       </div>
     </section>
   );

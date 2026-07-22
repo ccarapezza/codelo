@@ -12,99 +12,21 @@
 // reserved: amber ALWAYS means RNC, ink-blue ALWAYS means RNPC, in every figure
 // on the site. Single-series figures use amber as slot 1.
 
+import { Dato as DatoBase, Figure, Leyenda, Tabla } from "@/components/charts/primitivos";
 import type { AltasPorAnio, Conteo } from "@/lib/semillas-stats";
+
+// Los envoltorios genericos viven en components/charts: los comparte /clima.
+export { Figure, Leyenda, Tabla };
+
+/** `Dato` de semillas: el destacado va SIEMPRE en el ocre del RNC. */
+export function Dato(props: Omit<React.ComponentProps<typeof DatoBase>, "colorDestacado">) {
+  return <DatoBase {...props} colorDestacado={COLOR_RNC} />;
+}
 
 export const COLOR_RNC = "var(--data-rnc)";
 export const COLOR_RNPC = "var(--data-rnpc)";
 
 /* -------------------------------------------------------------------------- */
-
-export function Figure({
-  titulo,
-  bajada,
-  children,
-  tabla,
-}: {
-  titulo: string;
-  bajada?: string;
-  children: React.ReactNode;
-  /** Table view — every value reachable without hover. */
-  tabla?: React.ReactNode;
-}) {
-  return (
-    // `min-w-0` no es cosmético: un ítem de grid tiene `min-width: auto` por
-    // defecto, así que el ancho mínimo del gráfico estiraba la columna y hacía
-    // scrollear la PÁGINA entera en horizontal. Con esto el scroll queda donde
-    // corresponde, dentro del contenedor del gráfico.
-    <figure className="m-0 min-w-0">
-      <figcaption>
-        <h3 className="font-display text-xl leading-tight font-semibold">{titulo}</h3>
-        {bajada ? (
-          <p className="mt-1.5 max-w-prose font-serif text-sm leading-relaxed text-muted-foreground">
-            {bajada}
-          </p>
-        ) : null}
-      </figcaption>
-      <div className="mt-4">{children}</div>
-      {tabla ? (
-        <details className="mt-3 group">
-          <summary className="label cursor-pointer text-muted-foreground hover:text-ember">
-            Ver los datos
-          </summary>
-          <div className="mt-2 overflow-x-auto">{tabla}</div>
-        </details>
-      ) : null}
-    </figure>
-  );
-}
-
-export function Leyenda({ series }: { series: Array<{ color: string; nombre: string }> }) {
-  return (
-    <ul className="label flex flex-wrap gap-x-5 gap-y-1.5">
-      {series.map(s => (
-        <li key={s.nombre} className="flex items-center gap-2">
-          {/* Identity rides a coloured mark next to the text, never the text. */}
-          <span
-            aria-hidden
-            className="inline-block size-2.5 shrink-0"
-            style={{ backgroundColor: s.color }}
-          />
-          <span className="text-muted-foreground">{s.nombre}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-export function Tabla({ head, rows }: { head: string[]; rows: Array<Array<string | number>> }) {
-  return (
-    <table className="w-full border-collapse text-left">
-      <thead>
-        <tr className="border-b border-rule">
-          {head.map(h => (
-            <th key={h} className="label py-1.5 pr-4 font-medium text-muted-foreground">
-              {h}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((r, i) => (
-          <tr key={i} className="border-b border-rule/60">
-            {r.map((cell, j) => (
-              <td
-                key={j}
-                className={`py-1.5 pr-4 font-serif text-sm ${j === 0 ? "" : "tabular-nums"}`}
-              >
-                {cell}
-              </td>
-            ))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
 
 /* -------------------------------------------------------------------------- */
 
@@ -388,31 +310,3 @@ export function BarrasSuperpuestas({
  * Stat tile. Proportional figures, not tabular: `121` reads loose at display
  * sizes when every digit is forced to the width of a zero.
  */
-export function Dato({
-  valor,
-  etiqueta,
-  nota,
-  destacado,
-}: {
-  valor: string | number;
-  etiqueta: string;
-  nota?: string;
-  destacado?: boolean;
-}) {
-  return (
-    <div
-      className="border-t-2 border-rule pt-3"
-      style={destacado ? { borderColor: COLOR_RNC } : undefined}
-    >
-      <p
-        className={`font-display leading-none font-semibold ${destacado ? "text-[clamp(2.5rem,6vw,3.75rem)]" : "text-[clamp(1.75rem,4vw,2.5rem)]"}`}
-      >
-        {valor}
-      </p>
-      <p className="label mt-2 text-foreground">{etiqueta}</p>
-      {nota ? (
-        <p className="mt-1 font-serif text-sm leading-snug text-muted-foreground">{nota}</p>
-      ) : null}
-    </div>
-  );
-}

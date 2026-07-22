@@ -12,6 +12,7 @@ export async function SiteHeader() {
     { href: "/quienes-somos", label: tNav("about") },
     { href: "/reprocann", label: tNav("reprocann") },
     { href: "/semillas", label: tNav("seeds") },
+    { href: "/clima", label: tNav("weather") },
     { href: "/actividades", label: tNav("events") },
     { href: "/blog", label: tNav("blog") },
     { href: "/contacto", label: tNav("contact") },

@@ -1,7 +1,7 @@
-import { cookies } from "next/headers";
 import type { Locale } from "@/i18n/routing";
 import { localeTimeZone } from "@/lib/intl";
-import { COOKIE_UBICACION, getWeather, LUGAR_DEFAULT, parseLugarCookie } from "@/lib/weather";
+import { getWeather } from "@/lib/weather";
+import { resolverLugar } from "./lugar";
 import { Panel } from "./Panel";
 import type { PanelProps } from "./tipos";
 
@@ -39,8 +39,7 @@ function horaEn(zona: string): string {
  * (N visitas = 1 llamada externa). Resolviéndolo en el cliente serían N.
  */
 async function cargarInstrumento(locale: Locale): Promise<PanelProps> {
-  const jar = await cookies();
-  const lugar = parseLugarCookie(jar.get(COOKIE_UBICACION)?.value) ?? LUGAR_DEFAULT;
+  const lugar = await resolverLugar();
 
   const zonaLocal = localeTimeZone(locale);
   const lectura = await getWeather(lugar, zonaLocal);

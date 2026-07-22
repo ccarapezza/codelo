@@ -15,7 +15,8 @@
     "seeds": "Semillas",
     "events": "Actividades",
     "blog": "Noticias",
-    "contact": "Contacto"
+    "contact": "Contacto",
+    "weather": "Clima"
   },
   "header": {
     "logoAlt": "Cogollos del Oeste — inicio",
@@ -157,7 +158,10 @@
       "avisoNota": "Los valores son del aire exterior. Dentro de una inflorescencia densa la humedad es mayor, y una hoja al sol puede superar por varios grados la temperatura del aire. Las tablas de VPD por etapa que circulan en internet son de cultivo en interior con ambiente controlado y no se trasladan a campo.",
       "titulo": "Termohigrómetro en tiempo real",
       "ayudaLabel": "Qué significan estos valores",
-      "subtitulo": "Datos para cultivo exterior"
+      "subtitulo": "Datos para cultivo exterior",
+      "verPronostico": "Estación meteorológica",
+      "fuente": "Weather data by Open-Meteo.com",
+      "verPronosticoBajada": "Pronóstico de 48 h y 7 días, luz, suelo y riego"
     },
     "carouselPrev": "Nota destacada anterior",
     "carouselNext": "Nota destacada siguiente",
@@ -260,5 +264,145 @@
     "categoriasSource": "Ver las categorías del RNCyFS en INASE (PDF)",
     "verTodos": "más",
     "verMenos": "Ver menos"
+  },
+  "clima": {
+    "eyebrow": "Estación para cultivo de exterior",
+    "title": "Clima",
+    "tagline": "Lo que el aire, el suelo y la luz están haciendo ahora, y qué se viene en los próximos días.",
+    "verDatos": "Ver los datos",
+    "sinPronostico": "No pudimos traer el pronóstico. Volvé a intentar en un rato.",
+    "sinPronosticoNota": "La lectura del momento y el pronóstico se piden por separado, así que puede faltar uno y estar el otro.",
+    "ahora": {
+      "titulo": "Ahora mismo",
+      "sensacion": "Sensación",
+      "rocio": "Punto de rocío",
+      "viento": "Viento",
+      "rafaga": "Ráfaga",
+      "uv": "Índice UV",
+      "nubosidad": "Nubosidad",
+      "presion": "Presión",
+      "rocioExplain": "Es la temperatura a la que el aire satura. Cuanto más cerca está de la temperatura ambiente, más probable es que se forme rocío sobre las hojas: la depresión del punto de rocío predice el mojado foliar mejor que la humedad sola.",
+      "vientoDe": "Viento de",
+      "rafagaCorta": "ráfaga",
+      "humedad": "Humedad",
+      "dpv": "DPV"
+    },
+    "horas": {
+      "titulo": "Próximas 48 horas",
+      "bajadaTemp": "Temperatura y punto de rocío. Cuando las dos curvas se juntan, el aire está saturando.",
+      "bajadaVpd": "Déficit de presión de vapor: cuánta agua le pide la atmósfera a la planta.",
+      "bajadaLluvia": "Probabilidad de precipitación hora por hora.",
+      "temperatura": "Temperatura",
+      "rocio": "Punto de rocío",
+      "vpd": "DPV",
+      "probLluvia": "Prob. de lluvia",
+      "noche": "Noche",
+      "hora": "Hora"
+    },
+    "dias": {
+      "titulo": "Siete días",
+      "bajada": "Máxima y mínima sobre una escala común, con lluvia acumulada y ráfaga máxima.",
+      "dia": "Día",
+      "maxima": "Máx.",
+      "minima": "Mín.",
+      "lluvia": "Lluvia",
+      "rafaga": "Ráfaga",
+      "uvMax": "UV máx.",
+      "estado": "Estado",
+      "tituloPanel": "Los próximos siete días"
+    },
+    "luz": {
+      "titulo": "Luz y fotoperiodo",
+      "bajada": "Cuánto dura el día y cuánta luz recibe efectivamente el cultivo.",
+      "duracion": "Duración del día",
+      "amanece": "Amanece",
+      "atardece": "Atardece",
+      "sol": "Horas de sol",
+      "dli": "Luz diaria (DLI)",
+      "dliUnidad": "mol/m²/día",
+      "ritmoAcorta": "El día se viene acortando {minutos} por día.",
+      "ritmoAlarga": "El día se viene alargando {minutos} por día.",
+      "ritmoEstable": "El día casi no cambia de duración en esta ventana.",
+      "bandaUmbral": "Rango de umbral reportado (12–14 h)",
+      "fotoperiodoExplain": "El fotoperiodo es el principal disparador de la floración en cannabis de exterior: la planta responde al alargamiento de la noche, no a la fecha del calendario. El umbral no es un número único —depende del cultivar, y las variedades autoflorecientes no responden al fotoperiodo—, por eso mostramos las 12 a 14 horas como un rango reportado y no como un interruptor. Además, aun con días largos las plantas terminan floreciendo por edad, así que el fotoperiodo explica el momento pero no lo determina solo.",
+      "dliExplain": "El DLI es la cantidad de luz útil para fotosíntesis que recibe una superficie en todo el día. Acá es una ESTIMACIÓN, no una medición: se deriva de la radiación global que publica el modelo, suponiendo que la fracción aprovechable es del 45 %. Esa fracción se mueve con la nubosidad y con la altura del sol, así que el valor tiene un margen del orden del 10 %. Sirve para comparar un día con otro, no como lectura de sensor.",
+      "banda": {
+        "baja": "día de luz baja",
+        "media": "día de luz media",
+        "alta": "día de luz alta",
+        "muyAlta": "día de luz muy alta"
+      },
+      "arco": "Recorrido del sol",
+      "tituloPanel": "El día",
+      "tablaTitulo": "Luz por día",
+      "tablaBajada": "Cuánto dura el día y cuánta luz acumula, para los próximos siete."
+    },
+    "suelo": {
+      "titulo": "Suelo y riego",
+      "bajada": "Temperatura del suelo a 6 cm y balance entre lo que la atmósfera pide y lo que llueve.",
+      "temp": "Temperatura del suelo",
+      "humedad": "Humedad del suelo",
+      "humedadUnidad": "m³/m³",
+      "balance": "Balance hídrico",
+      "balanceUnidad": "mm",
+      "pierde": "El suelo pierde agua",
+      "gana": "El suelo recibe más de lo que pierde",
+      "balanceExplain": "El balance es la lluvia menos la evapotranspiración de referencia (ET₀) del día. Positivo significa que la atmósfera pide más agua de la que cae. Es una referencia, no una receta de riego: la ET₀ está calculada para una superficie de pasto estándar y la demanda real de un cultivo se obtiene multiplicándola por un coeficiente propio de la especie, que en cannabis no está bien establecido. Tampoco sabemos tu sustrato, tu maceta ni el tamaño de tus plantas.",
+      "humedadExplain": "Es contenido volumétrico de agua modelado para una columna de suelo genérica, entre 3 y 9 cm de profundidad. Sirve para leer el CAMBIO —si llovió, si se está secando— y no para decidir si el suelo está suficientemente húmedo: eso depende de la textura del suelo real, que el modelo no conoce.",
+      "tituloTemp": "Tierra a 6 cm"
+    },
+    "riesgos": {
+      "titulo": "A tener en cuenta",
+      "bajada": "Lo que el pronóstico marca para los próximos días."
+    },
+    "avisos": {
+      "heladaProxima": {
+        "texto": "Se pronostica una mínima de riesgo para el {cuando}. Con cielo despejado y sin viento, la superficie del cultivo puede estar 2 a 4 °C por debajo de la temperatura del aire.",
+        "accion": "Prever cobertura para esa noche."
+      },
+      "olaDeCalor": {
+        "texto": "Dos días seguidos de calor extremo desde el {cuando}. Cerca de los 40 °C la fotosíntesis del cannabis cae entre 16 % y 38 % según la variedad.",
+        "accion": "Prever sombra parcial en las horas centrales y riego a primera hora."
+      },
+      "mojadoProlongado": {
+        "texto": "Vienen ocho horas o más seguidas con humedad muy alta. Ese es el tiempo de hoja mojada que necesita el moho gris para germinar.",
+        "accion": "Mejorar la circulación de aire y evitar mojar el follaje."
+      },
+      "lluviaFuerte": {
+        "texto": "Lluvia importante prevista para el {cuando}.",
+        "accion": "Revisar el drenaje y, en flores densas, la ventilación posterior."
+      },
+      "rachasFuertes": {
+        "texto": "Ráfagas fuertes previstas para el {cuando}. Las ramas cargadas de flor son las que se quiebran.",
+        "accion": "Revisar tutores y ataduras antes."
+      },
+      "uvExtremo": {
+        "texto": "Índice UV muy alto previsto para el {cuando}.",
+        "accion": "Es un riesgo para quien trabaja al aire libre: sombra y protección en las horas centrales."
+      },
+      "ventanaSeca": {
+        "texto": "Se vienen varios días sin lluvia y con demanda de agua sostenida.",
+        "accion": "Verificar la humedad del suelo antes de que el balance se acumule."
+      },
+      "ventanaSinLluvia": {
+        "texto": "No hay lluvia probable en las próximas 48 horas.",
+        "accion": "Buena ventana para tareas que necesitan el follaje seco."
+      },
+      "sinNovedades": {
+        "texto": "El pronóstico no marca situaciones de riesgo para los próximos días.",
+        "accion": "Seguimiento normal."
+      }
+    },
+    "rosas": {
+      "titulo": "Viento"
+    },
+    "fuente": {
+      "titulo": "De dónde salen estos datos",
+      "texto": "Los valores vienen de Open-Meteo, que integra los modelos de pronóstico numérico de más de quince servicios meteorológicos nacionales —entre ellos el ECMWF europeo, la NOAA estadounidense, el DWD alemán y Météo-France—. No son la lectura de un sensor puesto en tu terreno: el modelo calcula sobre una grilla y el valor que ves está interpolado a la coordenada consultada, redondeada a unos 1,1 km. Un patio con paredes al sol, un bajo donde se junta el aire frío o el reparo de una medianera pueden apartarse bastante de esta lectura.",
+      "licencia": "Datos publicados bajo licencia Creative Commons BY 4.0.",
+      "enlace": "Weather data by Open-Meteo.com",
+      "ubicacion": "Si compartís tu ubicación, el nombre del lugar lo resuelve BigDataCloud desde tu navegador. Las coordenadas se guardan redondeadas en una cookie de tu equipo y no se envían a ningún otro lado.",
+      "placa": "Fuente de datos"
+    }
   }
 }

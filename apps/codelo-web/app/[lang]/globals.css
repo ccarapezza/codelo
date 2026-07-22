@@ -104,6 +104,32 @@
   --data-rnc: #b96831;
   --data-rnpc: #525ca1;
 
+  /* Tintas de dato de /clima. Son tokens PROPIOS y no alias de --data-rnc/rnpc
+     aunque hoy compartan los pasos: aquellos tienen significado reservado
+     (ámbar = RNC, tinta = RNPC) y no puede depender de ellos otra página.
+
+     La paleta de /clima es de CINCO familias y no de dos: la página es un
+     tablero con muchos instrumentos a la vista al mismo tiempo, y con dos
+     tintas todos se parecían entre sí. Cada familia nombra una magnitud y esa
+     asignación no rota:
+       calor   → temperatura, sensación, máxima, DLI (energía)
+       agua    → punto de rocío, humedad, lluvia, mínima
+       vegetal → suelo: temperatura y humedad de la tierra
+       viento  → viento y ráfagas, lo que se mueve en el aire
+       uv      → índice UV, la única magnitud de riesgo directo a la persona
+     Cada nombre describe lo que muestra, no el color que tiene, así que la
+     asignación no se puede rotar sin renombrarla.
+
+     Las cinco pasaron el validador del skill de dataviz sobre papel #f6e6cc:
+     banda de luminosidad, piso de croma, separación CVD (peor par ΔE 10.2),
+     visión normal 25.5 y contraste ≥3:1. El verde estuvo dos iteraciones en
+     2,95:1 —apenas debajo del piso— y hubo que oscurecerlo.                */
+  --data-calor: #b96831;
+  --data-agua: #4a5bb0;
+  --data-vegetal: #6b8118;
+  --data-viento: #0f8fa8;
+  --data-uv: #a8305c;
+
   --background: oklch(0.931 0.039 80); /* #F6E6CC papel tintado con el ámbar */
   --foreground: oklch(0.145 0.045 275);
   --card: oklch(0.972 0.022 80);
@@ -158,6 +184,16 @@
      normal 25.7, contraste ≥3:1. */
   --data-rnc: #ce773e;
   --data-rnpc: #6977d3;
+
+  /* Revalidados aparte sobre #090c20: CVD ΔE 9.1 en el peor par, visión normal
+     25.7, contraste ≥3:1. ELEGIDOS, no invertidos: el verde y el cian claros se
+     salían por arriba de la banda del modo oscuro (L 0.48–0.67) y hubo que
+     bajarlos. */
+  --data-calor: #ce773e;
+  --data-agua: #6977d3;
+  --data-vegetal: #7f9c22;
+  --data-viento: #28a0b8;
+  --data-uv: #d4577f;
 
   --background: oklch(0.165 0.042 275);
   --foreground: oklch(0.93 0.015 78);
@@ -786,3 +822,206 @@
   }
 }
 /* ═══════════ FIN TERMOHIGRÓMETRO ═══════════ */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TABLERO DE /clima
+   ═══════════════════════════════════════════════════════════════════════════
+   La página es una consola de instrumentos, no una lista de secciones. Reusa
+   el material del termohigrómetro —bisel moldeado, cristal hundido, cifras de
+   siete segmentos— en formato chico y repetido sobre una grilla.
+
+   Por qué se hereda el material en vez de inventar tarjetas: el aparato de la
+   home ya definió cómo se ve un instrumento en este sitio. Una tarjeta plana
+   al lado del termohigrómetro leería como otro producto.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Bisel chico. Mismo modelado que `.termo-bisel` pero con el canto reducido de
+   10 px a 4: repetido doce veces en una grilla, el espesor completo convertía
+   la página en un muro de relieve. */
+.instr {
+  background-color: var(--brand-ink);
+  background-image: linear-gradient(180deg, oklch(0.245 0.052 275) 0%, oklch(0.19 0.048 275) 62%);
+  color: var(--brand-paper);
+  border-radius: calc(var(--radius) * 4);
+  padding: 0.5rem;
+  height: 100%;
+  box-shadow:
+    inset 0 1px 0 oklch(0.949 0.017 78 / 22%),
+    inset 0 -1px 0 oklch(0 0 0 / 55%),
+    inset 0 0 0 1px oklch(0 0 0 / 32%),
+    0 1px 0 oklch(0.145 0.045 275),
+    0 2px 0 oklch(0.131 0.043 275),
+    0 3px 0 oklch(0.117 0.041 275),
+    0 4px 0 oklch(0.103 0.038 275),
+    0 5px 4px -2px oklch(0.145 0.045 275 / 34%),
+    0 10px 18px -8px oklch(0.145 0.045 275 / 38%);
+}
+.dark .instr {
+  border: 1px solid oklch(0.949 0.017 78 / 16%);
+}
+
+/* Cristal del instrumento chico. El de la home es ámbar fijo; acá el tinte lo
+   pone cada instrumento con `--tinte`, que es lo que permite distinguir doce
+   aparatos de un vistazo sin leer los rótulos. El default es el ámbar del
+   logo, así que un instrumento sin tinte se ve como el de la home. */
+.instr-vidrio {
+  --tinte: var(--brand-sun);
+  position: relative;
+  overflow: hidden;
+  border-radius: calc(var(--radius) * 2);
+  padding: 0.7rem 0.75rem 0.6rem;
+  color: var(--brand-ink);
+  /* El tinte se MEZCLA con el vidrio, no se superpone en `multiply`.
+     Con multiply sobre el ámbar, el azul y el cian daban gris sucio —el
+     producto de dos colores opuestos se va al neutro— y tres instrumentos
+     quedaban indistinguibles. Mezclando en oklab cada familia conserva su
+     matiz, y el segundo paso más saturado mantiene el gradiente de atardecer
+     que define al cristal.
+     Las proporciones son bajas (30/46 %) a propósito: el texto va en tinta
+     sobre este vidrio, así que la superficie tiene que quedar clara. */
+  background-image: linear-gradient(
+    160deg,
+    color-mix(in oklab, var(--tinte) 30%, oklch(0.9 0.05 82)),
+    color-mix(in oklab, var(--tinte) 46%, oklch(0.84 0.065 70))
+  );
+  box-shadow:
+    inset 0 3px 6px -1px oklch(0.145 0.045 275 / 45%),
+    inset 0 -1px 0 oklch(1 0 0 / 30%);
+}
+/* El mismo reflejo de una sola esquina que el aparato grande. */
+.instr-vidrio::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(146deg, oklch(1 0 0 / 18%) 0 20%, transparent 44%);
+}
+.instr-vidrio > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Rótulo serigrafiado del instrumento. */
+.instr-rotulo {
+  font-family: var(--font-mono);
+  font-size: 0.5625rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: oklch(0.145 0.045 275 / 66%);
+}
+
+/* Pie del instrumento: la nota que en un aparato real va serigrafiada en el
+   marco, debajo del cristal. */
+.instr-pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.45rem 0.3rem 0.1rem;
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: oklch(0.949 0.017 78 / 52%);
+}
+
+/* Panel de gráfico: NO es un instrumento, es papel montado en el tablero. Los
+   gráficos necesitan el fondo del tema para que los tokens de dato conserven
+   el contraste con el que fueron validados — sobre el cristal ámbar no. */
+.instr-panel {
+  border: 1px solid var(--rule);
+  border-radius: calc(var(--radius) * 2);
+  background-color: var(--card);
+  padding: 1rem;
+  height: 100%;
+}
+/* ═══════════ FIN TABLERO ═══════════ */
+
+/* ── Acceso a la estación, desde el termohigrómetro ────────────────────────
+   No es un enlace de texto: es la CARA de otro aparato asomando debajo del
+   que ya está en pantalla. Reusa el bisel del instrumento para que se lea
+   como "hay más aparato acá abajo" y no como un botón de marketing pegado a
+   un objeto. */
+.instr-cta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border-radius: calc(var(--radius) * 4);
+  background-color: var(--brand-ink);
+  background-image: linear-gradient(180deg, oklch(0.245 0.052 275) 0%, oklch(0.19 0.048 275) 62%);
+  color: var(--brand-paper);
+  box-shadow:
+    inset 0 1px 0 oklch(0.949 0.017 78 / 22%),
+    inset 0 0 0 1px oklch(0 0 0 / 32%),
+    0 1px 0 oklch(0.145 0.045 275),
+    0 2px 0 oklch(0.131 0.043 275),
+    0 3px 0 oklch(0.117 0.041 275),
+    0 4px 0 oklch(0.103 0.038 275),
+    0 5px 4px -2px oklch(0.145 0.045 275 / 34%);
+  transition:
+    transform 140ms ease-out,
+    box-shadow 140ms ease-out;
+}
+/* Se HUNDE al presionar, como una tecla: baja 2 px y pierde 2 px de canto.
+   Un `translateY` negativo lo haría flotar, que es justo el hover de tarjeta
+   que el design system prohíbe. */
+.instr-cta:hover {
+  box-shadow:
+    inset 0 1px 0 oklch(0.949 0.017 78 / 30%),
+    inset 0 0 0 1px oklch(0 0 0 / 32%),
+    0 1px 0 oklch(0.145 0.045 275),
+    0 2px 0 oklch(0.131 0.043 275),
+    0 3px 0 oklch(0.117 0.041 275),
+    0 4px 0 oklch(0.103 0.038 275),
+    0 6px 10px -3px oklch(0.145 0.045 275 / 42%);
+}
+.instr-cta:active {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 1px 0 oklch(0.949 0.017 78 / 18%),
+    inset 0 0 0 1px oklch(0 0 0 / 32%),
+    0 1px 0 oklch(0.145 0.045 275),
+    0 2px 0 oklch(0.131 0.043 275),
+    0 3px 4px -2px oklch(0.145 0.045 275 / 34%);
+}
+/* El icono va sobre un disco de cristal ámbar: es la pieza que lo ata al
+   aparato de arriba y le da el punto de color que el enlace plano no tenía. */
+.instr-cta-icono {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  color: var(--brand-ink);
+  background-image: linear-gradient(160deg, oklch(0.885 0.058 82), oklch(0.83 0.072 68));
+  box-shadow:
+    inset 0 2px 4px -1px oklch(0.145 0.045 275 / 40%),
+    inset 0 -1px 0 oklch(1 0 0 / 30%);
+}
+
+/* Placa de especificaciones: la chapita que los instrumentos traen atrás con
+   la marca, el modelo y la norma. Acá lleva la fuente de los datos, que es
+   exactamente ese rol — y le da relieve a un bloque que si no era un párrafo
+   suelto sobre el papel. */
+.placa {
+  position: relative;
+  border: 1px solid var(--rule);
+  border-radius: calc(var(--radius) * 2);
+  background-color: color-mix(in oklab, var(--muted) 55%, transparent);
+  /* Cuatro tornillos: las esquinas de una chapa remachada. Es el detalle que
+     la hace leer como pieza de aparato y no como caja de aviso. */
+  background-image:
+    radial-gradient(circle at 10px 10px, var(--rule) 0 2px, transparent 2.5px),
+    radial-gradient(circle at calc(100% - 10px) 10px, var(--rule) 0 2px, transparent 2.5px),
+    radial-gradient(circle at 10px calc(100% - 10px), var(--rule) 0 2px, transparent 2.5px),
+    radial-gradient(circle at calc(100% - 10px) calc(100% - 10px), var(--rule) 0 2px, transparent 2.5px);
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 40%);
+}
+.dark .placa {
+  box-shadow: inset 0 1px 0 oklch(0.949 0.017 78 / 10%);
+}

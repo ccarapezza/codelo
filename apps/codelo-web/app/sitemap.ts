@@ -21,6 +21,7 @@ const STATIC_PATHS = [
   "/actividades",
   "/contacto",
   "/blog",
+  "/clima",
   "/semillas",
   "/semillas/operadores",
   "/semillas/rotulo",
