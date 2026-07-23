@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
-import { getTranslations, setRequestLocale } from "next-intl/server";
-import { CmsPageView } from "@/components/CmsPageView";
+import { setRequestLocale } from "next-intl/server";
+import { QuienesSomosView } from "@/components/QuienesSomosView";
 import { getPageBySlug } from "@/lib/content";
 import { pageMetadata } from "@/lib/seo";
 
 const SLUG = "quienes-somos";
 
+// La metadata sigue saliendo de la page del CMS (título/SEO editables desde el
+// admin); el CUERPO ya no: lo renderiza QuienesSomosView, la maqueta
+// infográfica propia. El markdown de docs/contenido/quienes-somos.md queda
+// como fuente textual de referencia.
 export async function generateMetadata({
   params,
 }: {
@@ -21,11 +25,6 @@ export async function generateMetadata({
   });
 }
 
-async function pageEyebrow(lang: string) {
-  const t = await getTranslations({ locale: lang, namespace: "pages" });
-  return t("eyebrowAbout");
-}
-
 export default async function QuienesSomosPage({
   params,
 }: {
@@ -33,6 +32,5 @@ export default async function QuienesSomosPage({
 }) {
   const { lang } = await params;
   setRequestLocale(lang);
-  const page = await getPageBySlug(SLUG);
-  return <CmsPageView page={page} eyebrow={await pageEyebrow(lang)} lamina="sol" />;
+  return <QuienesSomosView />;
 }
