@@ -122,9 +122,26 @@ export async function SiteFooter() {
           </nav>
         </div>
 
-        <div className="label mt-14 flex flex-wrap items-center justify-between gap-3 border-t border-current/25 pt-6 opacity-70">
+        {/* Sombra negra bajo el texto: la barra pisa el friso del fondo y sin
+            ella el "Powered by" se pierde contra los techos claros. */}
+        <div className="label mt-14 flex flex-wrap items-center justify-between gap-3 border-t border-current/25 pt-6 opacity-70 [text-shadow:0_1px_2px_rgba(0,0,0,1),0_2px_6px_rgba(0,0,0,0.9),0_0_12px_rgba(0,0,0,0.8)]">
           <p>{t("copyright", { year })}</p>
           <p>{t("disclaimer")}</p>
+          <a
+            href="https://westcode.com.ar/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 transition-opacity hover:opacity-100"
+          >
+            <span>Powered by</span>
+            <Image
+              src="/logo-westcode.png"
+              alt="Westcode"
+              width={136}
+              height={20}
+              className="h-4 w-auto [filter:drop-shadow(0_1px_2px_rgba(0,0,0,1))_drop-shadow(0_2px_6px_rgba(0,0,0,0.9))]"
+            />
+          </a>
         </div>
       </div>
     </footer>

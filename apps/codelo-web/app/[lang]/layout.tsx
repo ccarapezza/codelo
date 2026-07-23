@@ -10,6 +10,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { LocaleAlternatesProvider } from "@/components/locale-alternates";
 import { NavigationProgress } from "@/components/NavigationProgress";
 import { SiteFooter } from "@/components/SiteFooter";
+import { SiteSplash } from "@/components/splash/SiteSplash";
 import { resolveGaId, resolveClarityId } from "@/lib/analytics";
 import { getSiteSettings } from "@/lib/cms";
 import { JsonLd } from "@/components/JsonLd";
@@ -160,6 +161,7 @@ export default async function RootLayout({
         ) : null}
         <NextIntlClientProvider>
           <LocaleAlternatesProvider>
+            <SiteSplash />
             <NavigationProgress />
             <SiteHeader />
             {children}

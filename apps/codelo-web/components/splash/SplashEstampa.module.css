@@ -1,0 +1,490 @@
+/* Splash "La Estampa" — la impresión a dos tintas ocurriendo en vivo.
+   Usa las CONSTANTES de marca (--brand-*): la hoja es papel físico y las
+   tintas no se invierten con el tema, igual que el duotono y el pie. */
+
+/* La salida es una pasada de racleta a pantalla completa: la barra baja y la
+   hoja se recorta (clip-path) a su mismo ritmo — misma duración y MISMA curva
+   en .wipe y en el clip, o se desincronizan. Nada de fundido: la racleta
+   limpia, no desvanece. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  --press: min(58vw, 320px);
+  --wipe-curve: cubic-bezier(0.6, 0.05, 0.35, 1);
+}
+
+.overlay.exit {
+  pointer-events: none;
+}
+
+/* La hoja: papel con grano. */
+.sheet {
+  position: absolute;
+  inset: 0;
+  background: var(--brand-paper);
+  display: grid;
+  place-items: center;
+}
+
+.exit .sheet {
+  animation: wipeClip calc(var(--ts, 1) * 0.75s) var(--wipe-curve) forwards;
+}
+
+@keyframes wipeClip {
+  from {
+    clip-path: inset(0 0 0 0);
+  }
+  to {
+    clip-path: inset(100% 0 0 0);
+  }
+}
+
+/* La racleta de la pasada final: hermana de .sheet (si viviera adentro se
+   recortaría a sí misma). Arranca arriba de la pantalla y la cruza entera. */
+.wipe {
+  position: absolute;
+  left: -4%;
+  width: 108%;
+  height: 16px;
+  top: -20px;
+  border-radius: 3px;
+  background: var(--brand-ink);
+  box-shadow: 0 3px 20px rgba(0, 0, 28, 0.45);
+  animation: wipeSweep calc(var(--ts, 1) * 0.75s) var(--wipe-curve) forwards;
+}
+
+@keyframes wipeSweep {
+  from {
+    top: -20px;
+  }
+  to {
+    top: 100%;
+  }
+}
+
+.sheet::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='160' height='160' filter='url(%23n)' opacity='0.55'/></svg>");
+  mix-blend-mode: multiply;
+  opacity: 0.07;
+}
+
+/* ── Humo ambiente ───────────────────────────────────────────────────── */
+
+/* Fondo de humo a pantalla completa, detrás de toda la coreografía. El campo
+   nace con 3 s de simulación pre-corridos (warm-up en SmokeCanvas); el
+   fundido corto solo evita el pop del primer frame. */
+.smokeBg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  animation: smokeIn calc(var(--ts, 1) * 0.55s) ease calc(var(--ts, 1) * 0.08s) forwards;
+}
+
+@keyframes smokeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+.smokeBgCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  mix-blend-mode: multiply;
+}
+
+/* ── Cruces de registro ──────────────────────────────────────────────── */
+
+.mark {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  fill: none;
+  stroke: color-mix(in oklab, var(--brand-ink) 45%, transparent);
+  stroke-width: 1.4;
+}
+
+.mark line,
+.mark circle {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw calc(var(--ts, 1) * 0.7s) ease calc(var(--ts, 1) * var(--md)) forwards;
+}
+
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.markNW {
+  left: max(24px, 5vw);
+  top: max(24px, 6vh);
+}
+
+.markNE {
+  right: max(24px, 5vw);
+  top: max(24px, 6vh);
+}
+
+.markSW {
+  left: max(24px, 5vw);
+  bottom: max(24px, 6vh);
+}
+
+.markSE {
+  right: max(24px, 5vw);
+  bottom: max(24px, 6vh);
+}
+
+/* ── Rótulo del taller ───────────────────────────────────────────────── */
+
+.rotulo {
+  position: absolute;
+  top: max(30px, 6.5vh);
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--brand-ink) 72%, transparent);
+  opacity: 0;
+  animation: fadeDown calc(var(--ts, 1) * 0.6s) ease calc(var(--ts, 1) * 0.35s) forwards;
+}
+
+@keyframes fadeDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── La estampa ──────────────────────────────────────────────────────── */
+
+.plate {
+  display: grid;
+  justify-items: center;
+  gap: clamp(20px, 4vh, 34px);
+}
+
+.press {
+  position: relative;
+  width: var(--press);
+  height: var(--press);
+}
+
+/* Pasada 1: el atardecer del logo, reconstruido en sus dos ámbares. */
+.solDisc {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 72%, #e4b569 0 46%, #d89457 47% 100%);
+  clip-path: inset(0 0 100% 0);
+}
+
+.solOn {
+  clip-path: inset(0 0 0 0);
+  transition: clip-path calc(var(--ts, 1) * 0.9s) linear;
+}
+
+/* Pasada 2: el MISMO logo.png con umbral → los ámbares se van a blanco y el
+   multiply los borra sobre lo ya impreso; solo queda la silueta de tinta.
+   Entra fuera de registro (corrida y rotada) hasta el snap. */
+/* El multiply va ACÁ y no en la imagen: el transform de este contenedor crea
+   un stacking context que aísla el blending de sus hijos — con el blend en la
+   imagen, el blanco del umbral nunca multiplicaba contra el disco ámbar. */
+.inkShift {
+  position: absolute;
+  inset: 0;
+  transform: translate(9px, -7px) rotate(1.7deg);
+  mix-blend-mode: multiply;
+}
+
+.snap {
+  animation: snap calc(var(--ts, 1) * 0.5s) cubic-bezier(0.3, 1.4, 0.4, 1) forwards;
+}
+
+@keyframes snap {
+  0% {
+    transform: translate(9px, -7px) rotate(1.7deg);
+  }
+  55% {
+    transform: translate(-1.5px, 1px) rotate(-0.35deg);
+  }
+  100% {
+    transform: translate(0, 0) rotate(0);
+  }
+}
+
+.inkLayer {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: grayscale(1) brightness(1.8) contrast(18);
+  clip-path: inset(100% 0 0 0);
+}
+
+.inkOn {
+  clip-path: inset(0 0 0 0);
+  transition: clip-path calc(var(--ts, 1) * 0.8s) linear;
+}
+
+/* Al encajar el registro: crossfade al PNG real. El resultado final es el
+   logo de verdad, no la reconstrucción. */
+.finalLogo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+}
+
+.finalOn {
+  opacity: 1;
+  transition: opacity calc(var(--ts, 1) * 0.45s) ease calc(var(--ts, 1) * 0.3s);
+}
+
+/* ── Racletas ────────────────────────────────────────────────────────── */
+
+.squeegee {
+  position: absolute;
+  left: -7%;
+  width: 114%;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--brand-ink);
+  box-shadow: 0 2px 12px rgba(0, 0, 28, 0.35);
+  opacity: 0;
+}
+
+.sqDown {
+  top: -16px;
+  animation: sweepDown calc(var(--ts, 1) * 0.95s) linear forwards;
+}
+
+@keyframes sweepDown {
+  0% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(calc(var(--press) + 24px));
+  }
+}
+
+.sqUp {
+  bottom: -16px;
+  animation: sweepUp calc(var(--ts, 1) * 0.85s) linear forwards;
+}
+
+@keyframes sweepUp {
+  0% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(calc((var(--press) + 24px) * -1));
+  }
+}
+
+/* ── Sello: el wordmark ──────────────────────────────────────────────── */
+
+.titles {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  min-height: 74px;
+}
+
+.wordmark {
+  font-family: var(--font-wordmark);
+  font-weight: 800;
+  font-size: clamp(1.7rem, 6vw, 2.7rem);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--brand-ink);
+  opacity: 0;
+  transform: scale(1.45);
+}
+
+.stamped {
+  animation: stamp calc(var(--ts, 1) * 0.45s) cubic-bezier(0.18, 1.25, 0.35, 1) forwards;
+}
+
+@keyframes stamp {
+  from {
+    opacity: 0;
+    transform: scale(1.45);
+  }
+  60% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.sublabel {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--brand-ink) 62%, transparent);
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.sublabelOn {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity calc(var(--ts, 1) * 0.5s) ease calc(var(--ts, 1) * 0.18s),
+    transform calc(var(--ts, 1) * 0.5s) ease calc(var(--ts, 1) * 0.18s);
+}
+
+/* El lema: una línea de voz propia bajo la ficha técnica. Serif itálica —
+   registro editorial, no de etiqueta — y entra un pelo después del sello. */
+.lema {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: clamp(0.95rem, 2.6vw, 1.1rem);
+  color: color-mix(in oklab, var(--brand-ink) 78%, transparent);
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.lemaOn {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity calc(var(--ts, 1) * 0.55s) ease calc(var(--ts, 1) * 0.4s),
+    transform calc(var(--ts, 1) * 0.55s) ease calc(var(--ts, 1) * 0.4s);
+}
+
+/* ── Progreso ────────────────────────────────────────────────────────── */
+
+.progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: max(34px, 6.5vh);
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+.phaseLabel {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--brand-ink) 85%, transparent);
+  min-height: 1em;
+}
+
+/* Con el humo detrás, la barra necesita cuerpo propio: respaldo de papel
+   sólido y filete de tinta, como un casillero impreso del taller. */
+.bar {
+  width: min(300px, 64vw);
+  height: 8px;
+  background: var(--brand-paper);
+  border: 1.5px solid color-mix(in oklab, var(--brand-ink) 60%, transparent);
+  padding: 1.5px;
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  background: var(--brand-sun);
+  transition: width calc(var(--ts, 1) * 0.45s) ease;
+}
+
+/* ── Reduced motion: la estampa aparece terminada, sin pasadas ni snap;
+      la salida es solo un fundido. ───────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .mark line,
+  .mark circle,
+  .rotulo,
+  .snap,
+  .squeegee,
+  .smokeBg {
+    animation: none !important;
+  }
+
+  .mark line,
+  .mark circle {
+    stroke-dashoffset: 0;
+  }
+
+  .rotulo {
+    opacity: 1;
+  }
+
+  .solDisc,
+  .inkLayer {
+    clip-path: none;
+    transition: none;
+  }
+
+  .inkShift {
+    transform: none;
+  }
+
+  .squeegee {
+    display: none;
+  }
+
+  .wordmark {
+    opacity: 1;
+    transform: none;
+    animation: none !important;
+  }
+
+  .sublabel,
+  .lema {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Sin barrido: la salida vuelve a ser un fundido simple. */
+  .wipe {
+    display: none;
+  }
+
+  .exit .sheet {
+    animation: none !important;
+  }
+
+  .overlay.exit {
+    opacity: 0;
+    transition: opacity calc(var(--ts, 1) * 0.5s) ease;
+  }
+}
