@@ -186,7 +186,7 @@ Además, nunca:
 - Gradientes decorativos que no vengan del atardecer del logo.
 - Verde como color de marca (el logo no tiene verde).
 - Emojis como iconos — SVG de Lucide.
-- Imágenes de consumo, caras reconocibles o marcas (regla editorial, Art. 2-C).
+- Imágenes de consumo, caras reconocibles o marcas (regla editorial, Art. 2°).
 
 ---
 

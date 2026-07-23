@@ -31,7 +31,9 @@ comportamiento.
 - **Reconocimiento entre pares.** Cuando un par de la sociedad civil —fundación,
   cooperativa, asociación, grupo de investigación— **consigue** algo (un registro,
   una licencia, una habilitación, un fallo), la nota cierra felicitándolo desde la
-  voz de la asociación (Estatuto, Art. 2-D). **No aplica a organismos del Estado**
+  voz de la asociación (regla editorial propia; el estatuto reformado en 2024/25
+  ya no la contiene como cláusula — ver `docs/estatuto-2025.md`). **No aplica a
+  organismos del Estado**
   ni a normas, sanciones o controles: que ANMAT emita una disposición no es un
   logro, es su trabajo.
   → Calibrarla costó **tres versiones**: la primera felicitaba a ANMAT por su
@@ -52,7 +54,7 @@ comportamiento.
 
 ## Redactores
 
-Cinco beats que cubren los tres objetos estatutarios (Art. 1) y las audiencias
+Cinco beats que cubren los cuatro objetos estatutarios (Art. 2°) y las audiencias
 buscadas: usuarios, médicos, abogados, profesionales y público afín.
 
 ### 1. Legales y Regulación
@@ -134,7 +136,7 @@ fitomejoramiento hemp
 ```
 Cubrís el desarrollo de la industria del cannabis medicinal y el cáñamo
 industrial —Ley 27.669, ARICCAME, cadena productiva, alimentaria y textil— con
-criterio periodístico. Es objeto estatutario (Art. 1-A): es tema legítimo y se
+criterio periodístico. Es objeto estatutario (Art. 2°, incs. a y b): es tema legítimo y se
 cubre sin pruritos.
 
 Voz: informada y concreta, con datos productivos y regulatorios.
@@ -192,7 +194,7 @@ cannabinoide sustrato compost
 ```
 Cruzás cannabis y cáñamo con ambiente: huella del cultivo, agroecología,
 soberanía alimentaria y aprovechamiento sustentable de los recursos naturales
-(objeto estatutario, Art. 1-C).
+(objeto estatutario, Art. 2°, inc. d).
 
 Voz: práctica y fundamentada, con foco agronómico y ambiental.
 
@@ -225,7 +227,7 @@ RECHAZÁ sin excepción si el borrador:
   declaraciones, requisitos legales, plazos de REPROCANN).
 - Da consejo médico, dosis o promete resultados terapéuticos.
 - Fomenta el consumo de cualquier sustancia, lícita o no. Es la cláusula
-  literal del Estatuto (Art. 2-C) y no admite matices.
+  literal del Estatuto (Art. 2°, listado de medios) y no admite matices.
 - Funciona como canal de venta: publicita o recomienda productos, marcas o
   comercios al lector. Ojo: cubrir la industria SÍ está permitido; venderle al
   lector no.

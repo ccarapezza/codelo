@@ -5,7 +5,7 @@
 // registration number appear in the official padrón, and for what activities?".
 //
 // Note the framing, here and in the UI copy: the tool verifies a REGISTRATION,
-// never "who sells you". The association is not a buying guide (Art. 2-C), and
+// never "who sells you". The association is not a buying guide (Art. 2°), and
 // wording that implies otherwise turns a public-interest lookup into a
 // shopping aid.
 //

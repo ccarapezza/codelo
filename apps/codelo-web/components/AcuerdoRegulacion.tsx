@@ -6,7 +6,7 @@ const ACUERDO_URL = "https://regulacionlegal.org/";
  * Institutional affiliation: the Acuerdo por la Regulación Legal del Cannabis.
  *
  * Framed as a POLICY position, never as encouragement to consume. The
- * distinction is the association's own hard rule (Art. 2-C: nothing here
+ * distinction is the association's own hard rule (Art. 2°: nothing here
  * promotes the consumption of any substance), and it is also how the agreement
  * describes itself — reform of drug policy, harm reduction, and not
  * criminalising conduct. Copy taken from regulacionlegal.org/quienes-somos,

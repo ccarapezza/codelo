@@ -1,7 +1,7 @@
 // Schematic anatomy of a cannabis seed label.
 //
 // Drawn, not photographed, on purpose. A real packet carries a brand, and the
-// editorial rule (Art. 2-C) keeps brands and commerce out of the imagery — a
+// editorial rule (Art. 2°) keeps brands and commerce out of the imagery — a
 // photo would turn a public-interest diagram into a shop window. Vector also
 // stays crisp, follows the theme, and can be labelled precisely.
 //

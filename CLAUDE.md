@@ -166,28 +166,32 @@ complementa. Tres cosas no obvias, todas verificadas contra el sitio real:
 ## Reglas editoriales del vertical (prompts)
 
 `src/lib/prompt-defaults.ts` define el dominio con reglas duras que NO deben
-relajarse. El temario sale de los **objetos estatutarios (Art. 1)**: etnobotánica
-de plantas (Plantae) y hongos (Fungi) con énfasis en Cannabis y cáñamo/hemp;
-DDHH (derecho a la salud, soberanía alimentaria) y reducción de daños; ambiente.
-REPROCANN y autocultivo entran como asesoramiento dentro de ese marco, no como
-eje único.
+relajarse. El temario sale de los **objetos estatutarios (Art. 2° del estatuto
+reformado 2024/25, ver `docs/estatuto-2025.md`)**: investigación y estudio del
+cultivo de cannabis y sus derivados en el marco de la Ley 27.350 y la Res.
+3132/2024; etnobotánica de plantas (Plantae) y hongos (Fungi) con énfasis en
+Cannabis y cáñamo/hemp; DDHH (derecho a la salud, soberanía alimentaria) y
+reducción de daños; ambiente. REPROCANN y autocultivo entran como asesoramiento
+dentro de ese marco, no como eje único.
 
-Reglas duras: la cláusula literal del **Art. 2-C** — *"En ningún caso… comprenderán
-el fomento del consumo de sustancia alguna, lícita o no"* —, sin consejo médico ni
-dosis, sin apología ni contenido para menores, y las imágenes nunca muestran
-consumo, caras ni marcas. Los hechos no-inventables incluyen requisitos legales y
-plazos de REPROCANN; los preprints se citan siempre como tales.
+Reglas duras: la cláusula literal del **Art. 2° (listado de medios)** — *"En
+ningún caso… comprenderán el fomento de consumo de sustancia alguna, lícita o
+no"* —, sin consejo médico ni dosis, sin apología ni contenido para menores, y
+las imágenes nunca muestran consumo, caras ni marcas. Los hechos no-inventables
+incluyen requisitos legales y plazos de REPROCANN; los preprints se citan
+siempre como tales.
 
 **Reconocimiento entre pares.** Cuando un par de la sociedad civil (fundación,
 cooperativa, asociación) CONSIGUE algo —un registro, una licencia, un fallo— la
-nota lo felicita desde la voz de la asociación (Art. 2-D). NO aplica a organismos
+nota lo felicita desde la voz de la asociación (regla editorial propia; el
+estatuto reformado ya no la contiene como cláusula). NO aplica a organismos
 del Estado: que ANMAT emita una disposición no es un logro. El Director tiene la
 regla espejo para no leerlo como publicidad. Calibrarla costó tres iteraciones y
 solo funcionó al incluir un ejemplo textual del párrafo esperado — si se toca,
 re-probarla corriéndola. Ver `docs/agentes.md`.
 
 **La industria SÍ se cubre.** Ley 27.669, ARICCAME, Expo Cannabis y el desarrollo
-agroindustrial/alimentario del cáñamo son objeto estatutario (Art. 1-A) y tema
+agroindustrial/alimentario del cáñamo son objeto estatutario (Art. 2°, incs. a y b) y tema
 legítimo. La línea roja no es hablar de la industria sino **ser canal de venta**:
 no se publicitan ni recomiendan productos, marcas o comercios al lector.
 
@@ -289,7 +293,8 @@ Gotchas:
 
 - **Branding**: `SITE_NAME`/`SITE_URL` viven SOLO en `apps/codelo-web/lib/site.ts`
   (+ env `NEXT_PUBLIC_SITE_URL`). Dominio real: `cogollosdeloeste.com.ar`
-  (fijado por el Estatuto, Art. 2-B); el CMS va en `cms.cogollosdeloeste.com.ar`.
+  (fijado por el Estatuto, Art. 2°, inciso d del listado de medios); el CMS va
+  en `cms.cogollosdeloeste.com.ar`.
 - **Restos de fulbo: barrer en inglés, no solo en español.** La plantilla venía
   de un sitio de fútbol y el grueso del residuo estaba en los prompts, que están
   escritos en inglés. Un `grep -i "fulbo|futbol|mundial"` da limpio y aun así

@@ -49,3 +49,6 @@ apps/codelo-cms/types/generated/
 # TypeScript incremental build info
 *.tsbuildinfo
 .secret
+
+# Estatuto escaneado: 16 MB y contiene datos personales (repo publico)
+Estatuto actualizado 2025 A.C. Cogollos del Oeste

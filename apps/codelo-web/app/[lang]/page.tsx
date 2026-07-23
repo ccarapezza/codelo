@@ -585,7 +585,7 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
 
             {/* ASESORAMIENTO — contenido de servicio, permanente. No compite con
               la portada y responde la consulta real de la gente (REPROCANN).
-              El Art. 2-C obliga a que quede claro que no somos canal de venta. */}
+              El Art. 2° obliga a que quede claro que no somos canal de venta. */}
             <div className="boletin-panel mt-10 px-6 py-7">
               <p className="label text-ember">{t("serviceTitle")}</p>
               <p className="mt-3 font-serif text-sm leading-relaxed text-muted-foreground">
