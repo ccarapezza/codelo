@@ -1,4 +1,5 @@
 import type { Core } from "@strapi/strapi";
+import { registerAdminPermissionActions } from "./lib/admin-permissions";
 import { ensurePostCover } from "./lib/social-studio/post-cover";
 import { ensurePostTranslation } from "./lib/translate-post";
 
@@ -9,7 +10,12 @@ export default {
    *
    * This gives you an opportunity to extend code.
    */
-  register({ strapi }: { strapi: Core.Strapi }) {
+  async register({ strapi }: { strapi: Core.Strapi }) {
+    // Acciones RBAC de las pantallas custom (Site Settings, Prompts IA). Va acá
+    // y no en bootstrap(): el bootstrap del plugin admin —que sincroniza los
+    // permisos del super admin y limpia los desconocidos— corre antes.
+    await registerAdminPermissionActions(strapi);
+
     // Safety-net: whenever a post is published without a cover image (Director
     // generation skipped/failed, or a note pushed straight through the REST
     // API), generate one in the background and attach it. Fire-and-forget so the

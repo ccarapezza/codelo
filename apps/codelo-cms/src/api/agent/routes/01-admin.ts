@@ -5,6 +5,31 @@ const ADMIN_ROUTE = { auth: false };
 
 export default {
   routes: [
+    // CRUD que reemplaza al del Content Manager (el tipo está oculto ahí).
+    {
+      method: "GET",
+      path: "/agent/admin-list",
+      handler: "api::agent.agent.adminList",
+      config: ADMIN_ROUTE,
+    },
+    {
+      method: "POST",
+      path: "/agent/admin-create",
+      handler: "api::agent.agent.adminCreate",
+      config: ADMIN_ROUTE,
+    },
+    {
+      method: "PUT",
+      path: "/agent/admin-update/:documentId",
+      handler: "api::agent.agent.adminUpdate",
+      config: ADMIN_ROUTE,
+    },
+    {
+      method: "DELETE",
+      path: "/agent/admin-delete/:documentId",
+      handler: "api::agent.agent.adminDelete",
+      config: ADMIN_ROUTE,
+    },
     {
       method: "POST",
       path: "/agent/run-now",

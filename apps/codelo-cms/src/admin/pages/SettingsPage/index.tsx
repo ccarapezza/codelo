@@ -14,7 +14,8 @@ import { Key, Magic, ChartPie, Eye, Cog } from "@strapi/icons";
 import { createGlobalStyle } from "styled-components";
 import { PageContainer, PageHeader, AccentCard, Hairline, GroupLabel, SaveBar } from "../../components/ui";
 
-import { useFetchClient, useNotification } from "@strapi/strapi/admin";
+import { Page, useFetchClient, useNotification } from "@strapi/strapi/admin";
+import { ADMIN_PERMISSIONS } from "../../../lib/admin-permissions";
 
 // Strapi's <SingleSelect> caps its dropdown at max-height: 15.6rem (~6 options),
 // which forces scrolling. Mounted only while this page is open, this lets the Radix
@@ -87,7 +88,19 @@ const IMAGE_MODELS = [
   { value: "google/gemini-2.5-flash-image",         label: "Nano Banana (gemini-2.5-flash) — ~$0.039 / imagen" },
 ];
 
-export default function SettingsPage() {
+// Ocultar el link del menú no cierra la puerta: /admin/site-settings sigue
+// siendo navegable escribiéndola. Page.Protect es lo que corta ese acceso y
+// muestra el cartel de "sin permisos" en vez de un formulario que falla al
+// guardar. La API igual valida por su cuenta (requireAdminPermission).
+export default function ProtectedSettingsPage() {
+  return (
+    <Page.Protect permissions={[{ action: ADMIN_PERMISSIONS.siteSettings, subject: null }]}>
+      <SettingsPage />
+    </Page.Protect>
+  );
+}
+
+function SettingsPage() {
   const { get, put } = useFetchClient();
   const { toggleNotification } = useNotification();
 

@@ -17,11 +17,18 @@ import {
   Dialog,
   NumberInput,
 } from "@strapi/design-system";
-import { Plus, Trash, Pencil, Feather, Magic, PlusCircle, Play } from "@strapi/icons";
+import { Plus, Trash, Pencil, Feather, Magic, PlusCircle, Play, Eye } from "@strapi/icons";
 import { useFetchClient, useNotification } from "@strapi/strapi/admin";
+import { useNavigate } from "react-router-dom";
 import { PageContainer, PageHeader, Hairline } from "../../components/ui";
 
-const CM_BASE = "/content-manager/collection-types/api::agent.agent";
+// CRUD por la API propia y no por la del Content Manager: el content-type está
+// oculto ahí a propósito (editar un agente a mano rompe cosas), y esa marca hace
+// que /content-manager/collection-types/... devuelva 403 hasta al super admin.
+const LIST_API = "/api/agent/admin-list";
+const CREATE_API = "/api/agent/admin-create";
+const UPDATE_API = "/api/agent/admin-update";
+const DELETE_API = "/api/agent/admin-delete";
 const RUN_NOW_API = "/api/agent/run-now";
 
 // Estimated prices USD per image
@@ -529,9 +536,9 @@ function AgentFormModal({
       };
 
       if (initial.agent) {
-        await put(`${CM_BASE}/${initial.agent.documentId}`, body);
+        await put(`${UPDATE_API}/${initial.agent.documentId}`, body);
       } else {
-        await post(CM_BASE, body);
+        await post(CREATE_API, body);
       }
 
       toggleNotification({
@@ -853,11 +860,15 @@ function AgentItem({
   onEdit,
   onDelete,
   onRunNow,
+  onToggleEnabled,
+  toggling,
 }: {
   agent: Agent;
   onEdit: () => void;
   onDelete: () => void;
   onRunNow: () => void;
+  onToggleEnabled: (next: boolean) => void;
+  toggling: boolean;
 }) {
   const activeSchedules = (agent.schedules ?? []).filter((s) => s.enabled);
 
@@ -875,12 +886,13 @@ function AgentItem({
       <Flex justifyContent="space-between" alignItems="flex-start" gap={2}>
         <Box style={{ flex: 1, minWidth: 0 }}>
           <Flex gap={2} alignItems="center" marginBottom={1} style={{ flexWrap: "wrap" }}>
-            <Typography variant="omega" fontWeight="bold" textColor="neutral800">
+            <Typography
+              variant="omega"
+              fontWeight="bold"
+              textColor={agent.enabled ? "neutral800" : "neutral500"}
+            >
               {agent.name}
             </Typography>
-            {!agent.enabled ? (
-              <Badge textColor="neutral500">Inactivo</Badge>
-            ) : null}
           </Flex>
 
           {agent.instructions ? (
@@ -944,7 +956,23 @@ function AgentItem({
           )}
         </Box>
 
-        <Flex gap={1} style={{ flexShrink: 0 }}>
+        <Flex gap={2} alignItems="center" style={{ flexShrink: 0 }}>
+          {/* Toggle de activación in situ: el switch guarda solo. La etiqueta
+              acompaña el estado para que no dependa únicamente de la posición. */}
+          <Flex gap={1} alignItems="center">
+            <Typography
+              variant="pi"
+              textColor={agent.enabled ? "success600" : "neutral500"}
+            >
+              {agent.enabled ? "Activo" : "Inactivo"}
+            </Typography>
+            <Switch
+              checked={agent.enabled}
+              onCheckedChange={(v: boolean) => onToggleEnabled(v)}
+              disabled={toggling}
+              aria-label={agent.enabled ? `Desactivar ${agent.name}` : `Activar ${agent.name}`}
+            />
+          </Flex>
           {agent.role !== "image-generator" ? (
             <IconButton label="Ejecutar ahora" variant="ghost" onClick={onRunNow}>
               <Play />
@@ -1117,8 +1145,9 @@ function EmptySectionState({
 // ─── AgentsPage ───────────────────────────────────────────────────────────────
 
 export default function AgentsPage() {
-  const { get, post, del } = useFetchClient();
+  const { get, post, put, del } = useFetchClient();
   const { toggleNotification } = useNotification();
+  const navigate = useNavigate();
 
   const [agents, setAgents] = React.useState<Agent[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -1126,6 +1155,8 @@ export default function AgentsPage() {
   const [editing, setEditing] = React.useState<Agent | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<Agent | null>(null);
   const [deleting, setDeleting] = React.useState(false);
+  // documentId del agente cuyo toggle está en vuelo (deshabilita ese switch).
+  const [togglingId, setTogglingId] = React.useState<string | null>(null);
 
   // Run-now state
   const [runNowTarget, setRunNowTarget] = React.useState<Agent | null>(null);
@@ -1136,9 +1167,8 @@ export default function AgentsPage() {
   const loadAgents = React.useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await get<{ results: Agent[] }>(
-        `${CM_BASE}?sort[0]=role:asc&sort[1]=name:asc&populate[0]=schedules&pagination[pageSize]=100`,
-      );
+      // El orden y el populate de schedules ahora los fija el endpoint.
+      const { data } = await get<{ results: Agent[] }>(LIST_API);
       setAgents(data.results ?? []);
     } catch {
       toggleNotification({ type: "danger", message: "No se pudieron cargar los agentes." });
@@ -1155,7 +1185,7 @@ export default function AgentsPage() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await del(`${CM_BASE}/${deleteTarget.documentId}`);
+      await del(`${DELETE_API}/${deleteTarget.documentId}`);
       toggleNotification({ type: "success", message: "Agente eliminado." });
       setDeleteTarget(null);
       loadAgents();
@@ -1163,6 +1193,35 @@ export default function AgentsPage() {
       toggleNotification({ type: "danger", message: "No se pudo eliminar el agente." });
     } finally {
       setDeleting(false);
+    }
+  };
+
+  // Toggle de activación directo desde el card, sin abrir el modal. Antes,
+  // activar un agente exigía abrir el editor, mover el switch y apretar "Guardar
+  // cambios" (que además re-valida nombre + instrucciones y re-graba todo el
+  // formulario): si el usuario movía el switch pero no guardaba, no pasaba nada
+  // —de ahí el "a veces parece que sí"—. Acá el switch ES la acción.
+  //
+  // Optimista: el card refleja el cambio al instante y sólo se revierte si el
+  // PUT falla. Manda sólo { enabled }; el resto del agente (schedules, tema,
+  // instrucciones) queda intacto porque el controlador actualiza campo a campo.
+  const handleToggleEnabled = async (agent: Agent, next: boolean) => {
+    setTogglingId(agent.documentId);
+    setAgents((prev) =>
+      prev.map((a) => (a.documentId === agent.documentId ? { ...a, enabled: next } : a)),
+    );
+    try {
+      await put(`${UPDATE_API}/${agent.documentId}`, { enabled: next });
+    } catch {
+      setAgents((prev) =>
+        prev.map((a) => (a.documentId === agent.documentId ? { ...a, enabled: !next } : a)),
+      );
+      toggleNotification({
+        type: "danger",
+        message: `No se pudo ${next ? "activar" : "desactivar"} "${agent.name}".`,
+      });
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -1241,6 +1300,10 @@ export default function AgentsPage() {
         subtitle="Gestioná los agentes que generan y publican artículos automáticamente."
         actions={
           <Flex gap={2}>
+            {/* Audit ya no está en el menú lateral; este es su único acceso visible. */}
+            <Button variant="tertiary" startIcon={<Eye />} onClick={() => navigate("/audit")}>
+              Audit
+            </Button>
             <Button
               variant="secondary"
               loading={backfilling}
@@ -1285,6 +1348,8 @@ export default function AgentsPage() {
                 onEdit={() => openEdit(director)}
                 onDelete={() => setDeleteTarget(director)}
                 onRunNow={() => openRunNow(director)}
+                onToggleEnabled={(next) => handleToggleEnabled(director, next)}
+                toggling={togglingId === director.documentId}
               />
             ) : (
               <EmptySectionState
@@ -1313,6 +1378,8 @@ export default function AgentsPage() {
                 onEdit={() => openEdit(imageGenerator)}
                 onDelete={() => setDeleteTarget(imageGenerator)}
                 onRunNow={() => {}}
+                onToggleEnabled={(next) => handleToggleEnabled(imageGenerator, next)}
+                toggling={togglingId === imageGenerator.documentId}
               />
             ) : (
               <EmptySectionState
@@ -1344,6 +1411,8 @@ export default function AgentsPage() {
                     onEdit={() => openEdit(a)}
                     onDelete={() => setDeleteTarget(a)}
                     onRunNow={() => openRunNow(a)}
+                    onToggleEnabled={(next) => handleToggleEnabled(a, next)}
+                    toggling={togglingId === a.documentId}
                   />
                 ))}
               </Flex>

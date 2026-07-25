@@ -65,22 +65,40 @@ function parseItems(feedXml: string, source: string): NewsItem[] {
   return items;
 }
 
+// ⚠️ Esta función TIRA el error en vez de tragárselo. Antes devolvía `[]` ante
+// cualquier fallo (red, HTTP 404, HTML en vez de XML), lo que hacía a un feed
+// muerto indistinguible de uno sano sin novedades: el ciclo lo contaba como
+// éxito y el admin no tenía cómo enterarse. El caller lo envuelve en
+// allSettled, así que un feed caído sigue sin tumbar a los otros 25.
 async function fetchFeed(feedUrl: string, source: string, timeoutMs = 8000): Promise<NewsItem[]> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let res: Response;
   try {
-    const res = await fetch(feedUrl, {
+    res = await fetch(feedUrl, {
       signal: controller.signal,
       headers: { "User-Agent": "CodeloBot/1.0 (RSS aggregator)" },
     });
-    if (!res.ok) return [];
-    const xml = await res.text();
-    return parseItems(xml, source);
-  } catch {
-    return [];
+  } catch (err) {
+    const msg = (err as Error).message || "fetch failed";
+    throw new Error(
+      msg.includes("aborted")
+        ? `Timeout (>${timeoutMs / 1000}s) — el servidor no respondió`
+        : `Error de red: ${msg}`,
+    );
   } finally {
     clearTimeout(timer);
   }
+
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+
+  const xml = await res.text();
+  // Un feed que se mudó suele responder 200 con el HTML de una landing: parsea
+  // a cero items y pasaría como "sano pero sin novedades" para siempre.
+  if (!xml.includes("<item") && !xml.includes("<entry")) {
+    throw new Error("La respuesta no parece un feed RSS/Atom (sin <item> ni <entry>)");
+  }
+  return parseItems(xml, source);
 }
 
 /**
@@ -95,6 +113,14 @@ async function fetchFeed(feedUrl: string, source: string, timeoutMs = 8000): Pro
  * se guarda, no existe.
  */
 const INGEST_WINDOW_DAYS = 7;
+
+/** Clave en el core store con el ISO de la última corrida completa del cron. */
+const RSS_LAST_RUN_KEY = "codelo:rss-last-run";
+
+export async function getRssLastRun(strapi: Core.Strapi): Promise<string | null> {
+  const value = await strapi.store({ type: "core" }).get({ key: RSS_LAST_RUN_KEY });
+  return typeof value === "string" ? value : null;
+}
 
 function isRecentEnough(item: NewsItem): boolean {
   if (!item.itemPublishedAt) return true;
@@ -239,14 +265,25 @@ export async function fetchAndSaveNews(
     feeds.map((f) => fetchFeed(f.url, f.name)),
   );
 
+  // Estado por feed. Antes se estampaba lastFetchedAt en TODOS los feeds al
+  // final del ciclo, hubieran respondido o no: un feed muerto seguía mostrando
+  // "último fetch: hace 2m" en el admin y no había forma de verlo desde la UI.
+  // Ahora la marca de tiempo sólo avanza si el feed respondió, y el error del
+  // último intento queda persistido para pintarlo en la tabla.
+  const outcomes: Array<{ freshCount: number; error: string | null }> = [];
   const allItems: NewsItem[] = [];
   results.forEach((r, i) => {
     if (r.status === "fulfilled") {
       const fresh = r.value.filter(isRecentEnough);
       strapi.log.info(`[rss-fetcher] ${feeds[i].name}: ${fresh.length} items (últimos ${INGEST_WINDOW_DAYS} días)`);
       allItems.push(...fresh);
+      outcomes.push({ freshCount: fresh.length, error: null });
     } else {
       strapi.log.warn(`[rss-fetcher] ${feeds[i].name} failed:`, r.reason);
+      const reason = r.reason;
+      const message =
+        reason instanceof Error ? reason.message : String(reason ?? "error desconocido");
+      outcomes.push({ freshCount: 0, error: message.slice(0, 500) });
     }
   });
 
@@ -281,15 +318,27 @@ export async function fetchAndSaveNews(
     }
   }
 
-  // Update lastFetchedAt on each feed
+  // lastFetchedAt = último fetch EXITOSO (por eso no se toca cuando falla:
+  // que quede viejo es justamente la señal de "este feed dejó de responder").
+  // lastError se limpia en cada éxito para que no quede un error viejo pegado.
   const now = new Date().toISOString();
-  for (const feed of feeds) {
-    await strapi
-      .documents("api::rss-feed.rss-feed")
-      .update({ documentId: feed.documentId, data: { lastFetchedAt: now } });
+  for (const [i, feed] of feeds.entries()) {
+    const outcome = outcomes[i];
+    const data = outcome.error
+      ? { lastError: outcome.error }
+      : { lastFetchedAt: now, lastError: null, lastItemCount: outcome.freshCount };
+    await strapi.documents("api::rss-feed.rss-feed").update({ documentId: feed.documentId, data });
   }
 
   await pruneOldNews(strapi);
+
+  // Marca del ciclo completo, para que el admin pueda mostrar cuándo corrió el
+  // cron por última vez. Sólo en la corrida completa: un "fetch ahora" sobre un
+  // feed suelto no es un ciclo y no debe mover esta marca.
+  if (!onlyDocumentId) {
+    await strapi.store({ type: "core" }).set({ key: RSS_LAST_RUN_KEY, value: now });
+  }
+
   strapi.log.info("[rss-fetcher] RSS fetch cycle complete.");
 }
 

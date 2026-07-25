@@ -12,16 +12,29 @@ import {
   Badge,
   Loader,
   Dialog,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
 } from "@strapi/design-system";
 import { Plus, Pencil, Trash, Play, Globe } from "@strapi/icons";
 import {
   useFetchClient,
   useNotification,
 } from "@strapi/strapi/admin";
-import { PageContainer, PageHeader, EmptyState, Hairline } from "../../components/ui";
+import { PageContainer, PageHeader, EmptyState } from "../../components/ui";
 
-const CM_API = "/content-manager/collection-types/api::rss-feed.rss-feed";
+// CRUD por la API propia y no por la del Content Manager: el content-type está
+// oculto ahí a propósito (editarlo a mano rompe cosas), y esa marca hace que
+// /content-manager/collection-types/... devuelva 403 hasta al super admin.
+const LIST_API = "/api/rss-feed/admin-list";
+const CREATE_API = "/api/rss-feed/admin-create";
+const UPDATE_API = "/api/rss-feed/admin-update";
+const DELETE_API = "/api/rss-feed/admin-delete";
 const FETCH_NOW_API = "/api/rss-feed/fetch-now";
+const STATUS_API = "/api/rss-feed/admin-status";
 
 type RssFeed = {
   id: number;
@@ -29,7 +42,20 @@ type RssFeed = {
   name: string;
   url: string;
   enabled: boolean;
+  /** Último fetch EXITOSO. Si el feed falla, deja de avanzar (esa es la señal). */
   lastFetchedAt: string | null;
+  /** Error del último intento; null si salió bien. */
+  lastError: string | null;
+  /** Items dentro de la ventana de ingesta en el último fetch exitoso. */
+  lastItemCount: number | null;
+};
+
+/** Cadencia del cron, servida por el backend para no hardcodearla en la página. */
+type IngestStatus = {
+  cronEnabled: boolean;
+  rule: string | null;
+  label: string | null;
+  lastRunAt: string | null;
 };
 
 type FormData = {
@@ -50,6 +76,32 @@ function formatDate(iso: string | null): string {
     day: "2-digit", month: "2-digit", year: "numeric",
     hour: "2-digit", minute: "2-digit",
   });
+}
+
+// Misma escala que AuditPage: la fecha exacta arriba y el "hace X" abajo, que
+// es lo que se lee de un vistazo para detectar un feed que dejó de traer nada.
+function relativeTime(iso: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  const sec = Math.round((Date.now() - d.getTime()) / 1000);
+  if (sec < 60) return `hace ${sec}s`;
+  const min = Math.round(sec / 60);
+  if (min < 60) return `hace ${min}m`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `hace ${hr}h`;
+  const days = Math.round(hr / 24);
+  if (days < 7) return `hace ${days}d`;
+  return `hace ${Math.round(days / 7)} sem`;
+}
+
+/** Recorta la URL a lo informativo: dominio + path, sin esquema ni www. */
+function prettyUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    return `${u.host.replace(/^www\./, "")}${u.pathname === "/" ? "" : u.pathname}${u.search}`;
+  } catch {
+    return url;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -151,9 +203,9 @@ function FeedFormModal({
     try {
       const payload = { name: form.name.trim(), url: form.url.trim(), enabled: form.enabled };
       if (initial.feed) {
-        await put(`${CM_API}/${initial.feed.documentId}`, payload);
+        await put(`${UPDATE_API}/${initial.feed.documentId}`, payload);
       } else {
-        await post(CM_API, payload);
+        await post(CREATE_API, payload);
       }
       toggleNotification({ type: "success", message: "Feed guardado." });
       onSaved();
@@ -304,9 +356,9 @@ function FeedFormModal({
 }
 
 // ---------------------------------------------------------------------------
-// Feed card
+// Feed row
 // ---------------------------------------------------------------------------
-function FeedCard({
+function FeedRow({
   feed,
   onEdit,
   onDelete,
@@ -319,108 +371,97 @@ function FeedCard({
   onFetchNow: () => void;
   fetching: boolean;
 }) {
+  const relative = relativeTime(feed.lastFetchedAt);
+  // Dos dimensiones distintas: "Inactivo" es una decisión (alguien lo apagó),
+  // "Error" es un síntoma (está prendido pero no responde). Mezclarlas en un
+  // solo booleano era justamente lo que ocultaba a los feeds muertos.
+  const failing = feed.enabled && Boolean(feed.lastError);
+
   return (
-    <Box
-      background="neutral0"
-      borderColor="neutral200"
-      borderWidth="1px"
-      borderStyle="solid"
-      hasRadius
-      shadow="filterShadow"
-      style={{ display: "flex", flexDirection: "column", height: "100%" }}
-    >
-      {/* Header */}
-      <Box padding={4}>
-        <Flex justifyContent="space-between" alignItems="flex-start" gap={2}>
-          <Flex gap={3} alignItems="center" style={{ minWidth: 0, flex: 1 }}>
-            <Box
-              background={feed.enabled ? "success100" : "neutral150"}
-              borderRadius="4px"
-              hasRadius
-              style={{
-                width: 36,
-                height: 36,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <Typography textColor={feed.enabled ? "success600" : "neutral500"}>
-                <Globe />
-              </Typography>
-            </Box>
-            <Box style={{ minWidth: 0, flex: 1 }}>
-              <Typography
-                variant="omega"
-                fontWeight="bold"
-                textColor="neutral800"
-                ellipsis
-              >
-                {feed.name}
-              </Typography>
-              <Box marginTop={1}>
-                <Badge active={feed.enabled}>
-                  {feed.enabled ? "Activo" : "Inactivo"}
-                </Badge>
-              </Box>
-            </Box>
-          </Flex>
-          <Flex gap={1} alignItems="center" style={{ flexShrink: 0 }}>
-            <IconButton
-              label={fetching ? "Fetcheando…" : "Fetch ahora"}
-              variant="ghost"
-              onClick={onFetchNow}
-              disabled={fetching}
-            >
-              <Play />
-            </IconButton>
-            <IconButton label="Editar" variant="ghost" onClick={onEdit}>
-              <Pencil />
-            </IconButton>
-            <IconButton label="Eliminar" variant="ghost" onClick={onDelete}>
-              <Trash />
-            </IconButton>
-          </Flex>
-        </Flex>
-      </Box>
-
-      <Hairline />
-
-      {/* Body */}
-      <Box padding={4} background="neutral100" style={{ flex: 1 }}>
+    <Tr>
+      <Td>
+        <Badge
+          backgroundColor={!feed.enabled ? "neutral150" : failing ? "danger100" : "success100"}
+          textColor={!feed.enabled ? "neutral600" : failing ? "danger700" : "success700"}
+        >
+          {!feed.enabled ? "Inactivo" : failing ? "Error" : "Activo"}
+        </Badge>
+      </Td>
+      <Td>
+        <Box style={{ maxWidth: 320 }}>
+          <Typography
+            variant="omega"
+            fontWeight="bold"
+            textColor={feed.enabled ? "neutral800" : "neutral600"}
+            title={feed.name}
+            ellipsis
+          >
+            {feed.name}
+          </Typography>
+          {/* El error va visible y no sólo en un tooltip: si hay que hacer hover
+              para enterarse de que un feed está caído, nadie se entera. */}
+          {failing ? (
+            <Typography variant="pi" textColor="danger600" title={feed.lastError ?? ""} ellipsis>
+              {feed.lastError}
+            </Typography>
+          ) : null}
+        </Box>
+      </Td>
+      <Td>
+        {/* La URL cruda ocupaba dos renglones y no se leía. Se muestra el
+            dominio + path y la completa queda en el title y en el href. */}
+        <Box style={{ maxWidth: 360 }}>
+          <a
+            href={feed.url}
+            target="_blank"
+            rel="noreferrer"
+            title={feed.url}
+            style={{ color: "inherit", textDecoration: "none" }}
+          >
+            <Typography variant="pi" textColor="primary600" ellipsis>
+              {prettyUrl(feed.url)}
+            </Typography>
+          </a>
+        </Box>
+      </Td>
+      <Td>
+        <Typography variant="pi" textColor={feed.lastItemCount == null ? "neutral400" : "neutral800"}>
+          {feed.lastItemCount == null ? "—" : feed.lastItemCount}
+        </Typography>
+      </Td>
+      <Td>
         <Box>
-          <Typography variant="pi" textColor="neutral500" fontWeight="bold">
-            URL
+          <Typography variant="pi" textColor={failing ? "danger600" : "neutral800"}>
+            {formatDate(feed.lastFetchedAt)}
           </Typography>
-          <Box marginTop={1}>
-            <Typography
-              variant="pi"
-              textColor="neutral700"
-              style={{
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-                wordBreak: "break-all",
-              }}
-            >
-              {feed.url}
+        </Box>
+        {relative ? (
+          <Box>
+            <Typography variant="pi" textColor={failing ? "danger600" : "neutral500"}>
+              {failing ? `${relative} · sin actualizar` : relative}
             </Typography>
           </Box>
-        </Box>
-        <Box marginTop={3}>
-          <Typography variant="pi" textColor="neutral500" fontWeight="bold">
-            Último fetch
-          </Typography>
-          <Box marginTop={1}>
-            <Typography variant="pi" textColor="neutral700">
-              {formatDate(feed.lastFetchedAt)}
-            </Typography>
-          </Box>
-        </Box>
-      </Box>
-    </Box>
+        ) : null}
+      </Td>
+      <Td>
+        <Flex gap={1}>
+          <IconButton
+            label={fetching ? "Fetcheando…" : "Fetch ahora"}
+            variant="ghost"
+            onClick={onFetchNow}
+            disabled={fetching}
+          >
+            <Play />
+          </IconButton>
+          <IconButton label="Editar" variant="ghost" onClick={onEdit}>
+            <Pencil />
+          </IconButton>
+          <IconButton label="Eliminar" variant="ghost" onClick={onDelete}>
+            <Trash />
+          </IconButton>
+        </Flex>
+      </Td>
+    </Tr>
   );
 }
 
@@ -437,16 +478,27 @@ export default function RssFeedsPage() {
   const [editing, setEditing] = React.useState<RssFeed | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<RssFeed | null>(null);
   const [fetchingId, setFetchingId] = React.useState<string | null>(null);
+  const [status, setStatus] = React.useState<IngestStatus | null>(null);
+
+  const failingCount = feeds.filter((f) => f.enabled && f.lastError).length;
 
   const loadFeeds = React.useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await get(`${CM_API}?pageSize=100&sort=name:asc`);
+      const { data } = await get(LIST_API);
       setFeeds((data as { results: RssFeed[] }).results ?? []);
     } catch {
       toggleNotification({ type: "danger", message: "Error al cargar los feeds." });
     } finally {
       setLoading(false);
+    }
+    // La cadencia es informativa: si el endpoint falla se omite la línea en vez
+    // de romper la página o molestar con una notificación.
+    try {
+      const { data } = await get(STATUS_API);
+      setStatus(data as IngestStatus);
+    } catch {
+      setStatus(null);
     }
   }, [get, toggleNotification]);
 
@@ -455,7 +507,7 @@ export default function RssFeedsPage() {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await del(`${CM_API}/${deleteTarget.documentId}`);
+      await del(`${DELETE_API}/${deleteTarget.documentId}`);
       toggleNotification({ type: "success", message: "Feed eliminado." });
       setDeleteTarget(null);
       loadFeeds();
@@ -513,25 +565,70 @@ export default function RssFeedsPage() {
           }
         />
       ) : (
-        <Box
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
-            gap: 24,
-            alignItems: "stretch",
-          }}
-        >
-          {feeds.map((feed) => (
-            <FeedCard
-              key={feed.documentId}
-              feed={feed}
-              onEdit={() => { setEditing(feed); setModalOpen(true); }}
-              onDelete={() => setDeleteTarget(feed)}
-              onFetchNow={() => handleFetchNow(feed)}
-              fetching={fetchingId === feed.documentId}
-            />
-          ))}
-        </Box>
+        <>
+          <Flex marginBottom={2} gap={1} wrap="wrap" alignItems="center">
+            <Typography variant="pi" textColor="neutral600">
+              {feeds.length} {feeds.length === 1 ? "fuente" : "fuentes"} ·{" "}
+              {feeds.filter((f) => f.enabled).length} activas
+            </Typography>
+            {failingCount > 0 ? (
+              <Typography variant="pi" textColor="danger600" fontWeight="bold">
+                · {failingCount} con error
+              </Typography>
+            ) : null}
+            {/* La cadencia sale del backend (regla real del cron), no de una
+                constante acá: si cambia cron-tasks.ts, esto acompaña solo. */}
+            {status ? (
+              <Typography variant="pi" textColor={status.cronEnabled ? "neutral600" : "danger600"}>
+                {status.cronEnabled
+                  ? `· ingesta automática ${status.label ?? "programada"}${
+                      status.lastRunAt
+                        ? ` · última corrida ${relativeTime(status.lastRunAt)}`
+                        : " · sin corridas todavía"
+                    }`
+                  : "· ingesta automática DESACTIVADA (CRON_ENABLED=false)"}
+              </Typography>
+            ) : null}
+          </Flex>
+          <Box background="neutral0" hasRadius shadow="tableShadow">
+            <Table colCount={6} rowCount={feeds.length}>
+              <Thead>
+                <Tr>
+                  <Th>
+                    <Typography variant="sigma">Estado</Typography>
+                  </Th>
+                  <Th>
+                    <Typography variant="sigma">Nombre</Typography>
+                  </Th>
+                  <Th>
+                    <Typography variant="sigma">URL</Typography>
+                  </Th>
+                  <Th>
+                    <Typography variant="sigma">Items</Typography>
+                  </Th>
+                  <Th>
+                    <Typography variant="sigma">Último fetch OK</Typography>
+                  </Th>
+                  <Th>
+                    <Typography variant="sigma">Acciones</Typography>
+                  </Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {feeds.map((feed) => (
+                  <FeedRow
+                    key={feed.documentId}
+                    feed={feed}
+                    onEdit={() => { setEditing(feed); setModalOpen(true); }}
+                    onDelete={() => setDeleteTarget(feed)}
+                    onFetchNow={() => handleFetchNow(feed)}
+                    fetching={fetchingId === feed.documentId}
+                  />
+                ))}
+              </Tbody>
+            </Table>
+          </Box>
+        </>
       )}
 
       {/* Form modal */}

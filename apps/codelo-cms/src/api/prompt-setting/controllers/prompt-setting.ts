@@ -1,5 +1,6 @@
 import { factories } from "@strapi/strapi";
-import { requireAdmin } from "../../../lib/admin-auth";
+import { requireAdminPermission } from "../../../lib/admin-auth";
+import { ADMIN_PERMISSIONS } from "../../../lib/admin-permissions";
 import { DEFAULT_PROMPT_SETTINGS } from "../../../lib/prompt-defaults";
 
 const UID = "api::prompt-setting.prompt-setting";
@@ -22,13 +23,13 @@ export default factories.createCoreController(UID, ({ strapi }) => ({
   // code defaults, so the admin page can populate empty fields and offer a
   // "restore defaults" action without a second request.
   async adminFind(ctx) {
-    if (!(await requireAdmin(ctx, strapi))) return;
+    if (!(await requireAdminPermission(ctx, strapi, ADMIN_PERMISSIONS.promptSettings))) return;
     const current = await strapi.db.query(UID).findOne({});
     ctx.body = { current: current ?? {}, defaults: DEFAULT_PROMPT_SETTINGS };
   },
 
   async adminUpdate(ctx) {
-    if (!(await requireAdmin(ctx, strapi))) return;
+    if (!(await requireAdminPermission(ctx, strapi, ADMIN_PERMISSIONS.promptSettings))) return;
     const body = ctx.request.body as Record<string, unknown>;
 
     const data: Record<string, unknown> = {};

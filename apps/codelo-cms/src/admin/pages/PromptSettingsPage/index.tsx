@@ -10,7 +10,8 @@ import {
   Loader,
 } from "@strapi/design-system";
 import { Feather, Pencil, Eye, ArrowClockwise } from "@strapi/icons";
-import { useFetchClient, useNotification } from "@strapi/strapi/admin";
+import { Page, useFetchClient, useNotification } from "@strapi/strapi/admin";
+import { ADMIN_PERMISSIONS } from "../../../lib/admin-permissions";
 import { PageContainer, PageHeader, AccentCard, SaveBar } from "../../components/ui";
 
 const ADMIN_API = "/api/prompt-setting/admin-config";
@@ -79,7 +80,17 @@ function ReferenceNote({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function PromptSettingsPage() {
+// Ver el comentario gemelo en SettingsPage: el menu link oculto no bloquea la
+// navegación directa a /admin/prompt-settings.
+export default function ProtectedPromptSettingsPage() {
+  return (
+    <Page.Protect permissions={[{ action: ADMIN_PERMISSIONS.promptSettings, subject: null }]}>
+      <PromptSettingsPage />
+    </Page.Protect>
+  );
+}
+
+function PromptSettingsPage() {
   const { get, put } = useFetchClient();
   const { toggleNotification } = useNotification();
 

@@ -23,8 +23,9 @@ import {
   IconButton,
   Modal,
 } from "@strapi/design-system";
-import { Eye } from "@strapi/icons";
+import { Eye, ArrowLeft } from "@strapi/icons";
 import { useFetchClient, useNotification } from "@strapi/strapi/admin";
+import { useNavigate } from "react-router-dom";
 import { PageContainer, PageHeader, EmptyState } from "../../components/ui";
 
 const ADMIN_API = "/api/agent-action/admin-list";
@@ -239,6 +240,7 @@ function DetailModal({ item, onClose }: { item: AuditItem | null; onClose: () =>
 export default function AuditPage() {
   const { get } = useFetchClient();
   const { toggleNotification } = useNotification();
+  const navigate = useNavigate();
 
   const [items, setItems] = React.useState<AuditItem[]>([]);
   const [pagination, setPagination] = React.useState<PaginationMeta>({
@@ -294,9 +296,16 @@ export default function AuditPage() {
         title="Audit · Acciones de Agentes IA"
         subtitle="Trazabilidad de cada acción que ejecutan los Directores, Redactores y Generadores de Imágenes. Solo lectura — append-only."
         actions={
-          <Button variant="tertiary" onClick={fetchPage}>
-            Refrescar
-          </Button>
+          <Flex gap={2}>
+            {/* La página ya no está en el menú lateral: sin esta vuelta explícita
+                el único regreso sería el back del navegador. */}
+            <Button variant="tertiary" startIcon={<ArrowLeft />} onClick={() => navigate("/ai-agents")}>
+              AI Agents
+            </Button>
+            <Button variant="tertiary" onClick={fetchPage}>
+              Refrescar
+            </Button>
+          </Flex>
         }
       />
 
