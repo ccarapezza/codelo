@@ -48,6 +48,19 @@ export default {
       light: { colors: COLORS_LIGHT },
       dark: { colors: COLORS_DARK },
     },
+    // Textos de marca en la pantalla de login (sobreescriben las claves i18n
+    // de Strapi). Se ponen en en+es para que aparezcan sea cual sea el idioma
+    // del panel.
+    translations: {
+      en: {
+        "Auth.form.welcome.title": "Bienvenido a Cogollos del Oeste",
+        "Auth.form.welcome.subtitle": "Panel de gestión del portal",
+      },
+      es: {
+        "Auth.form.welcome.title": "Bienvenido a Cogollos del Oeste",
+        "Auth.form.welcome.subtitle": "Panel de gestión del portal",
+      },
+    },
     // Saca el ruido de onboarding de la home (el tour "Discover your
     // application" y el aviso de releases): no aportan a este proyecto.
     tutorials: false,
