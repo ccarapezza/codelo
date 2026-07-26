@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Box, Flex, Typography, Badge, Button, Loader, Tabs } from "@strapi/design-system";
+import { Box, Flex, Typography, Badge, Button, Loader, Tabs, Switch } from "@strapi/design-system";
 import { Files, CheckCircle, Clock, Eye, EyeStriked, Calendar, User, Images } from "@strapi/icons";
 import { useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { PageContainer, PageHeader, EmptyState } from "../../components/ui";
@@ -10,6 +10,8 @@ const PUBLISH_API = "/api/post-review/publish";
 const UNPUBLISH_API = "/api/post-review/unpublish";
 // Regenera la portada con el agente generador de imágenes (fire-and-forget).
 const GENERATE_COVER_API = "/api/post/generate-cover";
+// Marca/desmarca la nota como destacada (carrusel de la home).
+const SET_FEATURED_API = "/api/post-review/set-featured";
 
 type Note = {
   documentId: string;
@@ -20,6 +22,7 @@ type Note = {
   author: string | null;
   publishedAt: string | null;
   createdAt: string | null;
+  featured: boolean;
 };
 type TableData = { items: Note[]; page: number; pageCount: number; total: number };
 type ListResponse = { pageSize: number; published: TableData; unpublished: TableData };
@@ -43,15 +46,19 @@ function NoteRow({
   mode,
   busy,
   generating,
+  featuring,
   onToggle,
   onGenerateImage,
+  onToggleFeatured,
 }: {
   note: Note;
   mode: "published" | "draft";
   busy: boolean;
   generating: boolean;
+  featuring: boolean;
   onToggle: () => void;
   onGenerateImage: () => void;
+  onToggleFeatured: (next: boolean) => void;
 }) {
   const hasCover = Boolean(note.coverUrl);
   const src = coverSrc(note.coverUrl);
@@ -154,6 +161,21 @@ function NoteRow({
           gap={2}
           style={{ flexShrink: 0, width: isMobile ? "100%" : 170 }}
         >
+          {/* Destacar en el carrusel de la home (solo aplica a publicadas). */}
+          {mode === "published" ? (
+            <Flex justifyContent="space-between" alignItems="center" gap={2}>
+              <Typography variant="pi" textColor={note.featured ? "success600" : "neutral500"}>
+                En carrusel
+              </Typography>
+              <Switch
+                checked={note.featured}
+                onCheckedChange={(v: boolean) => onToggleFeatured(v)}
+                disabled={featuring}
+                aria-label={note.featured ? "Quitar del carrusel" : "Agregar al carrusel"}
+              />
+            </Flex>
+          ) : null}
+
           {/* Imagen: generar o regenerar con el agente generador de imágenes. */}
           <Button
             variant="secondary"
@@ -244,8 +266,10 @@ function Section({
   mode,
   busyId,
   generatingId,
+  featuringId,
   onToggle,
   onGenerateImage,
+  onToggleFeatured,
   onPage,
   emptyText,
 }: {
@@ -253,8 +277,10 @@ function Section({
   mode: "published" | "draft";
   busyId: string | null;
   generatingId: string | null;
+  featuringId: string | null;
   onToggle: (note: Note) => void;
   onGenerateImage: (note: Note) => void;
+  onToggleFeatured: (note: Note, next: boolean) => void;
   onPage: (p: number) => void;
   emptyText: string;
 }) {
@@ -275,8 +301,10 @@ function Section({
               mode={mode}
               busy={busyId === note.documentId}
               generating={generatingId === note.documentId}
+              featuring={featuringId === note.documentId}
               onToggle={() => onToggle(note)}
               onGenerateImage={() => onGenerateImage(note)}
+              onToggleFeatured={(next) => onToggleFeatured(note, next)}
             />
           ))}
         </Flex>
@@ -297,6 +325,7 @@ export default function PostReviewPage() {
   const [loading, setLoading] = React.useState(true);
   const [busyId, setBusyId] = React.useState<string | null>(null);
   const [generatingId, setGeneratingId] = React.useState<string | null>(null);
+  const [featuringId, setFeaturingId] = React.useState<string | null>(null);
   const [pubPage, setPubPage] = React.useState(1);
   const [draftPage, setDraftPage] = React.useState(1);
   const [tab, setTab] = React.useState("publicadas");
@@ -342,6 +371,27 @@ export default function PostReviewPage() {
       toggleNotification({ type: "danger", message: "No se pudo cambiar el estado de la nota." });
     } finally {
       setBusyId(null);
+    }
+  };
+
+  // Marca/desmarca la nota como destacada (carrusel de la home). Optimista:
+  // actualizamos la fila al toque y revertimos si el request falla.
+  const handleToggleFeatured = async (note: Note, next: boolean) => {
+    setFeaturingId(note.documentId);
+    setPublished((prev) => ({
+      ...prev,
+      items: prev.items.map((n) => (n.documentId === note.documentId ? { ...n, featured: next } : n)),
+    }));
+    try {
+      await post(SET_FEATURED_API, { documentId: note.documentId, featured: next });
+    } catch {
+      setPublished((prev) => ({
+        ...prev,
+        items: prev.items.map((n) => (n.documentId === note.documentId ? { ...n, featured: !next } : n)),
+      }));
+      toggleNotification({ type: "danger", message: "No se pudo cambiar el destacado." });
+    } finally {
+      setFeaturingId(null);
     }
   };
 
@@ -411,8 +461,10 @@ export default function PostReviewPage() {
                 mode="published"
                 busyId={busyId}
                 generatingId={generatingId}
+                featuringId={featuringId}
                 onToggle={(n) => handleToggle(n, "unpublish")}
                 onGenerateImage={handleGenerateImage}
+                onToggleFeatured={handleToggleFeatured}
                 onPage={setPubPage}
                 emptyText="No hay notas publicadas."
               />
@@ -426,8 +478,10 @@ export default function PostReviewPage() {
                 mode="draft"
                 busyId={busyId}
                 generatingId={generatingId}
+                featuringId={featuringId}
                 onToggle={(n) => handleToggle(n, "publish")}
                 onGenerateImage={handleGenerateImage}
+                onToggleFeatured={handleToggleFeatured}
                 onPage={setDraftPage}
                 emptyText="No hay borradores sin publicar."
               />

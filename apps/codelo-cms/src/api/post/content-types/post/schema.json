@@ -106,6 +106,15 @@
         }
       }
     },
+    "featured": {
+      "type": "boolean",
+      "default": false,
+      "pluginOptions": {
+        "i18n": {
+          "localized": false
+        }
+      }
+    },
     "tags": {
       "type": "relation",
       "relation": "manyToMany",

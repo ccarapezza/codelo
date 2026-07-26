@@ -90,10 +90,16 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
     getBoletinEntries(5),
   ]);
 
-  // Tres escalones de jerarquía en vez de "una grande + cuatro iguales": el
-  // ritmo desparejo es lo que hace que una portada se lea como portada.
-  const featured = posts.slice(0, 3); // carrusel de portada
-  const rest = posts.slice(featured.length);
+  // Carrusel de portada: las notas marcadas como destacadas desde el panel
+  // (página Notas → "En carrusel"), más nuevas primero. Si no hay ninguna
+  // marcada, cae a las 3 más recientes para que el carrusel nunca quede vacío.
+  const marcadas = posts.filter(p => p.featured);
+  const featured = marcadas.length > 0 ? marcadas.slice(0, 5) : posts.slice(0, 3);
+  // El resto excluye las destacadas por slug (pueden estar dispersas, no ser
+  // las primeras). Tres escalones de jerarquía: el ritmo desparejo es lo que
+  // hace que una portada se lea como portada.
+  const featuredSlugs = new Set(featured.map(p => p.slug));
+  const rest = posts.filter(p => !featuredSlugs.has(p.slug));
   const medium = rest.slice(0, 2); // con portada 16:9 y titular mediano
   const compact = rest.slice(2, 6); // miniatura + titular
 

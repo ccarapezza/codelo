@@ -32,6 +32,8 @@ export type CmsPostListItem = {
   tags: CmsTag[];
   coverImage?: CmsImage | null;
   authorName?: string | null;
+  /** Marcada para el carrusel de la home desde el panel (página Notas). */
+  featured?: boolean;
 };
 
 export type CmsPostDetail = CmsPostListItem & {
@@ -97,6 +99,7 @@ type StrapiPost = {
   publishedAt?: string | null;
   updatedAt?: string | null;
   authorName?: string | null;
+  featured?: boolean | null;
   tags?: Array<{
     id: number;
     documentId?: string;
@@ -192,6 +195,7 @@ const toListItem = (p: StrapiPost): CmsPostListItem => ({
   tags: mapTags(p),
   coverImage: mapCoverImage(p),
   authorName: p.authorName ?? null,
+  featured: Boolean(p.featured),
 });
 
 /** One sitemap entry per documentId, with the slug of every locale that has a

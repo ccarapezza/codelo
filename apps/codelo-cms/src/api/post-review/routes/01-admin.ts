@@ -21,5 +21,11 @@ export default {
       handler: "api::post-review.post-review.unpublish",
       config: { auth: false },
     },
+    {
+      method: "POST",
+      path: "/post-review/set-featured",
+      handler: "api::post-review.post-review.setFeatured",
+      config: { auth: false },
+    },
   ],
 };

@@ -19,6 +19,7 @@ type Row = {
   author: string | null;
   publishedAt: string | null;
   createdAt: string | null;
+  featured: boolean;
 };
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -48,6 +49,7 @@ function toRow(post: any): Row {
     author: authorOf(post),
     publishedAt: post.publishedAt ?? null,
     createdAt: post.createdAt ?? null,
+    featured: Boolean(post.featured),
   };
 }
 
@@ -140,6 +142,25 @@ export default ({ strapi }: { strapi: any }) => ({
     const { documentId } = ctx.request.body as { documentId?: string };
     if (!documentId) return ctx.badRequest("documentId es obligatorio");
     await strapi.documents(UID).unpublish({ documentId, locale: LOCALE });
+    ctx.body = { ok: true };
+  },
+
+  // Marca/desmarca la nota como destacada (va al carrusel de la home).
+  // Se escribe con updateMany a nivel entidad (no document service) para tocar
+  // TODAS las filas del documento —borrador Y publicado, todos los locales— de
+  // una: la web lee la versión PUBLICADA, así que el flag tiene que estar ahí
+  // sin necesidad de re-publicar. `featured` no es localizado, es un solo valor.
+  async setFeatured(ctx: any) {
+    if (!(await requireAdmin(ctx, strapi))) return;
+    const { documentId, featured } = ctx.request.body as {
+      documentId?: string;
+      featured?: boolean;
+    };
+    if (!documentId) return ctx.badRequest("documentId es obligatorio");
+    if (typeof featured !== "boolean") return ctx.badRequest("featured (boolean) es obligatorio");
+    await strapi.db
+      .query(UID)
+      .updateMany({ where: { documentId }, data: { featured } });
     ctx.body = { ok: true };
   },
 });
