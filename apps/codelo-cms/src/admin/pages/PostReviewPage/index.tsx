@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Box, Flex, Typography, Badge, Button, Loader, Tabs } from "@strapi/design-system";
-import { Files, CheckCircle, Clock, Eye, EyeStriked, Calendar, User } from "@strapi/icons";
+import { Files, CheckCircle, Clock, Eye, EyeStriked, Calendar, User, Images } from "@strapi/icons";
 import { useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { PageContainer, PageHeader, EmptyState } from "../../components/ui";
 import { useIsMobile } from "../../hooks/useIsMobile";
@@ -8,6 +8,8 @@ import { useIsMobile } from "../../hooks/useIsMobile";
 const LIST_API = "/api/post-review/list";
 const PUBLISH_API = "/api/post-review/publish";
 const UNPUBLISH_API = "/api/post-review/unpublish";
+// Regenera la portada con el agente generador de imágenes (fire-and-forget).
+const GENERATE_COVER_API = "/api/post/generate-cover";
 
 type Note = {
   documentId: string;
@@ -40,13 +42,18 @@ function NoteRow({
   note,
   mode,
   busy,
+  generating,
   onToggle,
+  onGenerateImage,
 }: {
   note: Note;
   mode: "published" | "draft";
   busy: boolean;
+  generating: boolean;
   onToggle: () => void;
+  onGenerateImage: () => void;
 }) {
+  const hasCover = Boolean(note.coverUrl);
   const src = coverSrc(note.coverUrl);
   const fecha = mode === "published" ? note.publishedAt : note.createdAt;
   const fechaLabel = mode === "published" ? "Publicada" : "Creada";
@@ -141,25 +148,59 @@ function NoteRow({
           </Flex>
         </Box>
 
-        {/* Acción (derecha en desktop, abajo a lo ancho en mobile) */}
-        <Box style={{ flexShrink: 0, width: isMobile ? "100%" : 148 }}>
+        {/* Acciones (derecha en desktop, abajo a lo ancho en mobile) */}
+        <Flex
+          direction="column"
+          gap={2}
+          style={{ flexShrink: 0, width: isMobile ? "100%" : 170 }}
+        >
+          {/* Imagen: generar o regenerar con el agente generador de imágenes. */}
+          <Button
+            variant="secondary"
+            size="S"
+            fullWidth
+            loading={generating}
+            disabled={busy}
+            startIcon={<Images />}
+            onClick={onGenerateImage}
+          >
+            {hasCover ? "Regenerar imagen" : "Generar imagen"}
+          </Button>
+
           {mode === "published" ? (
             <Button
               variant="tertiary"
               size="S"
               fullWidth
               loading={busy}
+              disabled={generating}
               startIcon={<EyeStriked />}
               onClick={onToggle}
             >
               Despublicar
             </Button>
           ) : (
-            <Button variant="success-light" size="S" fullWidth loading={busy} startIcon={<Eye />} onClick={onToggle}>
-              Publicar
-            </Button>
+            <>
+              {/* Publicar deshabilitado hasta que la nota tenga imagen. */}
+              <Button
+                variant="success-light"
+                size="S"
+                fullWidth
+                loading={busy}
+                disabled={!hasCover || generating}
+                startIcon={<Eye />}
+                onClick={onToggle}
+              >
+                Publicar
+              </Button>
+              {!hasCover ? (
+                <Typography variant="pi" textColor="neutral500" style={{ textAlign: "center" }}>
+                  Generá la imagen para poder publicar
+                </Typography>
+              ) : null}
+            </>
           )}
-        </Box>
+        </Flex>
       </Flex>
     </Box>
   );
@@ -202,14 +243,18 @@ function Section({
   data,
   mode,
   busyId,
+  generatingId,
   onToggle,
+  onGenerateImage,
   onPage,
   emptyText,
 }: {
   data: TableData;
   mode: "published" | "draft";
   busyId: string | null;
+  generatingId: string | null;
   onToggle: (note: Note) => void;
+  onGenerateImage: (note: Note) => void;
   onPage: (p: number) => void;
   emptyText: string;
 }) {
@@ -229,7 +274,9 @@ function Section({
               note={note}
               mode={mode}
               busy={busyId === note.documentId}
+              generating={generatingId === note.documentId}
               onToggle={() => onToggle(note)}
+              onGenerateImage={() => onGenerateImage(note)}
             />
           ))}
         </Flex>
@@ -249,6 +296,7 @@ export default function PostReviewPage() {
   const [unpublished, setUnpublished] = React.useState<TableData>(EMPTY_TABLE);
   const [loading, setLoading] = React.useState(true);
   const [busyId, setBusyId] = React.useState<string | null>(null);
+  const [generatingId, setGeneratingId] = React.useState<string | null>(null);
   const [pubPage, setPubPage] = React.useState(1);
   const [draftPage, setDraftPage] = React.useState(1);
   const [tab, setTab] = React.useState("publicadas");
@@ -282,32 +330,42 @@ export default function PostReviewPage() {
 
   const handleToggle = async (note: Note, action: "publish" | "unpublish") => {
     setBusyId(note.documentId);
-    // Al publicar SIN portada, el server la genera con el agente generador de
-    // imágenes (fire-and-forget, ~30s). Avisamos y reprogramamos un refresh para
-    // que la portada aparezca sola, sin que el usuario tenga que recargar.
-    const willGenerateCover = action === "publish" && !note.coverUrl;
     try {
       await post(action === "publish" ? PUBLISH_API : UNPUBLISH_API, { documentId: note.documentId });
       toggleNotification({
         type: "success",
-        message:
-          action !== "publish"
-            ? "Nota despublicada."
-            : willGenerateCover
-              ? "Nota publicada. Generando la portada con el agente en segundo plano (~30 s)…"
-              : "Nota publicada.",
+        message: action === "publish" ? "Nota publicada." : "Nota despublicada.",
       });
       // Refresca ambas tablas: la nota se mueve de una a la otra.
       await load({ silent: true });
-      if (willGenerateCover) {
-        window.setTimeout(() => {
-          if (mountedRef.current) void load({ silent: true });
-        }, 35000);
-      }
     } catch {
       toggleNotification({ type: "danger", message: "No se pudo cambiar el estado de la nota." });
     } finally {
       setBusyId(null);
+    }
+  };
+
+  // Genera/regenera la portada con el agente generador de imágenes. El endpoint
+  // es fire-and-forget (la imagen tarda ~30 s), así que mantenemos el spinner y
+  // recargamos en diferido para que la portada nueva aparezca sola.
+  const handleGenerateImage = async (note: Note) => {
+    setGeneratingId(note.documentId);
+    try {
+      await post(GENERATE_COVER_API, { documentId: note.documentId });
+      toggleNotification({
+        type: "success",
+        message: "Generando la imagen con el agente… puede tardar ~30 s.",
+      });
+      window.setTimeout(() => {
+        if (!mountedRef.current) return;
+        setGeneratingId((cur) => (cur === note.documentId ? null : cur));
+        void load({ silent: true });
+      }, 35000);
+    } catch {
+      // Errores sincrónicos (falta OPENAI_API_KEY o el agente de imagen): el
+      // endpoint responde 400 y lo avisamos de una.
+      toggleNotification({ type: "danger", message: "No se pudo generar la imagen (revisá el agente / la API key)." });
+      setGeneratingId(null);
     }
   };
 
@@ -352,7 +410,9 @@ export default function PostReviewPage() {
                 data={published}
                 mode="published"
                 busyId={busyId}
+                generatingId={generatingId}
                 onToggle={(n) => handleToggle(n, "unpublish")}
+                onGenerateImage={handleGenerateImage}
                 onPage={setPubPage}
                 emptyText="No hay notas publicadas."
               />
@@ -365,7 +425,9 @@ export default function PostReviewPage() {
                 data={unpublished}
                 mode="draft"
                 busyId={busyId}
+                generatingId={generatingId}
                 onToggle={(n) => handleToggle(n, "publish")}
+                onGenerateImage={handleGenerateImage}
                 onPage={setDraftPage}
                 emptyText="No hay borradores sin publicar."
               />
