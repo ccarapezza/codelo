@@ -25,6 +25,7 @@ import {
   useNotification,
 } from "@strapi/strapi/admin";
 import { PageContainer, PageHeader, EmptyState } from "../../components/ui";
+import { useIsMobile } from "../../hooks/useIsMobile";
 
 // CRUD por la API propia y no por la del Content Manager: el content-type está
 // oculto ahí a propósito (editarlo a mano rompe cosas), y esa marca hace que
@@ -465,6 +466,91 @@ function FeedRow({
   );
 }
 
+// Tarjeta apilada para mobile: la tabla de 6 columnas no entra en un celular
+// (sólo se veían Estado + Nombre y las acciones quedaban fuera de pantalla).
+function FeedCard({
+  feed,
+  onEdit,
+  onDelete,
+  onFetchNow,
+  fetching,
+}: {
+  feed: RssFeed;
+  onEdit: () => void;
+  onDelete: () => void;
+  onFetchNow: () => void;
+  fetching: boolean;
+}) {
+  const relative = relativeTime(feed.lastFetchedAt);
+  const failing = feed.enabled && Boolean(feed.lastError);
+  return (
+    <Box
+      background="neutral0"
+      borderColor="neutral200"
+      borderWidth="1px"
+      borderStyle="solid"
+      hasRadius
+      padding={3}
+      shadow="tableShadow"
+    >
+      <Flex justifyContent="space-between" alignItems="flex-start" gap={2}>
+        <Typography
+          variant="omega"
+          fontWeight="bold"
+          textColor={feed.enabled ? "neutral800" : "neutral600"}
+          style={{ minWidth: 0, overflowWrap: "anywhere" }}
+        >
+          {feed.name}
+        </Typography>
+        <Badge
+          backgroundColor={!feed.enabled ? "neutral150" : failing ? "danger100" : "success100"}
+          textColor={!feed.enabled ? "neutral600" : failing ? "danger700" : "success700"}
+        >
+          {!feed.enabled ? "Inactivo" : failing ? "Error" : "Activo"}
+        </Badge>
+      </Flex>
+
+      {failing ? (
+        <Box marginTop={1}>
+          <Typography variant="pi" textColor="danger600" style={{ overflowWrap: "anywhere" }}>
+            {feed.lastError}
+          </Typography>
+        </Box>
+      ) : null}
+
+      <Box marginTop={2}>
+        <a href={feed.url} target="_blank" rel="noreferrer" title={feed.url} style={{ color: "inherit", textDecoration: "none" }}>
+          <Typography variant="pi" textColor="primary600" style={{ overflowWrap: "anywhere" }}>
+            {prettyUrl(feed.url)}
+          </Typography>
+        </a>
+      </Box>
+
+      <Flex gap={2} wrap="wrap" marginTop={2}>
+        <Typography variant="pi" textColor="neutral600">
+          {feed.lastItemCount == null ? "— items" : `${feed.lastItemCount} items`}
+        </Typography>
+        <Typography variant="pi" textColor={failing ? "danger600" : "neutral500"}>
+          · {formatDate(feed.lastFetchedAt)}
+          {relative ? ` (${failing ? `${relative} · sin actualizar` : relative})` : ""}
+        </Typography>
+      </Flex>
+
+      <Flex gap={1} marginTop={3}>
+        <IconButton label={fetching ? "Fetcheando…" : "Fetch ahora"} variant="ghost" onClick={onFetchNow} disabled={fetching}>
+          <Play />
+        </IconButton>
+        <IconButton label="Editar" variant="ghost" onClick={onEdit}>
+          <Pencil />
+        </IconButton>
+        <IconButton label="Eliminar" variant="ghost" onClick={onDelete}>
+          <Trash />
+        </IconButton>
+      </Flex>
+    </Box>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main page
 // ---------------------------------------------------------------------------
@@ -479,6 +565,7 @@ export default function RssFeedsPage() {
   const [deleteTarget, setDeleteTarget] = React.useState<RssFeed | null>(null);
   const [fetchingId, setFetchingId] = React.useState<string | null>(null);
   const [status, setStatus] = React.useState<IngestStatus | null>(null);
+  const isMobile = useIsMobile();
 
   const failingCount = feeds.filter((f) => f.enabled && f.lastError).length;
 
@@ -590,44 +677,59 @@ export default function RssFeedsPage() {
               </Typography>
             ) : null}
           </Flex>
-          <Box background="neutral0" hasRadius shadow="tableShadow">
-            <Table colCount={6} rowCount={feeds.length}>
-              <Thead>
-                <Tr>
-                  <Th>
-                    <Typography variant="sigma">Estado</Typography>
-                  </Th>
-                  <Th>
-                    <Typography variant="sigma">Nombre</Typography>
-                  </Th>
-                  <Th>
-                    <Typography variant="sigma">URL</Typography>
-                  </Th>
-                  <Th>
-                    <Typography variant="sigma">Items</Typography>
-                  </Th>
-                  <Th>
-                    <Typography variant="sigma">Último fetch OK</Typography>
-                  </Th>
-                  <Th>
-                    <Typography variant="sigma">Acciones</Typography>
-                  </Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {feeds.map((feed) => (
-                  <FeedRow
-                    key={feed.documentId}
-                    feed={feed}
-                    onEdit={() => { setEditing(feed); setModalOpen(true); }}
-                    onDelete={() => setDeleteTarget(feed)}
-                    onFetchNow={() => handleFetchNow(feed)}
-                    fetching={fetchingId === feed.documentId}
-                  />
-                ))}
-              </Tbody>
-            </Table>
-          </Box>
+          {isMobile ? (
+            <Flex direction="column" alignItems="stretch" gap={2}>
+              {feeds.map((feed) => (
+                <FeedCard
+                  key={feed.documentId}
+                  feed={feed}
+                  onEdit={() => { setEditing(feed); setModalOpen(true); }}
+                  onDelete={() => setDeleteTarget(feed)}
+                  onFetchNow={() => handleFetchNow(feed)}
+                  fetching={fetchingId === feed.documentId}
+                />
+              ))}
+            </Flex>
+          ) : (
+            <Box background="neutral0" hasRadius shadow="tableShadow">
+              <Table colCount={6} rowCount={feeds.length}>
+                <Thead>
+                  <Tr>
+                    <Th>
+                      <Typography variant="sigma">Estado</Typography>
+                    </Th>
+                    <Th>
+                      <Typography variant="sigma">Nombre</Typography>
+                    </Th>
+                    <Th>
+                      <Typography variant="sigma">URL</Typography>
+                    </Th>
+                    <Th>
+                      <Typography variant="sigma">Items</Typography>
+                    </Th>
+                    <Th>
+                      <Typography variant="sigma">Último fetch OK</Typography>
+                    </Th>
+                    <Th>
+                      <Typography variant="sigma">Acciones</Typography>
+                    </Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {feeds.map((feed) => (
+                    <FeedRow
+                      key={feed.documentId}
+                      feed={feed}
+                      onEdit={() => { setEditing(feed); setModalOpen(true); }}
+                      onDelete={() => setDeleteTarget(feed)}
+                      onFetchNow={() => handleFetchNow(feed)}
+                      fetching={fetchingId === feed.documentId}
+                    />
+                  ))}
+                </Tbody>
+              </Table>
+            </Box>
+          )}
         </>
       )}
 

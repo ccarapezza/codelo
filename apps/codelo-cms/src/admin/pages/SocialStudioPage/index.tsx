@@ -16,6 +16,7 @@ import { Check, Cross, Images, Magic, PaperPlane, Play } from "@strapi/icons";
 import { useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { useSearchParams } from "react-router-dom";
 import { AccentCard, EmptyState, GroupLabel, Hairline, IconChip, PageContainer } from "../../components/ui";
+import { useIsMobile } from "../../hooks/useIsMobile";
 import BackgroundPickerModal from "./BackgroundPickerModal";
 import DeckEditor from "./DeckEditor";
 import JobProgress from "./JobProgress";
@@ -49,6 +50,7 @@ export default function SocialStudioPage() {
   const { get, post } = useFetchClient();
   const { toggleNotification } = useNotification();
   const [searchParams] = useSearchParams();
+  const isMobile = useIsMobile();
 
   const [config, setConfig] = React.useState<StudioConfig | null>(null);
   const [state, setState] = React.useState<StudioState>({
@@ -269,9 +271,12 @@ export default function SocialStudioPage() {
                         key={p.documentId}
                         type="button"
                         onClick={() => set("post", p)}
-                        style={{ background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}
+                        // width:100% + minWidth:0 para que el `ellipsis` del título
+                        // tenga un ancho que respetar (si no, el texto en nowrap
+                        // estira el botón más allá de la pantalla).
+                        style={{ background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left", width: "100%", minWidth: 0 }}
                       >
-                        <Box paddingTop={1} paddingBottom={1} paddingLeft={2} paddingRight={2} hasRadius background="neutral100">
+                        <Box paddingTop={1} paddingBottom={1} paddingLeft={2} paddingRight={2} hasRadius background="neutral100" style={{ overflow: "hidden" }}>
                           <Typography variant="pi" textColor="neutral700" ellipsis>{p.title}</Typography>
                         </Box>
                       </button>
@@ -330,7 +335,7 @@ export default function SocialStudioPage() {
 
   // Segmented format switcher — lives in the top bar instead of its own card.
   const formatTabs = (
-    <Flex gap={1} background="neutral100" hasRadius padding={1} style={{ borderRadius: 8 }}>
+    <Flex gap={1} wrap="wrap" background="neutral100" hasRadius padding={1} style={{ borderRadius: 8 }}>
       {FORMAT_META.map((f) => {
         const selected = state.format === f.key;
         const disabled = f.key === "reel" && !config.ffmpegAvailable;
@@ -582,12 +587,21 @@ export default function SocialStudioPage() {
         borderStyle="solid"
         style={{ marginTop: -40, marginLeft: -40, marginRight: -40, marginBottom: 24, zIndex: 10 }}
       >
-        <Flex justifyContent="space-between" alignItems="center" gap={4} wrap="wrap">
-          <Flex gap={3} alignItems="center">
-            <IconChip icon={<Magic />} accent="primary" size={36} />
-            <Typography variant="beta" textColor="neutral800">Social Studio</Typography>
-            <Box marginLeft={2}>{formatTabs}</Box>
-            <Typography variant="pi" textColor="neutral500">{currentFormat.description}</Typography>
+        <Flex justifyContent="space-between" alignItems={isMobile ? "stretch" : "center"} gap={isMobile ? 3 : 4} wrap="wrap" direction={isMobile ? "column" : "row"}>
+          <Flex
+            gap={isMobile ? 2 : 3}
+            alignItems={isMobile ? "flex-start" : "center"}
+            direction={isMobile ? "column" : "row"}
+            style={{ minWidth: 0 }}
+          >
+            <Flex gap={3} alignItems="center">
+              <IconChip icon={<Magic />} accent="primary" size={36} />
+              <Typography variant="beta" textColor="neutral800">Social Studio</Typography>
+            </Flex>
+            <Box marginLeft={isMobile ? 0 : 2}>{formatTabs}</Box>
+            {!isMobile ? (
+              <Typography variant="pi" textColor="neutral500">{currentFormat.description}</Typography>
+            ) : null}
           </Flex>
 
           <Flex gap={4} alignItems="center">
@@ -604,11 +618,17 @@ export default function SocialStudioPage() {
         </Flex>
       </Box>
 
-      {/* ── Editor de 3 columnas: config · preview · plan ───────────────── */}
+      {/* ── Editor: 3 columnas en desktop (config · preview · plan), apiladas
+          en mobile (si no, el mínimo ~560px desborda la pantalla). ─────── */}
       <Box
         style={{
           display: "grid",
-          gridTemplateColumns: "minmax(300px, 340px) minmax(0, 1fr) minmax(260px, 300px)",
+          // minmax(0, 1fr) y no "1fr": "1fr" = minmax(auto,1fr), y ese `auto`
+          // deja que la columna se estire al min-content (el título de nota más
+          // largo en nowrap), desbordando la pantalla. minmax(0,…) lo capea.
+          gridTemplateColumns: isMobile
+            ? "minmax(0, 1fr)"
+            : "minmax(300px, 340px) minmax(0, 1fr) minmax(260px, 300px)",
           gap: 16,
           alignItems: "start",
         }}

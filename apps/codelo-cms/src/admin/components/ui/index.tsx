@@ -12,6 +12,7 @@
 import * as React from "react";
 import { Box, Flex, Typography, Button } from "@strapi/design-system";
 import { Check } from "@strapi/icons";
+import { useIsMobile } from "../../hooks/useIsMobile";
 
 export type Accent = "primary" | "warning" | "success" | "danger" | "secondary";
 
@@ -69,11 +70,21 @@ export function PageHeader({
   accent?: Accent;
   actions?: React.ReactNode;
 }) {
+  const isMobile = useIsMobile();
+  // En mobile el header pasa a columna: icono+título arriba y las acciones
+  // debajo, a lo ancho. En fila (como estaba) el subtítulo se espachurraba a una
+  // palabra por línea y los botones se cortaban.
   return (
-    <Flex justifyContent="space-between" alignItems="center" gap={4} marginBottom={6}>
+    <Flex
+      direction={isMobile ? "column" : "row"}
+      justifyContent="space-between"
+      alignItems={isMobile ? "stretch" : "center"}
+      gap={isMobile ? 3 : 4}
+      marginBottom={6}
+    >
       <Flex gap={3} alignItems="center">
         <IconChip icon={icon} accent={accent} size={44} />
-        <Box>
+        <Box style={{ minWidth: 0 }}>
           <Typography variant="alpha" textColor="neutral800">
             {title}
           </Typography>
@@ -86,7 +97,11 @@ export function PageHeader({
           ) : null}
         </Box>
       </Flex>
-      {actions ? <Flex gap={2}>{actions}</Flex> : null}
+      {actions ? (
+        <Flex gap={2} wrap="wrap" justifyContent={isMobile ? "flex-start" : "flex-end"}>
+          {actions}
+        </Flex>
+      ) : null}
     </Flex>
   );
 }

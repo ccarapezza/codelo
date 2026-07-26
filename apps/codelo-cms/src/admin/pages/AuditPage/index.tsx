@@ -27,6 +27,7 @@ import { Eye, ArrowLeft } from "@strapi/icons";
 import { useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { useNavigate } from "react-router-dom";
 import { PageContainer, PageHeader, EmptyState } from "../../components/ui";
+import { useIsMobile } from "../../hooks/useIsMobile";
 
 const ADMIN_API = "/api/agent-action/admin-list";
 
@@ -237,7 +238,55 @@ function DetailModal({ item, onClose }: { item: AuditItem | null; onClose: () =>
   );
 }
 
+// Tarjeta apilada para mobile: la tabla de 7 columnas sólo mostraba Fecha+Rol
+// en un celular. Acá cada acción entra completa.
+function AuditCard({ item, onDetail }: { item: AuditItem; onDetail: () => void }) {
+  return (
+    <Box background="neutral0" borderColor="neutral200" borderWidth="1px" borderStyle="solid" hasRadius padding={3} shadow="tableShadow">
+      <Flex justifyContent="space-between" alignItems="flex-start" gap={2}>
+        <Flex gap={1} wrap="wrap">
+          <Badge backgroundColor={`${ROLE_COLOR[item.agentRole]}100`} textColor={`${ROLE_COLOR[item.agentRole]}700`}>
+            {ROLE_LABEL[item.agentRole]}
+          </Badge>
+          <Badge backgroundColor={`${ACTION_COLOR[item.action] ?? "neutral"}100`} textColor={`${ACTION_COLOR[item.action] ?? "neutral"}700`}>
+            {ACTION_LABEL[item.action] ?? item.action}
+          </Badge>
+        </Flex>
+        <IconButton label="Ver detalle" variant="ghost" onClick={onDetail}>
+          <Eye />
+        </IconButton>
+      </Flex>
+
+      <Box marginTop={2}>
+        <Typography variant="omega" textColor="neutral800" style={{ overflowWrap: "anywhere" }}>
+          {item.summary}
+        </Typography>
+      </Box>
+
+      <Flex gap={2} wrap="wrap" marginTop={2}>
+        {item.agentName ? (
+          <Typography variant="pi" textColor="neutral600">
+            {item.agentName}
+          </Typography>
+        ) : null}
+        <Typography variant="pi" textColor="neutral500">
+          · {absoluteTime(item.createdAt)} ({relativeTime(item.createdAt)})
+        </Typography>
+      </Flex>
+
+      {item.postTitle ? (
+        <Box marginTop={1}>
+          <Typography variant="pi" textColor="neutral500" style={{ overflowWrap: "anywhere" }}>
+            Post: {item.postTitle}
+          </Typography>
+        </Box>
+      ) : null}
+    </Box>
+  );
+}
+
 export default function AuditPage() {
+  const isMobile = useIsMobile();
   const { get } = useFetchClient();
   const { toggleNotification } = useNotification();
   const navigate = useNavigate();
@@ -361,6 +410,13 @@ export default function AuditPage() {
         </Box>
       ) : (
         <>
+          {isMobile ? (
+            <Flex direction="column" alignItems="stretch" gap={2}>
+              {items.map((item) => (
+                <AuditCard key={item.id} item={item} onDetail={() => setDetail(item)} />
+              ))}
+            </Flex>
+          ) : (
           <Box background="neutral0" hasRadius shadow="tableShadow">
             <Table colCount={7} rowCount={items.length}>
               <Thead>
@@ -473,6 +529,7 @@ export default function AuditPage() {
               </Tbody>
             </Table>
           </Box>
+          )}
 
           {/* Pagination footer */}
           <Flex

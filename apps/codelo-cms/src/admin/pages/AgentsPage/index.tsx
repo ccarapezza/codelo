@@ -21,6 +21,7 @@ import { Plus, Trash, Pencil, Feather, Magic, PlusCircle, Play, Eye } from "@str
 import { useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { useNavigate } from "react-router-dom";
 import { PageContainer, PageHeader, Hairline } from "../../components/ui";
+import { useIsMobile } from "../../hooks/useIsMobile";
 
 // CRUD por la API propia y no por la del Content Manager: el content-type está
 // oculto ahí a propósito (editar un agente a mano rompe cosas), y esa marca hace
@@ -490,6 +491,7 @@ function AgentFormModal({
 }) {
   const { post, put } = useFetchClient();
   const { toggleNotification } = useNotification();
+  const isMobile = useIsMobile();
   const [form, setForm] = React.useState<FormData>(EMPTY_FORM);
   const [saving, setSaving] = React.useState(false);
 
@@ -591,8 +593,8 @@ function AgentFormModal({
           <Box
             style={{
               display: "grid",
-              gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
-              gap: 32,
+              gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) minmax(0, 1fr)",
+              gap: isMobile ? 20 : 32,
             }}
           >
             {/* LEFT COLUMN — 50% width, all fields auto-stretch to fill.
@@ -871,6 +873,7 @@ function AgentItem({
   toggling: boolean;
 }) {
   const activeSchedules = (agent.schedules ?? []).filter((s) => s.enabled);
+  const isMobile = useIsMobile();
 
   return (
     <Box
@@ -883,7 +886,14 @@ function AgentItem({
       hasRadius
       shadow="tableShadow"
     >
-      <Flex justifyContent="space-between" alignItems="flex-start" gap={2}>
+      {/* En mobile apila: contenido arriba y una barra de acciones abajo (switch
+          a la izquierda, iconos a la derecha). En fila quedaba todo apretado. */}
+      <Flex
+        direction={isMobile ? "column" : "row"}
+        justifyContent="space-between"
+        alignItems={isMobile ? "stretch" : "flex-start"}
+        gap={2}
+      >
         <Box style={{ flex: 1, minWidth: 0 }}>
           <Flex gap={2} alignItems="center" marginBottom={1} style={{ flexWrap: "wrap" }}>
             <Typography
@@ -956,7 +966,13 @@ function AgentItem({
           )}
         </Box>
 
-        <Flex gap={2} alignItems="center" style={{ flexShrink: 0 }}>
+        <Flex
+          gap={2}
+          alignItems="center"
+          style={{ flexShrink: 0 }}
+          justifyContent={isMobile ? "space-between" : "flex-end"}
+          marginTop={isMobile ? 3 : 0}
+        >
           {/* Toggle de activación in situ: el switch guarda solo. La etiqueta
               acompaña el estado para que no dependa únicamente de la posición. */}
           <Flex gap={1} alignItems="center">
