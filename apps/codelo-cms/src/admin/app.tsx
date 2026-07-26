@@ -38,6 +38,43 @@ const COLORS_DARK = {
 // justo cuando ya están registrados sus widgets y recién ahí se pueden filtrar.
 let appRef: StrapiApp | null = null;
 
+// Apaga el guided tour de Strapi ("Discover your application" + los tooltips
+// paso a paso). No hay flag de config: `isGuidedTourEnabled` está hardcodeado a
+// `NODE_ENV !== 'test'`, y sólo lo ve el primer super admin. El tour guarda su
+// estado en localStorage["STRAPI_GUIDED_TOUR"]; lo pre-seteamos como
+// desactivado y con todas las tours completadas ANTES de que monte el provider,
+// que es cuando lee esa clave. Merge (no reemplazo) para preservar tours que
+// una versión futura de Strapi pudiera agregar. Todo en try/catch: si algo
+// falla, se ignora — nunca debe romper el arranque del panel.
+function disableGuidedTour(): void {
+  try {
+    const KEY = "STRAPI_GUIDED_TOUR";
+    const KNOWN = ["contentTypeBuilder", "contentManager", "apiTokens", "strapiCloud"];
+    let cur: { tours?: Record<string, unknown>; completedActions?: unknown[] } = {};
+    try {
+      const raw = window.localStorage.getItem(KEY);
+      if (raw) cur = JSON.parse(raw);
+    } catch {
+      /* localStorage con basura: lo reescribimos limpio */
+    }
+    const tours: Record<string, { currentStep: number; isCompleted: boolean }> = {};
+    for (const name of [...KNOWN, ...Object.keys(cur.tours ?? {})]) {
+      tours[name] = { currentStep: 0, isCompleted: true };
+    }
+    window.localStorage.setItem(
+      KEY,
+      JSON.stringify({
+        tours,
+        enabled: false,
+        hidden: true,
+        completedActions: cur.completedActions ?? [],
+      }),
+    );
+  } catch {
+    /* no-op */
+  }
+}
+
 export default {
   config: {
     // Logo de Cogollos del Oeste en login y en el menú lateral.
@@ -61,8 +98,9 @@ export default {
         "Auth.form.welcome.subtitle": "Panel de gestión del portal",
       },
     },
-    // Saca el ruido de onboarding de la home (el tour "Discover your
-    // application" y el aviso de releases): no aportan a este proyecto.
+    // Menos ruido: saca los videos tutoriales del menú de ayuda y el aviso de
+    // "nueva versión de Strapi". (El guided tour de la home se apaga aparte, en
+    // register() → disableGuidedTour; `tutorials:false` NO lo cubre.)
     tutorials: false,
     notifications: { releases: false },
   },
@@ -75,6 +113,7 @@ export default {
   // en blanco. El tipo StrapiApp no lo refleja, así que el typecheck pasa igual.
   register(app: StrapiApp) {
     appRef = app;
+    disableGuidedTour();
     // Audit IA no tiene entrada propia en el menú: se entra por el botón
     // "Audit" del header de AI Agents, que es el contexto donde tiene sentido
     // (audita lo que hacen esos agentes). La ruta se registra igual para que
