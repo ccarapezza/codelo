@@ -3,6 +3,7 @@ import { Box, Flex, Typography, Badge, Button, Loader, Tabs } from "@strapi/desi
 import { Files, CheckCircle, Clock, Eye, EyeStriked, Calendar, User } from "@strapi/icons";
 import { useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { PageContainer, PageHeader, EmptyState } from "../../components/ui";
+import { useIsMobile } from "../../hooks/useIsMobile";
 
 const LIST_API = "/api/post-review/list";
 const PUBLISH_API = "/api/post-review/publish";
@@ -49,6 +50,12 @@ function NoteRow({
   const src = coverSrc(note.coverUrl);
   const fecha = mode === "published" ? note.publishedAt : note.createdAt;
   const fechaLabel = mode === "published" ? "Publicada" : "Creada";
+  const isMobile = useIsMobile();
+
+  // En mobile la fila apila: imagen a lo ancho arriba, texto, y el botón a lo
+  // ancho abajo. En fila (desktop) el texto quedaba en ~50px y el botón se salía.
+  const imgW = isMobile ? "100%" : 168;
+  const imgH = isMobile ? 160 : 100;
 
   return (
     <Box
@@ -60,15 +67,15 @@ function NoteRow({
       padding={4}
       shadow="tableShadow"
     >
-      <Flex gap={4} alignItems="flex-start">
-        {/* Izquierda: imagen */}
+      <Flex direction={isMobile ? "column" : "row"} gap={isMobile ? 3 : 4} alignItems="stretch">
+        {/* Imagen (izquierda en desktop, arriba en mobile) */}
         <Box style={{ flexShrink: 0 }}>
           {src ? (
             <img
               src={src}
               alt=""
               loading="lazy"
-              style={{ width: 168, height: 100, objectFit: "cover", borderRadius: 4, display: "block" }}
+              style={{ width: imgW, height: imgH, objectFit: "cover", borderRadius: 4, display: "block" }}
             />
           ) : (
             <Flex
@@ -76,7 +83,7 @@ function NoteRow({
               alignItems="center"
               background="neutral100"
               hasRadius
-              style={{ width: 168, height: 100 }}
+              style={{ width: imgW, height: imgH }}
             >
               <Typography variant="pi" textColor="neutral400">
                 sin portada
@@ -134,8 +141,8 @@ function NoteRow({
           </Flex>
         </Box>
 
-        {/* Derecha: acción */}
-        <Box style={{ flexShrink: 0, width: 148 }}>
+        {/* Acción (derecha en desktop, abajo a lo ancho en mobile) */}
+        <Box style={{ flexShrink: 0, width: isMobile ? "100%" : 148 }}>
           {mode === "published" ? (
             <Button
               variant="tertiary"
@@ -246,6 +253,11 @@ export default function PostReviewPage() {
   const [draftPage, setDraftPage] = React.useState(1);
   const [tab, setTab] = React.useState("publicadas");
 
+  // Para el refresh diferido tras publicar (la portada se genera en el server de
+  // forma fire-and-forget): no queremos setear estado si el usuario ya se fue.
+  const mountedRef = React.useRef(true);
+  React.useEffect(() => () => { mountedRef.current = false; }, []);
+
   const load = React.useCallback(
     async (opts?: { silent?: boolean }) => {
       if (!opts?.silent) setLoading(true);
@@ -270,14 +282,28 @@ export default function PostReviewPage() {
 
   const handleToggle = async (note: Note, action: "publish" | "unpublish") => {
     setBusyId(note.documentId);
+    // Al publicar SIN portada, el server la genera con el agente generador de
+    // imágenes (fire-and-forget, ~30s). Avisamos y reprogramamos un refresh para
+    // que la portada aparezca sola, sin que el usuario tenga que recargar.
+    const willGenerateCover = action === "publish" && !note.coverUrl;
     try {
       await post(action === "publish" ? PUBLISH_API : UNPUBLISH_API, { documentId: note.documentId });
       toggleNotification({
         type: "success",
-        message: action === "publish" ? "Nota publicada." : "Nota despublicada.",
+        message:
+          action !== "publish"
+            ? "Nota despublicada."
+            : willGenerateCover
+              ? "Nota publicada. Generando la portada con el agente en segundo plano (~30 s)…"
+              : "Nota publicada.",
       });
       // Refresca ambas tablas: la nota se mueve de una a la otra.
       await load({ silent: true });
+      if (willGenerateCover) {
+        window.setTimeout(() => {
+          if (mountedRef.current) void load({ silent: true });
+        }, 35000);
+      }
     } catch {
       toggleNotification({ type: "danger", message: "No se pudo cambiar el estado de la nota." });
     } finally {
