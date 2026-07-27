@@ -60,6 +60,8 @@ pipeline {
             STRAPI_TRANSFER_TOKEN_SALT:  'codelo-strapi-transfer-token-salt',
             STRAPI_ENCRYPTION_KEY:       'codelo-strapi-encryption-key',
             INTERNAL_API_KEY:            'codelo-internal-api-key',
+            // Secreto compartido para la vista previa de borradores (CMS ↔ web).
+            PREVIEW_SECRET:              'codelo-preview-secret',
             REDIS_PASSWORD:              'codelo-redis-password',
             OPENAI_API_KEY:              'codelo-openai-api-key',
             OPENROUTER_API_KEY:          'codelo-openrouter-api-key',

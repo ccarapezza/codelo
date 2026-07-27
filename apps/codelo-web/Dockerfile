@@ -17,6 +17,13 @@ RUN pnpm install --frozen-lockfile --filter "codelo-web..."
 FROM deps AS build
 COPY apps/codelo-web apps/codelo-web
 
+# La CSP `frame-ancestors` se resuelve en next.config `headers()`, que Next
+# evalúa en BUILD y hornea en el bundle standalone. Para que el iframe de
+# "Vista previa" del panel pueda embeber la web en prod, el origen del CMS
+# tiene que estar disponible acá (no alcanza con setearlo en runtime).
+ARG PREVIEW_FRAME_ANCESTOR=""
+ENV PREVIEW_FRAME_ANCESTOR=$PREVIEW_FRAME_ANCESTOR
+
 # Build Next.js (produces .next/standalone with self-contained server.js).
 # No database here — all content comes from the CMS at request time.
 ENV NEXT_TELEMETRY_DISABLED=1

@@ -87,6 +87,11 @@ services:
       TRANSFER_TOKEN_SALT: ${STRAPI_TRANSFER_TOKEN_SALT:?required}
       ENCRYPTION_KEY: ${STRAPI_ENCRYPTION_KEY:?required}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:?required}
+      # Vista previa de borradores (página Notas → iframe de la web). El mismo
+      # secreto lo comparte codelo-web como CMS_PREVIEW_SECRET. PREVIEW_WEB_URL
+      # habilita además el frame-src de la CSP del admin (ver middlewares.ts).
+      PREVIEW_SECRET: ${PREVIEW_SECRET:?PREVIEW_SECRET required}
+      PREVIEW_WEB_URL: ${SITE_PUBLIC_URL:-https://cogollosdeloeste.com.ar}
       OPENAI_API_KEY: ${OPENAI_API_KEY:?required}
       OPENAI_IMAGE_API_KEY: ${OPENAI_IMAGE_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
@@ -111,6 +116,10 @@ services:
     build:
       context: .
       dockerfile: apps/codelo-web/Dockerfile
+      args:
+        # frame-ancestors (CSP) se hornea en build: pasamos el origen del CMS
+        # para permitir el iframe de "Vista previa" del panel en prod.
+        PREVIEW_FRAME_ANCESTOR: ${CMS_PUBLIC_URL:-https://cms.cogollosdeloeste.com.ar}
     container_name: codelo-web
     <<: *restart_policy
     deploy:
@@ -123,6 +132,8 @@ services:
       CMS_URL: http://cms:1337
       NEXT_PUBLIC_CMS_URL: ${CMS_PUBLIC_URL:-https://cms.cogollosdeloeste.com.ar}
       NEXT_PUBLIC_SITE_URL: ${SITE_PUBLIC_URL:-https://cogollosdeloeste.com.ar}
+      # Vista previa de borradores: mismo secreto que el CMS (PREVIEW_SECRET).
+      CMS_PREVIEW_SECRET: ${PREVIEW_SECRET:?PREVIEW_SECRET required}
       NODE_ENV: production
     depends_on:
       cms:
