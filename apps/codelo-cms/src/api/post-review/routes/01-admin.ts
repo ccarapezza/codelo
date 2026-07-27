@@ -27,5 +27,19 @@ export default {
       handler: "api::post-review.post-review.setFeatured",
       config: { auth: false },
     },
+    // URL de preview para el panel (requireAdmin dentro del controller).
+    {
+      method: "GET",
+      path: "/post-review/preview-url",
+      handler: "api::post-review.post-review.previewUrl",
+      config: { auth: false },
+    },
+    // Contenido del borrador para la web (se autoriza con PREVIEW_SECRET).
+    {
+      method: "GET",
+      path: "/post-review/preview-content",
+      handler: "api::post-review.post-review.previewContent",
+      config: { auth: false },
+    },
   ],
 };

@@ -163,4 +163,49 @@ export default ({ strapi }: { strapi: any }) => ({
       .updateMany({ where: { documentId }, data: { featured } });
     ctx.body = { ok: true };
   },
+
+  // Devuelve la URL de preview de la web para una nota (admin-only). El secret
+  // se arma acá, del lado del server, para no exponerlo en el bundle del panel.
+  async previewUrl(ctx: any) {
+    if (!(await requireAdmin(ctx, strapi))) return;
+    const { documentId } = ctx.query as { documentId?: string };
+    if (!documentId) return ctx.badRequest("documentId es obligatorio");
+    const secret = process.env.PREVIEW_SECRET;
+    const webUrl = process.env.PREVIEW_WEB_URL;
+    if (!secret || !webUrl) {
+      return ctx.badRequest("Preview no configurado (faltan PREVIEW_SECRET / PREVIEW_WEB_URL).");
+    }
+    const doc = await strapi
+      .documents(UID)
+      .findOne({ documentId, status: "draft", locale: LOCALE, fields: ["slug"] });
+    if (!doc?.slug) return ctx.notFound("nota no encontrada");
+    const base = webUrl.replace(/\/$/, "");
+    ctx.body = {
+      url: `${base}/api/preview?secret=${encodeURIComponent(secret)}&slug=${encodeURIComponent(
+        doc.slug,
+      )}&lang=${LOCALE}`,
+    };
+  },
+
+  // Contenido del BORRADOR de una nota, para que la web lo renderice en modo
+  // preview. NO usa requireAdmin (lo llama el server de la web, no un usuario):
+  // se autoriza con el mismo PREVIEW_SECRET. Devuelve la misma forma que la API
+  // pública de posts para que la web reutilice su mapper tal cual.
+  async previewContent(ctx: any) {
+    const { secret, slug, locale } = ctx.query as {
+      secret?: string;
+      slug?: string;
+      locale?: string;
+    };
+    const expected = process.env.PREVIEW_SECRET;
+    if (!expected || secret !== expected) return ctx.unauthorized();
+    if (!slug) return ctx.badRequest("slug es obligatorio");
+    const doc = await strapi.documents(UID).findFirst({
+      filters: { slug },
+      status: "draft",
+      locale: locale || LOCALE,
+      populate: { coverImage: true, tags: true },
+    });
+    ctx.body = { data: doc ?? null };
+  },
 });

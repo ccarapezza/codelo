@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Box, Flex, Typography, Badge, Button, Loader, Tabs, Switch } from "@strapi/design-system";
+import { Box, Flex, Typography, Badge, Button, Loader, Tabs, Switch, Modal } from "@strapi/design-system";
 import { Files, CheckCircle, Clock, Eye, EyeStriked, Calendar, User, Images } from "@strapi/icons";
 import { useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { PageContainer, PageHeader, EmptyState } from "../../components/ui";
@@ -12,6 +12,8 @@ const UNPUBLISH_API = "/api/post-review/unpublish";
 const GENERATE_COVER_API = "/api/post/generate-cover";
 // Marca/desmarca la nota como destacada (carrusel de la home).
 const SET_FEATURED_API = "/api/post-review/set-featured";
+// Devuelve la URL de vista previa de la web (con el secret) para embeber en el iframe.
+const PREVIEW_URL_API = "/api/post-review/preview-url";
 
 type Note = {
   documentId: string;
@@ -47,18 +49,22 @@ function NoteRow({
   busy,
   generating,
   featuring,
+  previewing,
   onToggle,
   onGenerateImage,
   onToggleFeatured,
+  onPreview,
 }: {
   note: Note;
   mode: "published" | "draft";
   busy: boolean;
   generating: boolean;
   featuring: boolean;
+  previewing: boolean;
   onToggle: () => void;
   onGenerateImage: () => void;
   onToggleFeatured: (next: boolean) => void;
+  onPreview: () => void;
 }) {
   const hasCover = Boolean(note.coverUrl);
   const src = coverSrc(note.coverUrl);
@@ -176,6 +182,20 @@ function NoteRow({
             </Flex>
           ) : null}
 
+          {/* Vista previa: abre la nota renderizada por la web real (borradores
+              incluidos, vía draftMode) en un iframe. */}
+          <Button
+            variant="tertiary"
+            size="S"
+            fullWidth
+            loading={previewing}
+            disabled={busy || generating}
+            startIcon={<Eye />}
+            onClick={onPreview}
+          >
+            Vista previa
+          </Button>
+
           {/* Imagen: generar o regenerar con el agente generador de imágenes. */}
           <Button
             variant="secondary"
@@ -267,9 +287,11 @@ function Section({
   busyId,
   generatingId,
   featuringId,
+  previewingId,
   onToggle,
   onGenerateImage,
   onToggleFeatured,
+  onPreview,
   onPage,
   emptyText,
 }: {
@@ -278,9 +300,11 @@ function Section({
   busyId: string | null;
   generatingId: string | null;
   featuringId: string | null;
+  previewingId: string | null;
   onToggle: (note: Note) => void;
   onGenerateImage: (note: Note) => void;
   onToggleFeatured: (note: Note, next: boolean) => void;
+  onPreview: (note: Note) => void;
   onPage: (p: number) => void;
   emptyText: string;
 }) {
@@ -302,9 +326,11 @@ function Section({
               busy={busyId === note.documentId}
               generating={generatingId === note.documentId}
               featuring={featuringId === note.documentId}
+              previewing={previewingId === note.documentId}
               onToggle={() => onToggle(note)}
               onGenerateImage={() => onGenerateImage(note)}
               onToggleFeatured={(next) => onToggleFeatured(note, next)}
+              onPreview={() => onPreview(note)}
             />
           ))}
         </Flex>
@@ -326,6 +352,9 @@ export default function PostReviewPage() {
   const [busyId, setBusyId] = React.useState<string | null>(null);
   const [generatingId, setGeneratingId] = React.useState<string | null>(null);
   const [featuringId, setFeaturingId] = React.useState<string | null>(null);
+  const [previewingId, setPreviewingId] = React.useState<string | null>(null);
+  // Nota abierta en el modal de vista previa (título + URL a embeber).
+  const [preview, setPreview] = React.useState<{ title: string; url: string } | null>(null);
   const [pubPage, setPubPage] = React.useState(1);
   const [draftPage, setDraftPage] = React.useState(1);
   const [tab, setTab] = React.useState("publicadas");
@@ -392,6 +421,27 @@ export default function PostReviewPage() {
       toggleNotification({ type: "danger", message: "No se pudo cambiar el destacado." });
     } finally {
       setFeaturingId(null);
+    }
+  };
+
+  // Abre la vista previa: pide al CMS la URL de preview de la web (arma el secret
+  // del lado del server) y la embebe en el iframe del modal. La web, con esa URL,
+  // activa draftMode y renderiza el BORRADOR con su propio layout.
+  const handlePreview = async (note: Note) => {
+    setPreviewingId(note.documentId);
+    try {
+      const { data } = await get<{ url: string }>(
+        `${PREVIEW_URL_API}?documentId=${encodeURIComponent(note.documentId)}`,
+      );
+      if (!data?.url) throw new Error("sin url");
+      setPreview({ title: note.title, url: data.url });
+    } catch {
+      toggleNotification({
+        type: "danger",
+        message: "No se pudo abrir la vista previa (¿falta configurar PREVIEW_SECRET / PREVIEW_WEB_URL?).",
+      });
+    } finally {
+      setPreviewingId(null);
     }
   };
 
@@ -462,9 +512,11 @@ export default function PostReviewPage() {
                 busyId={busyId}
                 generatingId={generatingId}
                 featuringId={featuringId}
+                previewingId={previewingId}
                 onToggle={(n) => handleToggle(n, "unpublish")}
                 onGenerateImage={handleGenerateImage}
                 onToggleFeatured={handleToggleFeatured}
+                onPreview={handlePreview}
                 onPage={setPubPage}
                 emptyText="No hay notas publicadas."
               />
@@ -479,9 +531,11 @@ export default function PostReviewPage() {
                 busyId={busyId}
                 generatingId={generatingId}
                 featuringId={featuringId}
+                previewingId={previewingId}
                 onToggle={(n) => handleToggle(n, "publish")}
                 onGenerateImage={handleGenerateImage}
                 onToggleFeatured={handleToggleFeatured}
+                onPreview={handlePreview}
                 onPage={setDraftPage}
                 emptyText="No hay borradores sin publicar."
               />
@@ -489,6 +543,45 @@ export default function PostReviewPage() {
           </Tabs.Content>
         </Tabs.Root>
       )}
+
+      {/* Modal de vista previa: embebe la web real (con draftMode) en un iframe.
+          La URL ya trae el secret; la web resuelve el borrador y lo renderiza con
+          su propio layout, así la preview coincide con el sitio real. */}
+      <Modal.Root open={Boolean(preview)} onOpenChange={(open: boolean) => { if (!open) setPreview(null); }}>
+        {preview ? (
+          <Modal.Content style={{ maxWidth: "95vw", width: 1100 }}>
+            <Modal.Header>
+              <Modal.Title>Vista previa · {preview.title}</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              <Box
+                background="neutral150"
+                hasRadius
+                style={{ overflow: "hidden", border: "1px solid var(--strapi-neutral200, #eaeaef)" }}
+              >
+                <iframe
+                  title="Vista previa de la nota"
+                  src={preview.url}
+                  style={{ width: "100%", height: "70vh", border: "none", display: "block", background: "#fff" }}
+                />
+              </Box>
+              <Box paddingTop={2}>
+                <Typography variant="pi" textColor="neutral500">
+                  Estás viendo el borrador renderizado por la web real. Los cambios de diseño del sitio se reflejan acá.
+                </Typography>
+              </Box>
+            </Modal.Body>
+            <Modal.Footer>
+              <Modal.Close>
+                <Button variant="tertiary">Cerrar</Button>
+              </Modal.Close>
+              <Button variant="secondary" onClick={() => window.open(preview.url, "_blank", "noopener")}>
+                Abrir en pestaña nueva
+              </Button>
+            </Modal.Footer>
+          </Modal.Content>
+        ) : null}
+      </Modal.Root>
     </PageContainer>
   );
 }

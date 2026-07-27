@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { draftMode } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
 import { ArrowLeft } from "lucide-react";
 import { getPostBySlug, getLatestPosts, resolvePostRedirect, type CmsTag } from "@/lib/cms";
@@ -98,13 +99,20 @@ export default async function BlogPostPage({ params }: { params: Promise<{ lang:
   const locale = (await getLocale()) as Locale;
   const t = await getTranslations("blog");
   const { slug } = await params;
-  const post = await getPostBySlug(slug, locale);
+  // Modo preview (draftMode): activado por /api/preview desde el panel. Trae el
+  // BORRADOR en vez de la versión publicada.
+  const { isEnabled: preview } = await draftMode();
+  const post = await getPostBySlug(slug, locale, preview);
   if (!post) {
-    // The slug may belong to the other locale (old shared link, or a locale
-    // toggle on a post without translation). Send the visitor to the right
-    // URL instead of 404ing.
-    const target = await resolvePostRedirect(slug, locale);
-    if (target) redirect({ href: `/blog/${target.slug}`, locale: target.locale });
+    // En preview no redirigimos (el fallback busca publicadas): si no hay
+    // borrador para ese slug, 404 directo.
+    if (!preview) {
+      // The slug may belong to the other locale (old shared link, or a locale
+      // toggle on a post without translation). Send the visitor to the right
+      // URL instead of 404ing.
+      const target = await resolvePostRedirect(slug, locale);
+      if (target) redirect({ href: `/blog/${target.slug}`, locale: target.locale });
+    }
     notFound();
   }
 
@@ -153,6 +161,17 @@ export default async function BlogPostPage({ params }: { params: Promise<{ lang:
 
   return (
     <article className="min-h-screen bg-background pb-24 text-foreground">
+      {preview ? (
+        <div className="sticky top-0 z-50 flex items-center justify-center gap-3 bg-[#E4B569] px-4 py-2 text-center font-mono text-xs font-semibold uppercase tracking-wide text-[#00001C]">
+          <span>Vista previa — estás viendo el borrador, no la versión publicada</span>
+          <a
+            href={`/api/preview/exit?to=${encodeURIComponent(`/${locale}/blog/${slug}`)}`}
+            className="rounded border border-[#00001C]/40 px-2 py-0.5 underline underline-offset-2 hover:bg-[#00001C]/10"
+          >
+            Salir
+          </a>
+        </div>
+      ) : null}
       <SetLocaleAlternates alternates={toggleAlternates} />
       <JsonLd data={jsonLd} />
       {/* Right-aligned at every size: the masthead logo (header) overflows

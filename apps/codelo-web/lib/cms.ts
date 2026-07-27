@@ -387,9 +387,33 @@ export async function getHouseAds(): Promise<CmsHouseAd[]> {
   }
 }
 
-const fetchPostBySlug = async (slug: string, locale: CmsLocale): Promise<StrapiPost | null> => {
+const fetchPostBySlug = async (
+  slug: string,
+  locale: CmsLocale,
+  preview = false,
+): Promise<StrapiPost | null> => {
   const baseUrl = getCmsBaseUrl();
   if (!baseUrl) return null;
+
+  // Modo preview: pide el BORRADOR al endpoint del CMS protegido por el secret,
+  // en vez de la API pública (que solo devuelve publicadas). Devuelve la misma
+  // forma que la API pública, así el resto del mapeo es idéntico.
+  if (preview) {
+    const secret = process.env.CMS_PREVIEW_SECRET;
+    if (!secret) return null;
+    const url = new URL(`${baseUrl}/api/post-review/preview-content`);
+    url.searchParams.set("secret", secret);
+    url.searchParams.set("slug", slug);
+    url.searchParams.set("locale", locale);
+    try {
+      const response = await fetch(url.toString(), { cache: "no-store" });
+      if (!response.ok) return null;
+      const json = (await response.json()) as { data: StrapiPost | null };
+      return json.data ?? null;
+    } catch {
+      return null;
+    }
+  }
 
   const url = new URL(`${baseUrl}/api/posts`);
   url.searchParams.set("locale", locale);
@@ -436,8 +460,12 @@ const fetchSlugByDocumentId = async (
   }
 };
 
-export async function getPostBySlug(slug: string, locale: CmsLocale): Promise<CmsPostDetail | null> {
-  const post = await fetchPostBySlug(slug, locale);
+export async function getPostBySlug(
+  slug: string,
+  locale: CmsLocale,
+  preview = false,
+): Promise<CmsPostDetail | null> {
+  const post = await fetchPostBySlug(slug, locale, preview);
   if (!post) return null;
 
   const alternates: CmsPostDetail["alternates"] = { [locale]: post.slug };

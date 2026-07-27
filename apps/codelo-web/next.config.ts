@@ -27,6 +27,22 @@ function resolveCmsUpstream(): string {
 
 const isProd = process.env.NODE_ENV === "production";
 
+// Origen del panel (Strapi) que puede embeber la web en un iframe para la vista
+// previa de borradores (página Notas). Se toma el origin (esquema+host+puerto)
+// de NEXT_PUBLIC_CMS_URL, horneado en build. Si no se puede resolver, la vista
+// previa simplemente no cargará en el iframe (el resto del sitio no se afecta).
+function resolvePreviewFrameAncestor(): string | null {
+  const raw = process.env.PREVIEW_FRAME_ANCESTOR ?? process.env.NEXT_PUBLIC_CMS_URL;
+  if (!raw) return null;
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return null;
+  }
+}
+
+const previewFrameAncestor = resolvePreviewFrameAncestor();
+
 // CSP: AdSense + Next inline scripts force 'unsafe-inline' for now. Tighten
 // with a nonce middleware later.
 //
@@ -42,7 +58,9 @@ const cspDirectives = [
   "default-src 'self'",
   "base-uri 'self'",
   "form-action 'self'",
-  "frame-ancestors 'none'",
+  // 'self' + el origen del panel, para que el iframe de vista previa (Notas)
+  // pueda embeber la web. Sin el CMS acá, el navegador bloquea el iframe.
+  `frame-ancestors 'self'${previewFrameAncestor ? ` ${previewFrameAncestor}` : ""}`,
   "object-src 'none'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data: https://fonts.gstatic.com",
@@ -54,7 +72,11 @@ const cspDirectives = [
 ].join("; ");
 
 const securityHeaders = [
-  { key: "X-Frame-Options", value: "DENY" },
+  // Nota: NO se setea X-Frame-Options. Es un header legacy que sólo entiende
+  // DENY / SAMEORIGIN (no admite un origen extra), así que chocaría con la vista
+  // previa embebida desde el panel. El control de framing lo hace
+  // `frame-ancestors` en la CSP de arriba, que todos los navegadores actuales
+  // respetan y sí permite listar el origen del CMS.
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
