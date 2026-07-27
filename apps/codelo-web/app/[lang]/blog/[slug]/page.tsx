@@ -8,6 +8,7 @@ import { Link, redirect } from "@/i18n/navigation";
 import { SetLocaleAlternates, type LocaleAlternates } from "@/components/locale-alternates";
 import { markdownToSafeHtml, readingTimeMinutes, stripLeadingTitle } from "@/lib/markdown";
 import { PostCover } from "@/components/PostCover";
+import { PreviewBanner } from "@/components/PreviewBanner";
 import { PostListItem } from "@/components/PostListItem";
 import { cn } from "@/lib/utils";
 import { formatPostDate } from "@/lib/intl";
@@ -161,17 +162,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ lang:
 
   return (
     <article className="min-h-screen bg-background pb-24 text-foreground">
-      {preview ? (
-        <div className="sticky top-0 z-50 flex items-center justify-center gap-3 bg-[#E4B569] px-4 py-2 text-center font-mono text-xs font-semibold uppercase tracking-wide text-[#00001C]">
-          <span>Vista previa — estás viendo el borrador, no la versión publicada</span>
-          <a
-            href={`/api/preview/exit?to=${encodeURIComponent(`/${locale}/blog/${slug}`)}`}
-            className="rounded border border-[#00001C]/40 px-2 py-0.5 underline underline-offset-2 hover:bg-[#00001C]/10"
-          >
-            Salir
-          </a>
-        </div>
-      ) : null}
+      {preview ? <PreviewBanner exitTo={`/${locale}/blog/${slug}`} /> : null}
       <SetLocaleAlternates alternates={toggleAlternates} />
       <JsonLd data={jsonLd} />
       {/* Right-aligned at every size: the masthead logo (header) overflows

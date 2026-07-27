@@ -364,6 +364,17 @@ export default function PostReviewPage() {
   const mountedRef = React.useRef(true);
   React.useEffect(() => () => { mountedRef.current = false; }, []);
 
+  // El banner de la web (dentro del iframe) avisa por postMessage cuando el
+  // usuario toca "Cerrar" ahí; cerramos el modal desde acá. (El banner ya limpió
+  // draftMode antes de avisar.)
+  React.useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      if (e?.data?.type === "codelo-preview-close") setPreview(null);
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+
   const load = React.useCallback(
     async (opts?: { silent?: boolean }) => {
       if (!opts?.silent) setLoading(true);

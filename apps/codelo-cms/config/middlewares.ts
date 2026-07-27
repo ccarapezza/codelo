@@ -1,4 +1,19 @@
-export default ({ env }) => [
+export default ({ env }) => {
+  // Origen de la web pública, para permitir embeberla en el iframe de "Vista
+  // previa" de la página Notas. Sin `frame-src`, la CSP del admin hereda
+  // `default-src 'self'` y el navegador bloquea el iframe (localhost:3200 en dev,
+  // el dominio de la web en prod).
+  const previewWebOrigin = (() => {
+    const raw = env("PREVIEW_WEB_URL");
+    if (!raw) return null;
+    try {
+      return new URL(raw).origin;
+    } catch {
+      return null;
+    }
+  })();
+
+  return [
   "strapi::logger",
   "strapi::errors",
   {
@@ -11,6 +26,7 @@ export default ({ env }) => [
           "img-src": ["'self'", "data:", "blob:", "https:"],
           "media-src": ["'self'", "data:", "blob:", "https:"],
           "script-src": ["'self'", "'unsafe-inline'"],
+          "frame-src": ["'self'", ...(previewWebOrigin ? [previewWebOrigin] : [])],
           "frame-ancestors": ["'none'"],
           upgradeInsecureRequests: null,
         },
@@ -44,4 +60,5 @@ export default ({ env }) => [
       pathPrefix: "/api/",
     },
   },
-];
+  ];
+};
