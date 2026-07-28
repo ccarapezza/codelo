@@ -145,6 +145,31 @@ export default ({ strapi }: { strapi: any }) => ({
     ctx.body = { ok: true };
   },
 
+  // Borra una nota — SÓLO si es un borrador (nunca publicada). Para borrar una
+  // publicada hay que despublicarla primero. La guarda es del lado del server,
+  // no sólo de la UI: sin esto, un request directo podría bajar una nota viva
+  // del sitio de un saque.
+  async remove(ctx: any) {
+    if (!(await requireAdmin(ctx, strapi))) return;
+    const { documentId } = ctx.request.body as { documentId?: string };
+    if (!documentId) return ctx.badRequest("documentId es obligatorio");
+
+    const publishedSibling = await strapi.documents(UID).findOne({
+      documentId,
+      status: "published",
+      locale: LOCALE,
+      fields: ["documentId"],
+    });
+    if (publishedSibling) {
+      return ctx.badRequest("La nota está publicada. Despublicala antes de borrarla.");
+    }
+
+    // delete sin `status` baja TODAS las versiones/locales del documento; como
+    // no hay versión publicada, es sólo el borrador.
+    await strapi.documents(UID).delete({ documentId });
+    ctx.body = { ok: true };
+  },
+
   // Marca/desmarca la nota como destacada (va al carrusel de la home).
   // Se escribe con updateMany a nivel entidad (no document service) para tocar
   // TODAS las filas del documento —borrador Y publicado, todos los locales— de
@@ -158,9 +183,7 @@ export default ({ strapi }: { strapi: any }) => ({
     };
     if (!documentId) return ctx.badRequest("documentId es obligatorio");
     if (typeof featured !== "boolean") return ctx.badRequest("featured (boolean) es obligatorio");
-    await strapi.db
-      .query(UID)
-      .updateMany({ where: { documentId }, data: { featured } });
+    await strapi.db.query(UID).updateMany({ where: { documentId }, data: { featured } });
     ctx.body = { ok: true };
   },
 

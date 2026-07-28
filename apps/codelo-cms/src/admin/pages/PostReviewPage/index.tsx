@@ -22,6 +22,7 @@ import {
   Images,
   Pencil,
   Plus,
+  Trash,
 } from "@strapi/icons";
 import { useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { PageContainer, PageHeader, EmptyState } from "../../components/ui";
@@ -34,6 +35,8 @@ const UNPUBLISH_API = "/api/post-review/unpublish";
 const GENERATE_COVER_API = "/api/post/generate-cover";
 // Marca/desmarca la nota como destacada (carrusel de la home).
 const SET_FEATURED_API = "/api/post-review/set-featured";
+// Borra una nota (sólo borradores; el server rechaza publicadas).
+const DELETE_API = "/api/post-review/delete";
 // Devuelve la URL de vista previa de la web (con el secret) para embeber en el iframe.
 const PREVIEW_URL_API = "/api/post-review/preview-url";
 
@@ -81,6 +84,8 @@ function NoteRow({
   onToggleFeatured,
   onPreview,
   onEdit,
+  onDelete,
+  deleting,
 }: {
   note: Note;
   mode: "published" | "draft";
@@ -93,6 +98,8 @@ function NoteRow({
   onToggleFeatured: (next: boolean) => void;
   onPreview: () => void;
   onEdit: () => void;
+  onDelete: () => void;
+  deleting: boolean;
 }) {
   const hasCover = Boolean(note.coverUrl);
   const src = coverSrc(note.coverUrl);
@@ -283,6 +290,20 @@ function NoteRow({
                   Generá la imagen para poder publicar
                 </Typography>
               ) : null}
+
+              {/* Borrar: sólo borradores. Para borrar una publicada hay que
+                  despublicarla primero (el server lo exige igual). */}
+              <Button
+                variant="danger-light"
+                size="S"
+                fullWidth
+                loading={deleting}
+                disabled={busy || generating}
+                startIcon={<Trash />}
+                onClick={onDelete}
+              >
+                Borrar
+              </Button>
             </>
           )}
         </Flex>
@@ -341,6 +362,8 @@ function Section({
   onToggleFeatured,
   onPreview,
   onEdit,
+  onDelete,
+  deletingId,
   onPage,
   emptyText,
 }: {
@@ -355,6 +378,8 @@ function Section({
   onToggleFeatured: (note: Note, next: boolean) => void;
   onPreview: (note: Note) => void;
   onEdit: (note: Note) => void;
+  onDelete: (note: Note) => void;
+  deletingId: string | null;
   onPage: (p: number) => void;
   emptyText: string;
 }) {
@@ -382,6 +407,8 @@ function Section({
               onToggleFeatured={next => onToggleFeatured(note, next)}
               onPreview={() => onPreview(note)}
               onEdit={() => onEdit(note)}
+              onDelete={() => onDelete(note)}
+              deleting={deletingId === note.documentId}
             />
           ))}
         </Flex>
@@ -405,6 +432,9 @@ export default function PostReviewPage() {
   const [generatingId, setGeneratingId] = React.useState<string | null>(null);
   const [featuringId, setFeaturingId] = React.useState<string | null>(null);
   const [previewingId, setPreviewingId] = React.useState<string | null>(null);
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
+  // Nota en el modal de confirmación de borrado.
+  const [toDelete, setToDelete] = React.useState<Note | null>(null);
   // Nota abierta en el modal de vista previa (título + URL a embeber).
   const [preview, setPreview] = React.useState<{ title: string; url: string } | null>(null);
   const [pubPage, setPubPage] = React.useState(1);
@@ -545,6 +575,25 @@ export default function PostReviewPage() {
     }
   };
 
+  // Borra un borrador (confirmado en el modal). El server rechaza publicadas,
+  // así que el botón sólo aparece en la pestaña "Sin publicar".
+  const handleDelete = async (note: Note) => {
+    setDeletingId(note.documentId);
+    try {
+      await post(DELETE_API, { documentId: note.documentId });
+      toggleNotification({ type: "success", message: "Borrador eliminado." });
+      setToDelete(null);
+      await load({ silent: true });
+    } catch (err) {
+      const msg =
+        (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error
+          ?.message ?? "No se pudo borrar la nota.";
+      toggleNotification({ type: "danger", message: msg });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <PageContainer>
       <PageHeader
@@ -599,6 +648,8 @@ export default function PostReviewPage() {
                 onToggleFeatured={handleToggleFeatured}
                 onPreview={handlePreview}
                 onEdit={n => navigate(`/editor-nota?id=${encodeURIComponent(n.documentId)}`)}
+                onDelete={setToDelete}
+                deletingId={deletingId}
                 onPage={setPubPage}
                 emptyText="No hay notas publicadas."
               />
@@ -619,6 +670,8 @@ export default function PostReviewPage() {
                 onToggleFeatured={handleToggleFeatured}
                 onPreview={handlePreview}
                 onEdit={n => navigate(`/editor-nota?id=${encodeURIComponent(n.documentId)}`)}
+                onDelete={setToDelete}
+                deletingId={deletingId}
                 onPage={setDraftPage}
                 emptyText="No hay borradores sin publicar."
               />
@@ -678,6 +731,42 @@ export default function PostReviewPage() {
                 onClick={() => window.open(preview.url, "_blank", "noopener")}
               >
                 Abrir en pestaña nueva
+              </Button>
+            </Modal.Footer>
+          </Modal.Content>
+        ) : null}
+      </Modal.Root>
+
+      {/* Confirmación de borrado. Sólo se llega acá desde la pestaña de
+          borradores; el server igual rechaza borrar una publicada. */}
+      <Modal.Root
+        open={Boolean(toDelete)}
+        onOpenChange={(open: boolean) => {
+          if (!open) setToDelete(null);
+        }}
+      >
+        {toDelete ? (
+          <Modal.Content>
+            <Modal.Header>
+              <Modal.Title>Borrar borrador</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              <Typography>
+                ¿Seguro que querés borrar <strong>{toDelete.title}</strong>? Esta acción no se puede
+                deshacer.
+              </Typography>
+            </Modal.Body>
+            <Modal.Footer>
+              <Modal.Close>
+                <Button variant="tertiary">Cancelar</Button>
+              </Modal.Close>
+              <Button
+                variant="danger"
+                startIcon={<Trash />}
+                loading={deletingId === toDelete.documentId}
+                onClick={() => handleDelete(toDelete)}
+              >
+                Borrar
               </Button>
             </Modal.Footer>
           </Modal.Content>

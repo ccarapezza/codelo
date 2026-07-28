@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
@@ -26,6 +27,7 @@ const SAVE = "/api/news-generator/save";
 export default function NewsGeneratorPage() {
   const { post } = useFetchClient();
   const { toggleNotification } = useNotification();
+  const navigate = useNavigate();
 
   const [prompt, setPrompt] = React.useState("");
   const [webSearch, setWebSearch] = React.useState(true);
@@ -44,7 +46,7 @@ export default function NewsGeneratorPage() {
 
   const [saving, setSaving] = React.useState(false);
 
-  const setField = (k: keyof Note, v: string) => setNote((n) => (n ? { ...n, [k]: v } : n));
+  const setField = (k: keyof Note, v: string) => setNote(n => (n ? { ...n, [k]: v } : n));
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
@@ -110,10 +112,11 @@ export default function NewsGeneratorPage() {
         type: "success",
         message: publish ? "Nota publicada." : "Borrador guardado.",
       });
-      // Link to the Content Manager entry.
-      const url = `/admin/content-manager/collection-types/api::post.post/${data.documentId}`;
-      window.open(url, "_blank");
-      handleReset();
+      // Ir a Notas, NO al Content Manager. Abrir el entry del CM (window.open)
+      // le tira 403 "Whoops!" a los roles author/editor: el rol Author sólo
+      // puede abrir sus propios entries, y el pipeline los crea con otro dueño.
+      // Notas es la pantalla curada donde cualquier rol gestiona la nota.
+      navigate("/notas");
     } catch {
       toggleNotification({ type: "danger", message: "Falló el guardado." });
     } finally {
@@ -201,7 +204,9 @@ export default function NewsGeneratorPage() {
                   <Field.Label>Título</Field.Label>
                   <TextInput
                     value={note.title}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setField("title", e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setField("title", e.target.value)
+                    }
                   />
                 </Field.Root>
                 <Field.Root>
@@ -209,7 +214,9 @@ export default function NewsGeneratorPage() {
                   <Textarea
                     rows={2}
                     value={note.excerpt}
-                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setField("excerpt", e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                      setField("excerpt", e.target.value)
+                    }
                   />
                 </Field.Root>
                 <Field.Root hint="Cuerpo en Markdown. Editá libremente.">
@@ -217,7 +224,9 @@ export default function NewsGeneratorPage() {
                   <Textarea
                     rows={18}
                     value={note.content}
-                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setField("content", e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                      setField("content", e.target.value)
+                    }
                   />
                   <Field.Hint />
                 </Field.Root>
@@ -229,7 +238,7 @@ export default function NewsGeneratorPage() {
                       Fuentes consultadas
                     </Typography>
                     <Flex direction="column" gap={1} marginTop={2} alignItems="flex-start">
-                      {sources.map((s) => (
+                      {sources.map(s => (
                         <a key={s.url} href={s.url} target="_blank" rel="noreferrer">
                           <Typography variant="pi" textColor="primary600">
                             {s.title}
@@ -245,14 +254,20 @@ export default function NewsGeneratorPage() {
 
           {/* 3 — Refinar con prompt */}
           <Box marginBottom={6}>
-            <AccentCard title="3 · Refinar con un prompt" icon={<ArrowClockwise />} accent="warning">
+            <AccentCard
+              title="3 · Refinar con un prompt"
+              icon={<ArrowClockwise />}
+              accent="warning"
+            >
               <Field.Root hint="Pedí un cambio. Ej: 'Hacela más corta', 'Agregá una cita', 'Cambiá el enfoque al arquero'.">
                 <Field.Label>Instrucción de modificación</Field.Label>
                 <Textarea
                   rows={2}
                   placeholder="¿Qué querés cambiar?"
                   value={instruction}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInstruction(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                    setInstruction(e.target.value)
+                  }
                   disabled={refining}
                 />
                 <Field.Hint />
@@ -290,7 +305,9 @@ export default function NewsGeneratorPage() {
                   rows={2}
                   placeholder="Dejalo vacío para usar el agente, o describí la imagen…"
                   value={customImagePrompt}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCustomImagePrompt(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                    setCustomImagePrompt(e.target.value)
+                  }
                   disabled={imageBusy}
                 />
                 <Field.Hint />
@@ -330,13 +347,24 @@ export default function NewsGeneratorPage() {
           >
             <Flex justifyContent="space-between" alignItems="center" gap={4}>
               <Typography variant="omega" textColor="neutral600">
-                Guardá como borrador para revisar en el Content Manager, o publicá directo (genera la versión EN).
+                Guardá como borrador para revisar en el Content Manager, o publicá directo (genera
+                la versión EN).
               </Typography>
               <Flex gap={2}>
-                <Button variant="tertiary" onClick={() => handleSave(false)} loading={saving} disabled={saving}>
+                <Button
+                  variant="tertiary"
+                  onClick={() => handleSave(false)}
+                  loading={saving}
+                  disabled={saving}
+                >
                   Guardar borrador
                 </Button>
-                <Button onClick={() => handleSave(true)} loading={saving} disabled={saving} size="L">
+                <Button
+                  onClick={() => handleSave(true)}
+                  loading={saving}
+                  disabled={saving}
+                  size="L"
+                >
                   Publicar ahora
                 </Button>
               </Flex>

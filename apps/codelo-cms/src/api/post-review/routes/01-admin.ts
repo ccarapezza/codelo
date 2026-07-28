@@ -27,6 +27,13 @@ export default {
       handler: "api::post-review.post-review.setFeatured",
       config: { auth: false },
     },
+    // Borrar (sólo borradores; la guarda vive en el controller).
+    {
+      method: "POST",
+      path: "/post-review/delete",
+      handler: "api::post-review.post-review.remove",
+      config: { auth: false },
+    },
     // URL de preview para el panel (requireAdmin dentro del controller).
     {
       method: "GET",
