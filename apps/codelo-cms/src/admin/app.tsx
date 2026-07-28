@@ -1,4 +1,15 @@
-import { Magic, Cog, Cast, Pencil, Images, Feather, Book, Cloud, Plant, Files } from "@strapi/icons";
+import {
+  Magic,
+  Cog,
+  Cast,
+  Pencil,
+  Images,
+  Feather,
+  Book,
+  Cloud,
+  Plant,
+  Files,
+} from "@strapi/icons";
 import type { StrapiApp } from "@strapi/strapi/admin";
 import { ADMIN_PERMISSIONS } from "../lib/admin-permissions";
 import SocialStudioPanel from "./components/SocialStudioPanel";
@@ -130,6 +141,18 @@ export default {
       },
     });
 
+    // Editor unificado de notas (crear a mano / con IA / editar). No lleva
+    // entrada de menú: se entra desde /admin/notas. `?id=` = edición; sin él,
+    // creación. Se registra con addRoute (como Audit) para que sea navegable y
+    // sobreviva al back del navegador.
+    app.router.addRoute({
+      path: "editor-nota/*",
+      lazy: async () => {
+        const { default: Component } = await import("./pages/NoteEditorPage");
+        return { Component };
+      },
+    });
+
     // ── Home: tarjetas de sistema/crons ──────────────────────────────────
     // Widgets informativos (sólo lectura) para que TODO usuario del panel
     // —admin, editor o author— entienda de dónde y cuándo sale la información.
@@ -143,7 +166,10 @@ export default {
       },
       {
         icon: Cloud,
-        title: { id: "codelo.widget.termohigrometro", defaultMessage: "Termohigrómetro (clima de cultivo)" },
+        title: {
+          id: "codelo.widget.termohigrometro",
+          defaultMessage: "Termohigrómetro (clima de cultivo)",
+        },
         id: "codelo-termohigrometro",
         component: async () => (await import("./components/widgets/TermohigrometroWidget")).default,
       },
@@ -164,9 +190,7 @@ export default {
     // existían todavía. Se usa `appRef` porque la fachada de bootstrap no expone
     // `widgets`. Si más adelante se quiere un widget nativo de Strapi en la home,
     // se lo agrega a esta allowlist por prefijo.
-    appRef?.widgets.register((prev) =>
-      prev.filter((w) => String(w.id ?? "").startsWith("codelo-")),
-    );
+    appRef?.widgets.register(prev => prev.filter(w => String(w.id ?? "").startsWith("codelo-")));
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (app.getPlugin("content-manager") as any).apis.addEditViewSidePanel([SocialStudioPanel]);

@@ -67,6 +67,33 @@ pnpm dev:web    # Next en http://localhost:3200
   `analyst` heredado de la plantilla de fulbo —analizaba partidos de fútbol—
   eliminado junto con `match-context.ts` y `post.sourceMatchId`.)
 
+## Editor de notas del admin — NO usar el Content Manager
+
+El Content Manager nativo expone TODOS los campos del `post`, incluidos los
+internos del pipeline (`coverPrompt`, `carouselPlan`, `directorRejectionReason`,
+`generatedByAgent`). Setear `generatedByAgent` a mano, por ejemplo, mete la nota
+en el pool del Director. Por eso la creación y edición del día a día pasa por una
+pantalla curada, no por el CM.
+
+- **`/admin/notas`** (`PostReviewPage`) — lista publicadas/borradores. Botón
+  **Crear nota** y **Editar** por fila llevan al editor.
+- **`/admin/editor-nota`** (`NoteEditorPage`) — pantalla única crear+editar.
+  `?id=<documentId>` = edición; sin query = creación con switch **IA / a mano**.
+  El form compartido (título · slug autogenerado editable · excerpt · content ·
+  tags · imagen) es el mismo en los tres flujos. Refinar con IA y generar/subir
+  imagen viven en el form (ambos modos), no sólo en IA.
+- Backend en el `post` controller, rutas `/news-generator/*`: `generate`,
+  `refine`, `image`, `upload` (multipart, portada propia), `save` (crear),
+  `update` (editar), `post` (cargar para editar), `tags` (selector). Todas
+  `requireAdmin`; el slug se normaliza con `makeSlug` server-side y un duplicado
+  vuelve como 400 legible, no 500.
+- **La ruta va con `app.router.addRoute` en `register()`, no `addMenuLink`**: no
+  tiene entrada de menú (se entra desde `/notas`) y `app.router` sólo existe en
+  `register` — llamarlo desde `bootstrap` deja el panel en blanco.
+- Editar una nota YA publicada re-publica preservando la fecha
+  (`republishPreservingDate`) para que el cambio salga sin saltar al tope del
+  feed. El generador viejo `/admin/news-generator` sigue existiendo intacto.
+
 ## Consulta INASE — cultivares, operadores y rótulos
 
 `/semillas` espeja dos registros públicos de INASE para que obtentores,

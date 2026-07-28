@@ -3,7 +3,14 @@ import { factories } from "@strapi/strapi";
 import { requireAdmin } from "../../../lib/admin-auth";
 import { logAgentAction } from "../../../lib/audit";
 import { republishPreservingDate } from "../../../lib/post-publish";
-import { chooseImagePrompt, generateCoverImage, generatePost, getOpenAIClient, isOpenRouterModel, uploadImageToStrapi } from "../../../lib/openai";
+import {
+  chooseImagePrompt,
+  generateCoverImage,
+  generatePost,
+  getOpenAIClient,
+  isOpenRouterModel,
+  uploadImageToStrapi,
+} from "../../../lib/openai";
 import { makeSlug } from "../../../lib/agent-runner";
 import {
   researchWithWebSearch,
@@ -22,7 +29,14 @@ import { getPromptSettings } from "../../../lib/prompt-settings";
 import type { PromptSettings } from "../../../lib/prompt-defaults";
 import { ensurePostTranslation } from "../../../lib/translate-post";
 import { generateOpenRouterImage } from "../../../lib/openrouter-image";
-import { composeCarousel, dataUriFromBuffer, renderSlide, renderToPng, SIZES, type Slide } from "../../../lib/social-cards";
+import {
+  composeCarousel,
+  dataUriFromBuffer,
+  renderSlide,
+  renderToPng,
+  SIZES,
+  type Slide,
+} from "../../../lib/social-cards";
 
 type ImageGeneratorAgentDoc = {
   imagePromptTemplate: string | null;
@@ -79,7 +93,7 @@ async function regenerateCoverFor(
     fields: ["coverPrompt"],
     limit: 10,
   })) as unknown as Array<{ coverPrompt: string | null }>;
-  const recentDescriptions = recent.map((r) => r.coverPrompt!).filter(Boolean);
+  const recentDescriptions = recent.map(r => r.coverPrompt!).filter(Boolean);
 
   // Some generated prompts make the Gemini image model return an empty 200
   // deterministically (no image, no error) — retrying the same text never
@@ -102,22 +116,30 @@ async function regenerateCoverFor(
       excerpt: post.excerpt ?? "",
       seedKey: `${documentId}|${post.title}|${rotation}|${tryN}`,
       recentDescriptions,
-      systemInstructions: imgAgent.imagePromptTemplate?.trim() || promptSettings.imageSystemInstructions,
+      systemInstructions:
+        imgAgent.imagePromptTemplate?.trim() || promptSettings.imageSystemInstructions,
       themeGuide: promptSettings.imageThemeGuide,
       anchorTaxonomy: promptSettings.imageAnchorTaxonomy,
     });
     try {
-      imageBuffer = await generateCoverImage({ openaiImageKey: imageKey, openrouterKey }, imageModel, imagePrompt, {
-        size: imgAgent.imageSize ?? undefined,
-        quality: imgAgent.imageQuality ?? undefined,
-      });
+      imageBuffer = await generateCoverImage(
+        { openaiImageKey: imageKey, openrouterKey },
+        imageModel,
+        imagePrompt,
+        {
+          size: imgAgent.imageSize ?? undefined,
+          quality: imgAgent.imageQuality ?? undefined,
+        },
+      );
       break;
     } catch (err) {
       const empty = ((err as Error).message ?? "").includes("no inline image data");
       if (!empty || tryN === MAX_PROMPT_TRIES) {
         // Log the offending prompt before giving up: a moderation rejection is
         // otherwise undiagnosable, since the prompt is only persisted on success.
-        strapi.log.error(`[post] cover generation failed for ${documentId}; prompt was: ${imagePrompt}`);
+        strapi.log.error(
+          `[post] cover generation failed for ${documentId}; prompt was: ${imagePrompt}`,
+        );
         throw err;
       }
       strapi.log.warn(
@@ -158,7 +180,8 @@ async function loadImageAgentOrThrow(strapi: any): Promise<ImageGeneratorAgentDo
 
 // Image model for carousel backgrounds: always via OpenRouter so we can request
 // a 9:16 portrait aspect ratio. Configurable via env, independent of the cover model.
-const CAROUSEL_IMAGE_MODEL = process.env.OPENROUTER_IMAGE_MODEL?.trim() || "google/gemini-2.5-flash-image";
+const CAROUSEL_IMAGE_MODEL =
+  process.env.OPENROUTER_IMAGE_MODEL?.trim() || "google/gemini-2.5-flash-image";
 
 // Shared helper: build the full Instagram carousel for ONE post. Compose the deck
 // from the article (LLM, strictly grounded), render each slide with satori/resvg,
@@ -198,7 +221,9 @@ async function buildCarouselFor(
       });
       slides[0]._bgUri = dataUriFromBuffer(bg, "image/png");
     } catch (err) {
-      strapi.log.warn(`[post] carousel cover background failed (${documentId}): ${(err as Error).message}`);
+      strapi.log.warn(
+        `[post] carousel cover background failed (${documentId}): ${(err as Error).message}`,
+      );
     }
   }
 
@@ -209,7 +234,12 @@ async function buildCarouselFor(
     const png = await renderToPng(renderSlide(slides[i], SIZES.portrait), SIZES.portrait);
     const n = String(i + 1).padStart(2, "0");
     const filename = `slide-${n}-${documentId}-${Date.now()}.png`;
-    const uploadId = await uploadImageToStrapi(strapi, png, filename, `${post.title} — placa ${i + 1}`);
+    const uploadId = await uploadImageToStrapi(
+      strapi,
+      png,
+      filename,
+      `${post.title} — placa ${i + 1}`,
+    );
     uploadIds.push(uploadId);
     const { _bgUri, ...slideForPlan } = slides[i];
     void _bgUri;
@@ -241,7 +271,6 @@ async function buildCarouselFor(
   });
 }
 
-
 /** Etiqueta tal como la espera la web (ver mapTags en apps/codelo-web/lib/cms.ts). */
 type TagShape = { name: string; slug: string; kind: string; reference?: string | null };
 
@@ -259,7 +288,7 @@ async function attachTags(
     : response?.data
       ? [response.data as Record<string, unknown>]
       : [];
-  const ids = rows.map((r) => r.documentId).filter((v): v is string => typeof v === "string");
+  const ids = rows.map(r => r.documentId).filter((v): v is string => typeof v === "string");
   if (ids.length === 0) return;
 
   // Se respetan locale y status del pedido original: si no, una home en `es`
@@ -276,7 +305,7 @@ async function attachTags(
       limit: ids.length,
     })) as unknown as Array<{ documentId: string; tags?: TagShape[] }>;
 
-    const byDoc = new Map(withTags.map((p) => [p.documentId, p.tags ?? []]));
+    const byDoc = new Map(withTags.map(p => [p.documentId, p.tags ?? []]));
     for (const row of rows) {
       row.tags = byDoc.get(row.documentId as string) ?? [];
     }
@@ -307,7 +336,10 @@ async function findByTag(
   strapi: Core.Strapi,
   ctx: { query?: Record<string, unknown> },
   tagSlug: string,
-): Promise<{ data: unknown[]; meta: { pagination: { page: number; pageSize: number; total: number } } }> {
+): Promise<{
+  data: unknown[];
+  meta: { pagination: { page: number; pageSize: number; total: number } };
+}> {
   const q = ctx.query ?? {};
   const pag = (q.pagination ?? {}) as Record<string, unknown>;
   const pageSize = Math.min(Math.max(Number(pag.pageSize) || 25, 1), 100);
@@ -405,13 +437,25 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
       try {
         openrouterKey = getOpenRouterImageKey();
       } catch {
-        return ctx.badRequest("OpenRouter API key not configured (set OPENROUTER_API_KEY env var).");
+        return ctx.badRequest(
+          "OpenRouter API key not configured (set OPENROUTER_API_KEY env var).",
+        );
       }
     }
 
     (async () => {
       try {
-        await regenerateCoverFor(strapi, documentId, imgAgent, textModel, imageModel, textKey, imageKey, openrouterKey, promptSettings);
+        await regenerateCoverFor(
+          strapi,
+          documentId,
+          imgAgent,
+          textModel,
+          imageModel,
+          textKey,
+          imageKey,
+          openrouterKey,
+          promptSettings,
+        );
       } catch (err) {
         strapi.log.error(`[post] generateCover failed for ${documentId}:`, err);
         await logAgentAction(strapi, {
@@ -453,7 +497,14 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
 
     (async () => {
       try {
-        await buildCarouselFor(strapi, documentId, textModel, textKey, openrouterKey, promptSettings);
+        await buildCarouselFor(
+          strapi,
+          documentId,
+          textModel,
+          textKey,
+          openrouterKey,
+          promptSettings,
+        );
       } catch (err) {
         strapi.log.error(`[post] generateCarousel failed for ${documentId}:`, err);
         await logAgentAction(strapi, {
@@ -527,7 +578,7 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
     }>;
 
     const pending = candidates
-      .filter((p) => !p.localizations?.some((l) => l.locale === "en" && l.publishedAt))
+      .filter(p => !p.localizations?.some(l => l.locale === "en" && l.publishedAt))
       .slice(0, limit);
 
     if (pending.length === 0) {
@@ -599,7 +650,7 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
         fields: ["documentId"],
         limit,
       })) as unknown as Array<{ documentId: string }>;
-      documentIds = posts.map((p) => p.documentId);
+      documentIds = posts.map(p => p.documentId);
     }
 
     if (documentIds.length === 0) {
@@ -616,7 +667,9 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
       try {
         openrouterKey = getOpenRouterImageKey();
       } catch {
-        return ctx.badRequest("OpenRouter API key not configured (set OPENROUTER_API_KEY env var).");
+        return ctx.badRequest(
+          "OpenRouter API key not configured (set OPENROUTER_API_KEY env var).",
+        );
       }
     }
 
@@ -627,7 +680,17 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
       let failed = 0;
       for (const id of documentIds) {
         try {
-          await regenerateCoverFor(strapi, id, imgAgent, textModel, imageModel, textKey, imageKey, openrouterKey, promptSettings);
+          await regenerateCoverFor(
+            strapi,
+            id,
+            imgAgent,
+            textModel,
+            imageModel,
+            textKey,
+            imageKey,
+            openrouterKey,
+            promptSettings,
+          );
           done++;
         } catch (err) {
           failed++;
@@ -740,7 +803,9 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
       try {
         openrouterKey = getOpenRouterImageKey();
       } catch {
-        return ctx.badRequest("OpenRouter API key not configured (set OPENROUTER_API_KEY env var).");
+        return ctx.badRequest(
+          "OpenRouter API key not configured (set OPENROUTER_API_KEY env var).",
+        );
       }
     }
 
@@ -761,7 +826,7 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
         fields: ["coverPrompt"],
         limit: 10,
       })) as unknown as Array<{ coverPrompt: string | null }>;
-      const recentDescriptions = recent.map((r) => r.coverPrompt!).filter(Boolean);
+      const recentDescriptions = recent.map(r => r.coverPrompt!).filter(Boolean);
 
       const custom = customPrompt?.trim();
       let imagePrompt = "";
@@ -777,15 +842,21 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
               excerpt: excerpt ?? "",
               seedKey: `news-${Date.now()}|${title}|${tryN}`,
               recentDescriptions,
-              systemInstructions: imgAgent.imagePromptTemplate?.trim() || settings.imageSystemInstructions,
+              systemInstructions:
+                imgAgent.imagePromptTemplate?.trim() || settings.imageSystemInstructions,
               themeGuide: settings.imageThemeGuide,
               anchorTaxonomy: settings.imageAnchorTaxonomy,
             });
         try {
-          imageBuffer = await generateCoverImage({ openaiImageKey: imageKey, openrouterKey }, imageModel, imagePrompt, {
-            size: imgAgent.imageSize ?? undefined,
-            quality: imgAgent.imageQuality ?? undefined,
-          });
+          imageBuffer = await generateCoverImage(
+            { openaiImageKey: imageKey, openrouterKey },
+            imageModel,
+            imagePrompt,
+            {
+              size: imgAgent.imageSize ?? undefined,
+              quality: imgAgent.imageQuality ?? undefined,
+            },
+          );
           break;
         } catch (err) {
           const empty = ((err as Error).message ?? "").includes("no inline image data");
@@ -796,7 +867,12 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
       if (!imageBuffer) throw new Error("Image generation failed after retries.");
 
       const ext = isOpenRouterModel(imageModel) ? "png" : "jpg";
-      const mediaId = await uploadImageToStrapi(strapi, imageBuffer, `news-cover-${Date.now()}.${ext}`, title);
+      const mediaId = await uploadImageToStrapi(
+        strapi,
+        imageBuffer,
+        `news-cover-${Date.now()}.${ext}`,
+        title,
+      );
       const file = (await strapi.db
         .query("plugin::upload.file")
         .findOne({ where: { id: mediaId }, select: ["url"] })) as { url?: string } | null;
@@ -807,36 +883,56 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
     }
   },
 
-  // POST /news-generator/save { title, excerpt, content, coverImageId?, coverPrompt?, tags?, authorName?, publish? }
+  // POST /news-generator/save { title, slug?, excerpt, content, coverImageId?, coverPrompt?, tags?, featured?, authorName?, publish? }
   //   -> { documentId, slug, published }
+  //
+  // Crea una nota NUEVA. El slug es opcional: si no viene, se deriva del título.
+  // Venga como venga, se normaliza con makeSlug (sin espacios/acentos/dups de
+  // guiones) para que un editor no pueda dejar un slug inválido a mano.
   async newsSave(ctx) {
     if (!(await requireAdmin(ctx, strapi))) return;
-    const { title, excerpt, content, coverImageId, coverPrompt, tags, authorName, publish } =
-      ctx.request.body as {
-        title?: string;
-        excerpt?: string;
-        content?: string;
-        coverImageId?: number;
-        coverPrompt?: string;
-        tags?: number[];
-        authorName?: string;
-        publish?: boolean;
-      };
+    const {
+      title,
+      slug,
+      excerpt,
+      content,
+      coverImageId,
+      coverPrompt,
+      tags,
+      featured,
+      authorName,
+      publish,
+    } = ctx.request.body as {
+      title?: string;
+      slug?: string;
+      excerpt?: string;
+      content?: string;
+      coverImageId?: number;
+      coverPrompt?: string;
+      tags?: number[];
+      featured?: boolean;
+      authorName?: string;
+      publish?: boolean;
+    };
     if (!title?.trim() || !content?.trim()) return ctx.badRequest("title and content are required");
 
     try {
       const created = (await strapi.documents("api::post.post").create({
         data: {
           title,
-          slug: makeSlug(title),
+          slug: makeSlug(slug?.trim() || title),
           excerpt: excerpt ?? "",
           content,
           ...(coverImageId ? { coverImage: coverImageId } : {}),
           ...(coverPrompt ? { coverPrompt } : {}),
-          ...(Array.isArray(tags) && tags.length ? { tags } : {}),
+          ...(Array.isArray(tags) ? { tags } : {}),
+          ...(typeof featured === "boolean" ? { featured } : {}),
           // Admin-authored: no generatedByAgent → the Director's draft pool
           // (filters generatedByAgent != null) will never re-touch it.
-          authorName: authorName?.trim() || (ctx.state.user?.firstname as string) || "Redacción Cogollos del Oeste",
+          authorName:
+            authorName?.trim() ||
+            (ctx.state.user?.firstname as string) ||
+            "Redacción Cogollos del Oeste",
         } as never,
         status: "draft",
       })) as unknown as { documentId: string; slug: string };
@@ -847,7 +943,7 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
           await strapi.documents("api::post.post").publish({ documentId: created.documentId });
           published = true;
           // EN translation in background — never blocks the response (same as the Director).
-          ensurePostTranslation(strapi, created.documentId, { trigger: "manual-news" }).catch((err) =>
+          ensurePostTranslation(strapi, created.documentId, { trigger: "manual-news" }).catch(err =>
             strapi.log.warn(`[post] news translation failed for ${created.documentId}:`, err),
           );
         } catch (err) {
@@ -856,8 +952,186 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
       }
       ctx.body = { documentId: created.documentId, slug: created.slug, published };
     } catch (err) {
+      // Un slug duplicado explota la constraint unique; lo devolvemos como 400
+      // legible en vez de un 500 opaco.
+      if (
+        String((err as Error).message ?? "")
+          .toLowerCase()
+          .includes("unique")
+      ) {
+        return ctx.badRequest("Ya existe una nota con ese slug. Cambialo.");
+      }
       strapi.log.error("[post] newsSave failed:", err);
       return ctx.internalServerError("Failed to save post.");
+    }
+  },
+
+  // GET /news-generator/post?documentId= -> campos editables de una nota (borrador).
+  // Alimenta el modo edición del editor de notas. Aplana relaciones y media a la
+  // forma mínima que el form necesita — nada de campos internos del pipeline IA.
+  async newsLoad(ctx) {
+    if (!(await requireAdmin(ctx, strapi))) return;
+    const { documentId } = ctx.query as { documentId?: string };
+    if (!documentId) return ctx.badRequest("documentId is required");
+
+    const doc = (await strapi.documents("api::post.post").findOne({
+      documentId,
+      status: "draft",
+      locale: "es",
+      populate: {
+        coverImage: { fields: ["url", "formats"] },
+        tags: { fields: ["name"] },
+      },
+    })) as unknown as {
+      documentId: string;
+      title: string;
+      slug: string;
+      excerpt: string | null;
+      content: string | null;
+      featured: boolean | null;
+      authorName: string | null;
+      publishedAt: string | null;
+      coverImage: { id: number; url: string; formats?: Record<string, { url: string }> } | null;
+      tags: Array<{ id: number; name: string }>;
+    } | null;
+    if (!doc) return ctx.notFound("nota no encontrada");
+
+    const cover = doc.coverImage;
+    ctx.body = {
+      documentId: doc.documentId,
+      title: doc.title ?? "",
+      slug: doc.slug ?? "",
+      excerpt: doc.excerpt ?? "",
+      content: doc.content ?? "",
+      featured: Boolean(doc.featured),
+      published: Boolean(doc.publishedAt),
+      cover: cover
+        ? { mediaId: cover.id, url: cover.formats?.small?.url ?? cover.url ?? null }
+        : null,
+      tags: Array.isArray(doc.tags) ? doc.tags.map(t => ({ id: t.id, name: t.name })) : [],
+    };
+  },
+
+  // POST /news-generator/update { documentId, title, slug?, excerpt, content, coverImageId?, tags?, featured? }
+  //   -> { documentId, slug }
+  //
+  // Guarda cambios sobre una nota EXISTENTE. No publica ni despublica (eso vive
+  // en /admin/notas); sólo persiste el contenido del borrador. Si la nota ya
+  // estaba publicada, re-publica preservando la fecha para que el cambio salga a
+  // la web sin reordenar el feed.
+  async newsUpdate(ctx) {
+    if (!(await requireAdmin(ctx, strapi))) return;
+    const { documentId, title, slug, excerpt, content, coverImageId, tags, featured } = ctx.request
+      .body as {
+      documentId?: string;
+      title?: string;
+      slug?: string;
+      excerpt?: string;
+      content?: string;
+      coverImageId?: number | null;
+      tags?: number[];
+      featured?: boolean;
+    };
+    if (!documentId) return ctx.badRequest("documentId is required");
+    if (!title?.trim() || !content?.trim()) return ctx.badRequest("title and content are required");
+
+    try {
+      const existing = (await strapi.documents("api::post.post").findOne({
+        documentId,
+        status: "draft",
+        locale: "es",
+        fields: ["publishedAt"],
+      })) as unknown as { publishedAt: string | null } | null;
+      const wasPublished = Boolean(existing?.publishedAt);
+
+      const updated = (await strapi.documents("api::post.post").update({
+        documentId,
+        locale: "es",
+        data: {
+          title,
+          slug: makeSlug(slug?.trim() || title),
+          excerpt: excerpt ?? "",
+          content,
+          // coverImage: null lo desasocia; undefined lo deja como está.
+          ...(coverImageId === null
+            ? { coverImage: null }
+            : coverImageId
+              ? { coverImage: coverImageId }
+              : {}),
+          ...(Array.isArray(tags) ? { tags } : {}),
+          ...(typeof featured === "boolean" ? { featured } : {}),
+        } as never,
+      })) as unknown as { documentId: string; slug: string };
+
+      // Si estaba publicada, el cambio recién sale a la web al re-publicar. Se
+      // preserva la fecha original (helper compartido) para no saltar al tope
+      // del feed. Falla suave: el borrador ya quedó guardado igual.
+      if (wasPublished) {
+        try {
+          await republishPreservingDate(strapi, documentId);
+          ensurePostTranslation(strapi, documentId, { trigger: "manual-edit" }).catch(err =>
+            strapi.log.warn(`[post] edit translation failed for ${documentId}:`, err),
+          );
+        } catch (err) {
+          strapi.log.error(`[post] republish after edit failed for ${documentId}:`, err);
+        }
+      }
+      ctx.body = { documentId: updated.documentId, slug: updated.slug };
+    } catch (err) {
+      if (
+        String((err as Error).message ?? "")
+          .toLowerCase()
+          .includes("unique")
+      ) {
+        return ctx.badRequest("Ya existe una nota con ese slug. Cambialo.");
+      }
+      strapi.log.error("[post] newsUpdate failed:", err);
+      return ctx.internalServerError("Failed to update post.");
+    }
+  },
+
+  // GET /news-generator/tags -> [{ id, name, kind }] para el selector de tags.
+  async newsTags(ctx) {
+    if (!(await requireAdmin(ctx, strapi))) return;
+    const tags = (await strapi.documents("api::tag.tag").findMany({
+      fields: ["name", "kind"],
+      sort: "name:asc",
+      limit: 500,
+    })) as unknown as Array<{ id: number; name: string; kind: string | null }>;
+    ctx.body = tags.map(t => ({ id: t.id, name: t.name, kind: t.kind ?? null }));
+  },
+
+  // POST /news-generator/upload (multipart, campo "file") -> { mediaId, url }
+  // Sube una imagen propia y la deja lista para usar de portada. Es la
+  // alternativa manual a generar la imagen con IA.
+  async newsUpload(ctx) {
+    if (!(await requireAdmin(ctx, strapi))) return;
+    // El body parser de Strapi puebla ctx.request.files con multipart/form-data.
+    const files = (ctx.request as unknown as { files?: Record<string, unknown> }).files;
+    const file = files?.file;
+    if (!file) return ctx.badRequest("file is required (multipart, campo 'file')");
+
+    try {
+      const uploaded = (await strapi
+        .plugin("upload")
+        .service("upload")
+        .upload({ data: {}, files: file })) as Array<{ id: number; url: string; mime?: string }>;
+      const first = uploaded?.[0];
+      if (!first) return ctx.internalServerError("Upload returned no file.");
+      if (first.mime && !first.mime.startsWith("image/")) {
+        // La portada tiene que ser una imagen; si subieron otra cosa, la
+        // borramos para no dejar basura en el media library.
+        await strapi
+          .plugin("upload")
+          .service("upload")
+          .remove({ id: first.id })
+          .catch(() => {});
+        return ctx.badRequest("El archivo tiene que ser una imagen.");
+      }
+      ctx.body = { mediaId: first.id, url: first.url };
+    } catch (err) {
+      strapi.log.error("[post] newsUpload failed:", err);
+      return ctx.internalServerError("Failed to upload image.");
     }
   },
 }));

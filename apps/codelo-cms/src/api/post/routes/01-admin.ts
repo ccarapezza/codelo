@@ -59,5 +59,30 @@ export default {
       handler: "api::post.post.newsSave",
       config: { auth: false },
     },
+    // Editor unificado de notas (crear a mano / editar existentes).
+    {
+      method: "GET",
+      path: "/news-generator/post",
+      handler: "api::post.post.newsLoad",
+      config: { auth: false },
+    },
+    {
+      method: "POST",
+      path: "/news-generator/update",
+      handler: "api::post.post.newsUpdate",
+      config: { auth: false },
+    },
+    {
+      method: "GET",
+      path: "/news-generator/tags",
+      handler: "api::post.post.newsTags",
+      config: { auth: false },
+    },
+    {
+      method: "POST",
+      path: "/news-generator/upload",
+      handler: "api::post.post.newsUpload",
+      config: { auth: false },
+    },
   ],
 };
