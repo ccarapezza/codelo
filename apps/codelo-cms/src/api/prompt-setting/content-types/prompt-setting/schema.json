@@ -45,6 +45,9 @@
     },
     "imageAnchorTaxonomy": {
       "type": "text"
+    },
+    "boletinAnalysisInstructions": {
+      "type": "text"
     }
   }
 }

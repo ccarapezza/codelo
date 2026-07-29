@@ -9,7 +9,7 @@ import {
   Flex,
   Loader,
 } from "@strapi/design-system";
-import { Feather, Pencil, Eye, ArrowClockwise } from "@strapi/icons";
+import { Feather, Pencil, Eye, ArrowClockwise, Book } from "@strapi/icons";
 import { Page, useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { ADMIN_PERMISSIONS } from "../../../lib/admin-permissions";
 import { PageContainer, PageHeader, AccentCard, SaveBar } from "../../components/ui";
@@ -28,6 +28,7 @@ type PromptSettings = {
   imageSystemInstructions: string;
   imageThemeGuide: string;
   imageAnchorTaxonomy: string;
+  boletinAnalysisInstructions: string;
 };
 
 type FieldKey = keyof PromptSettings;
@@ -41,6 +42,7 @@ const FIELD_KEYS: FieldKey[] = [
   "imageSystemInstructions",
   "imageThemeGuide",
   "imageAnchorTaxonomy",
+  "boletinAnalysisInstructions",
 ];
 
 const EMPTY: PromptSettings = {
@@ -52,6 +54,7 @@ const EMPTY: PromptSettings = {
   imageSystemInstructions: "",
   imageThemeGuide: "",
   imageAnchorTaxonomy: "",
+  boletinAnalysisInstructions: "",
 };
 
 // Read-only, dimmed reference of the fixed scaffolding that wraps an editable
@@ -367,6 +370,39 @@ function PromptSettingsPage() {
               </ReferenceNote>
             </Field.Root>
           </Flex>
+        </AccentCard>
+
+        {/* ── Boletín Oficial ─────────────────────────────────────────────── */}
+        <AccentCard
+          icon={<Book />}
+          title="Lectura de normas (Boletín Oficial)"
+          accent="secondary"
+          description="Cómo se lee cada norma capturada del Boletín: la escala de relevancia que descarta el ruido y las reglas de extracción de la ficha. Es el texto que hay que ajustar si entra ruido o si se cuela una norma que importaba."
+          actions={
+            <Button
+              size="S"
+              variant="tertiary"
+              startIcon={<ArrowClockwise />}
+              onClick={() => restore(["boletinAnalysisInstructions"])}
+            >
+              Restaurar
+            </Button>
+          }
+        >
+          <Field.Root hint="Escala de relevancia 0-3 y reglas campo por campo. La norma llega con su texto íntegro; el modelo devuelve la ficha que se publica en /normativa y que alimenta al Redactor.">
+            <Field.Label>Instrucciones de análisis de normas</Field.Label>
+            <Textarea
+              rows={16}
+              value={form.boletinAnalysisInstructions}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                set("boletinAnalysisInstructions", e.target.value)
+              }
+            />
+            <Field.Hint />
+            <ReferenceNote>
+              {`Forma fija del JSON (no editable): { "relevancia": 0-3, "relevanciaMotivo": string, "organismo": string|null, "resumen": string|null, "queCambia": string[], "aQuienAfecta": string[], "vigencia": string|null, "pasos": string[], "normasCitadas": string[] }. Sólo se copian al pool del Redactor las normas con relevancia ≥ 2.`}
+            </ReferenceNote>
+          </Field.Root>
         </AccentCard>
       </Box>
 

@@ -1,9 +1,17 @@
 // Boletín Oficial de la República Argentina — normative watch.
 //
-// Feeds `news-context` with newly published norms matching the association's
-// statutory topics (REPROCANN, cannabis/cáñamo industry, drug policy), so the
-// Redactor can write about regulatory changes with the norm itself as source
-// instead of second-hand press coverage.
+// Busca las normas nuevas que tocan los objetos estatutarios de la asociación
+// (REPROCANN, cannabis/cáñamo, políticas de drogas), las archiva con su texto
+// íntegro en `norma` y las manda a leer por IA (ver boletin-analisis.ts). De
+// ahí salen a dos lugares:
+//   - la web (/normativa y el riel de la home), con la ficha de lectura;
+//   - `news-context`, sólo las relevantes, para que el Redactor escriba sobre
+//     cambios regulatorios con la norma como fuente y no con prensa de segunda
+//     mano.
+//
+// El archivo es permanente; la copia en `news-context` es efímera y la poda
+// rss-fetcher a los 7 días. Por eso el espejado ocurre una sola vez, al
+// terminar el análisis, y no en cada corrida.
 //
 // ⚠️ IMPORTANT — UNOFFICIAL ENDPOINT
 // boletinoficial.gob.ar publishes NO RSS and NO documented public API. This
@@ -15,6 +23,12 @@
 
 import type { Core } from "@strapi/strapi";
 import type { NewsItem } from "./rss-fetcher";
+import {
+  analisisEsUtil,
+  analizarNorma,
+  RELEVANCIA_MINIMA,
+  type NormaAnalisis,
+} from "./boletin-analisis";
 
 const BO_BASE = "https://www.boletinoficial.gob.ar";
 const BO_SEARCH = `${BO_BASE}/busquedaAvanzada/realizarBusqueda`;
@@ -50,6 +64,8 @@ export type BoletinItem = NewsItem & {
   rubro: string | null;
   /** Norm identifier when present, e.g. "Ley 27669", "Resolución 123/2025". */
   norma: string | null;
+  /** Which search term brought it in — útil para tunear DEFAULT_BO_TERMS. */
+  terminoOrigen: string | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -148,6 +164,7 @@ export function parseBoletinHtml(html: string): BoletinItem[] {
       itemPublishedAt,
       rubro,
       norma,
+      terminoOrigen: null, // lo completa el llamador, que sabe qué término buscó
     });
   }
 
@@ -257,6 +274,12 @@ async function searchTerm(
  * funda el trámite, los responsables y la fundamentación técnica.
  *
  * Falla suave: si no se puede bajar o parsear, el llamador conserva el snippet.
+ *
+ * Los techos son GENEROSOS a propósito. Con 24.000 caracteres de HTML y 2.000
+ * de texto —lo que había cuando esto sólo alimentaba un snippet— una
+ * resolución con anexos se cortaba dentro del VISTO: el análisis terminaba
+ * resumiendo de qué expediente viene la norma en vez de qué dispone. La parte
+ * que importa (VISTO, CONSIDERANDO y los ARTÍCULOS) entra holgada en 60.000.
  */
 async function fetchAvisoDetail(url: string, timeoutMs: number): Promise<string | null> {
   const controller = new AbortController();
@@ -279,11 +302,11 @@ async function fetchAvisoDetail(url: string, timeoutMs: number): Promise<string 
     // limpia. El contenedor trae <style> inline con reglas de tablas, que sin
     // quitar se cuelan como "table tr td {border: 1px solid grey…}".
     const chunk = html
-      .slice(openEnd + 1, openEnd + 24000)
+      .slice(openEnd + 1, openEnd + 200000)
       .replace(/<script[\s\S]*?<\/script>/gi, "")
       .replace(/<style[\s\S]*?<\/style>/gi, "");
     const text = stripTags(chunk);
-    return text.length > 40 ? text.slice(0, 2000) : null;
+    return text.length > 40 ? text.slice(0, 60000) : null;
   } catch {
     return null;
   } finally {
@@ -299,7 +322,19 @@ async function fetchAvisoDetail(url: string, timeoutMs: number): Promise<string 
  */
 export async function fetchRecentBoletinItems(
   strapi: Core.Strapi,
-  opts?: { terms?: string[]; sinceDays?: number; timeoutMs?: number; delayMs?: number },
+  opts?: {
+    terms?: string[];
+    sinceDays?: number;
+    timeoutMs?: number;
+    delayMs?: number;
+    /**
+     * URLs ya archivadas. Se listan igual (la búsqueda es una sola request por
+     * término) pero se saltea la bajada de su detalle: con una ventana de 7
+     * días, cada norma aparecería 7 veces y bajaríamos su texto 7 veces contra
+     * un sitio ajeno para guardar exactamente lo mismo.
+     */
+    knownUrls?: Set<string>;
+  },
 ): Promise<BoletinItem[]> {
   const terms = opts?.terms ?? DEFAULT_BO_TERMS;
   const sinceDays = opts?.sinceDays ?? 7;
@@ -321,7 +356,14 @@ export async function fetchRecentBoletinItems(
           i.itemPublishedAt >= cutoff &&
           itemMatchesTerm(i, term),
       );
-      for (const item of recent) byUrl.set(item.url, item);
+      for (const item of recent) {
+        // Primer término que la trae gana: los términos se recorren en orden y
+        // el más específico ("REPROCANN") está después del genérico, así que
+        // sobreescribir sólo cambiaría la atribución por la más vaga.
+        if (byUrl.has(item.url)) continue;
+        item.terminoOrigen = term;
+        byUrl.set(item.url, item);
+      }
       strapi.log.info(
         `[boletin-oficial] "${term}": ${found.length} resultados, ${recent.length} relevantes en los últimos ${sinceDays} días.`,
       );
@@ -339,8 +381,10 @@ export async function fetchRecentBoletinItems(
   // Segundo paso: por cada norma nueva se baja su texto completo. Son pocas
   // (unas 4 por día), secuenciales y con pausa: el volumen no justifica
   // paralelizar contra un sitio ajeno.
+  const known = opts?.knownUrls;
+  const pending = items.filter((i) => !known?.has(i.url));
   let enriched = 0;
-  for (const item of items) {
+  for (const item of pending) {
     const full = await fetchAvisoDetail(item.url, timeoutMs);
     if (full && full.length > item.summary.length) {
       item.summary = full;
@@ -349,58 +393,243 @@ export async function fetchRecentBoletinItems(
     if (delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));
   }
   strapi.log.info(
-    `[boletin-oficial] Texto completo obtenido para ${enriched}/${items.length} normas.`,
+    `[boletin-oficial] Texto completo obtenido para ${enriched}/${pending.length} normas nuevas` +
+      (known && items.length > pending.length
+        ? ` (${items.length - pending.length} ya archivadas, no se re-descargan).`
+        : "."),
   );
 
   return items;
 }
 
+// ---------------------------------------------------------------------------
+// Sync — archivo permanente en `norma` + copia efímera en `news-context`
+// ---------------------------------------------------------------------------
+
+/** Fila de `norma` en lo que a este módulo le interesa. */
+type NormaRow = {
+  documentId: string;
+  url: string;
+  titulo: string;
+  norma: string | null;
+  rubro: string | null;
+  textoCompleto: string | null;
+  analisisEstado: string;
+};
+
+export type SyncBoletinResult = {
+  /** Normas devueltas por la búsqueda dentro de la ventana. */
+  encontradas: number;
+  /** Normas que no estaban archivadas y se crearon en esta corrida. */
+  nuevas: number;
+  /** Normas analizadas con éxito (incluye reintentos de corridas anteriores). */
+  analizadas: number;
+  /** De las analizadas, cuántas superaron el umbral de relevancia. */
+  relevantes: number;
+  /** Análisis que fallaron y quedaron para reintentar. */
+  errores: number;
+};
+
+/** El título como lo ve el Redactor y el admin: "Ley 27669 — Título". */
+function tituloConNorma(item: { titulo: string; norma?: string | null }): string {
+  return item.norma ? `${item.norma} — ${item.titulo}` : item.titulo;
+}
+
 /**
- * Fetch recent norms and store the new ones in `news-context`, mirroring what
- * rss-fetcher does. Dedup is by `url`, which is unique on the content type.
- * Returns how many rows were created.
+ * Lo que se le pasa al Redactor: el resumen en lenguaje llano más los cambios
+ * concretos. NO el texto legal crudo — que era lo que se guardaba antes y
+ * llegaba al prompt como 300 caracteres de VISTO y considerandos.
  */
-export async function fetchBoletinOficialIntoContext(
+function resumenParaContexto(a: NormaAnalisis): string {
+  return [
+    a.resumen ?? "",
+    a.queCambia.length > 0 ? `Qué cambia: ${a.queCambia.join(" · ")}` : "",
+    a.aQuienAfecta.length > 0 ? `Alcanza a: ${a.aQuienAfecta.join(", ")}` : "",
+    a.vigencia ? `Vigencia: ${a.vigencia}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n")
+    .slice(0, 2000);
+}
+
+/**
+ * Copia una norma relevante al pool del Redactor.
+ *
+ * Se llama SÓLO al terminar de analizarla, nunca sobre el archivo entero: las
+ * filas de `news-context` se podan a los 7 días (pruneOldNews en rss-fetcher),
+ * así que re-espejar el archivo completo en cada corrida le devolvería al
+ * Redactor las mismas normas para siempre.
+ */
+async function espejarEnNewsContext(
   strapi: Core.Strapi,
-  opts?: { terms?: string[]; sinceDays?: number },
-): Promise<number> {
-  const items = await fetchRecentBoletinItems(strapi, opts);
-  if (items.length === 0) {
-    strapi.log.info("[boletin-oficial] Sin normas nuevas en el período.");
-    return 0;
-  }
-
-  const urls = items.map((i) => i.url);
-  const existing = (await strapi
-    .documents("api::news-context.news-context")
-    .findMany({ filters: { url: { $in: urls } } })) as unknown as Array<{ url: string }>;
-  const existingUrls = new Set(existing.map((e) => e.url));
-  const toCreate = items.filter((i) => !existingUrls.has(i.url));
-
-  strapi.log.info(
-    `[boletin-oficial] ${toCreate.length} normas nuevas (${existingUrls.size} ya estaban).`,
-  );
-
+  row: NormaRow,
+  analisis: NormaAnalisis,
+  publicadaEl: Date | null,
+): Promise<void> {
   const fetchedAt = new Date();
-  let created = 0;
-  for (const item of toCreate) {
-    // Prefix the norm id so the Redactor sees "Ley 27669 — TITLE" in context.
-    const title = item.norma ? `${item.norma} — ${item.title}` : item.title;
+  try {
+    await strapi.documents("api::news-context.news-context").create({
+      data: {
+        title: tituloConNorma({ titulo: row.titulo, norma: row.norma }).slice(0, 255),
+        url: row.url,
+        source: row.rubro ? `Boletín Oficial · ${row.rubro}` : "Boletín Oficial",
+        summary: resumenParaContexto(analisis),
+        itemPublishedAt: publicadaEl ?? fetchedAt,
+        fetchedAt,
+      },
+    });
+  } catch {
+    // `url` es único: si la norma todavía está en la ventana de 7 días desde un
+    // reintento anterior, el insert choca y no hay nada que hacer.
+    strapi.log.debug(`[boletin-oficial] Ya estaba en news-context: ${row.url}`);
+  }
+}
+
+/**
+ * Analiza las normas pendientes (y reintenta las que fallaron), y espeja las
+ * relevantes en `news-context`.
+ *
+ * Secuencial y con tope: son ~4 por día en régimen, pero un primer arranque
+ * puede traer varias decenas y no hay razón para disparar 50 llamadas juntas.
+ * Cada fallo es suave: la fila queda en "error" con el mensaje y el cron del
+ * día siguiente la reintenta sin volver a descargar el texto.
+ */
+async function analizarPendientes(
+  strapi: Core.Strapi,
+  maxAnalisis: number,
+): Promise<{ analizadas: number; relevantes: number; errores: number }> {
+  const pendientes = (await strapi.documents("api::norma.norma").findMany({
+    filters: { analisisEstado: { $in: ["pendiente", "error"] } },
+    sort: { publicadaEl: "desc" },
+    limit: maxAnalisis,
+  })) as unknown as Array<NormaRow & { publicadaEl: string | null }>;
+
+  if (pendientes.length === 0) return { analizadas: 0, relevantes: 0, errores: 0 };
+
+  strapi.log.info(`[boletin-oficial] Analizando ${pendientes.length} normas pendientes…`);
+
+  let analizadas = 0;
+  let relevantes = 0;
+  let errores = 0;
+
+  for (const row of pendientes) {
+    const texto = row.textoCompleto?.trim();
+    if (!texto) {
+      // Sin texto no hay nada que leer: el detalle no se pudo bajar. Se marca
+      // como error para que el reintento vuelva a pasar por acá, pero no se
+      // gasta una llamada al modelo sobre un título suelto.
+      await strapi.documents("api::norma.norma").update({
+        documentId: row.documentId,
+        data: { analisisEstado: "error", analisisError: "Sin texto de la norma" },
+      });
+      errores += 1;
+      continue;
+    }
+
     try {
-      await strapi.documents("api::news-context.news-context").create({
+      const { analisis, modelo } = await analizarNorma(strapi, {
+        titulo: row.titulo,
+        norma: row.norma,
+        rubro: row.rubro,
+        texto,
+      });
+
+      const util = analisisEsUtil(analisis);
+      const esRelevante = analisis.relevancia >= RELEVANCIA_MINIMA;
+
+      await strapi.documents("api::norma.norma").update({
+        documentId: row.documentId,
         data: {
-          title: title.slice(0, 255),
-          url: item.url,
-          source: item.rubro ? `Boletín Oficial · ${item.rubro}` : "Boletín Oficial",
-          summary: item.summary.slice(0, 2000),
-          itemPublishedAt: item.itemPublishedAt ?? fetchedAt,
-          fetchedAt,
+          ...analisis,
+          analisisEstado: !util ? "error" : esRelevante ? "listo" : "descartada",
+          analisisError: util ? null : "Relevante pero sin resumen; se reintenta",
+          analizadaEl: new Date(),
+          analisisModelo: modelo,
         },
       });
-      created += 1;
-    } catch {
-      strapi.log.debug(`[boletin-oficial] Duplicado, se omite: ${item.url}`);
+
+      if (!util) {
+        errores += 1;
+        continue;
+      }
+
+      analizadas += 1;
+      if (esRelevante) {
+        relevantes += 1;
+        await espejarEnNewsContext(
+          strapi,
+          row,
+          analisis,
+          row.publicadaEl ? new Date(row.publicadaEl) : null,
+        );
+      }
+    } catch (err) {
+      // Falla suave: sin OPENAI_API_KEY, con la API caída o con un timeout, la
+      // norma queda archivada con su texto y se reintenta mañana. El sitio
+      // sigue funcionando: la web sólo muestra las que están en "listo".
+      const message = (err as Error).message;
+      strapi.log.warn(`[boletin-oficial] Análisis falló para ${row.url}: ${message}`);
+      await strapi.documents("api::norma.norma").update({
+        documentId: row.documentId,
+        data: { analisisEstado: "error", analisisError: message.slice(0, 500) },
+      });
+      errores += 1;
     }
   }
-  return created;
+
+  return { analizadas, relevantes, errores };
+}
+
+/**
+ * Ciclo completo: buscar, archivar y analizar.
+ *
+ * El archivo (`norma`) es permanente; `news-context` recibe sólo una copia de
+ * las relevantes, con el resumen legible en vez del texto legal, y se poda a
+ * los 7 días como cualquier otra noticia.
+ */
+export async function syncBoletinOficial(
+  strapi: Core.Strapi,
+  opts?: { terms?: string[]; sinceDays?: number; maxAnalisis?: number },
+): Promise<SyncBoletinResult> {
+  // Se consulta el archivo ANTES de buscar, para saber de cuáles no hace falta
+  // volver a bajar el texto.
+  const archivadas = (await strapi
+    .documents("api::norma.norma")
+    .findMany({ fields: ["url"], limit: -1 })) as unknown as Array<{ url: string }>;
+  const knownUrls = new Set(archivadas.map((n) => n.url));
+
+  const items = await fetchRecentBoletinItems(strapi, { ...opts, knownUrls });
+
+  const syncedAt = new Date();
+  let nuevas = 0;
+  for (const item of items) {
+    if (knownUrls.has(item.url)) continue;
+    try {
+      await strapi.documents("api::norma.norma").create({
+        data: {
+          url: item.url,
+          titulo: item.title.slice(0, 500),
+          norma: item.norma,
+          rubro: item.rubro,
+          publicadaEl: item.itemPublishedAt ?? syncedAt,
+          textoCompleto: item.summary,
+          terminoOrigen: item.terminoOrigen,
+          analisisEstado: "pendiente",
+          syncedAt,
+        },
+      });
+      nuevas += 1;
+    } catch (err) {
+      // `url` es único: una carrera con otra corrida cae acá y no es un fallo.
+      strapi.log.debug(`[boletin-oficial] No se pudo archivar ${item.url}: ${err}`);
+    }
+  }
+
+  strapi.log.info(
+    `[boletin-oficial] ${items.length} normas en la ventana, ${nuevas} nuevas archivadas.`,
+  );
+
+  const analisis = await analizarPendientes(strapi, opts?.maxAnalisis ?? 25);
+
+  return { encontradas: items.length, nuevas, ...analisis };
 }

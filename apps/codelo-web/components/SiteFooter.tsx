@@ -24,6 +24,7 @@ export async function SiteFooter() {
       label: t("sectionInfo"),
       links: [
         { href: "/reprocann", label: tNav("reprocann") },
+        { href: "/normativa", label: tNav("normativa") },
         { href: "/semillas", label: tNav("seeds") },
         { href: "/clima", label: tNav("weather") },
         { href: "/actividades", label: tNav("events") },

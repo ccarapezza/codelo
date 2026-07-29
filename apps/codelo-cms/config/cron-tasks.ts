@@ -1,7 +1,7 @@
 import type { Core } from "@strapi/strapi";
 import { runDueAgents } from "../src/lib/agent-runner";
 import { fetchAndSaveNews } from "../src/lib/rss-fetcher";
-import { fetchBoletinOficialIntoContext } from "../src/lib/boletin-oficial";
+import { syncBoletinOficial } from "../src/lib/boletin-oficial";
 import { syncCultivares } from "../src/lib/inase/cultivares";
 import { syncOperadores } from "../src/lib/inase/operadores";
 
@@ -40,13 +40,16 @@ export default {
   boletinOficial: {
     task: async ({ strapi }: { strapi: Core.Strapi }) => {
       try {
-        const created = await fetchBoletinOficialIntoContext(strapi, { sinceDays: 7 });
-        if (created > 0) {
-          strapi.log.info(`[cron] boletinOficial: ${created} normas nuevas en news_context.`);
+        const r = await syncBoletinOficial(strapi, { sinceDays: 7 });
+        if (r.nuevas > 0 || r.analizadas > 0 || r.errores > 0) {
+          strapi.log.info(
+            `[cron] boletinOficial: ${r.nuevas} normas nuevas, ${r.analizadas} analizadas ` +
+              `(${r.relevantes} relevantes), ${r.errores} con error.`,
+          );
         }
       } catch (err) {
-        // fetchBoletinOficialIntoContext ya falla suave por término; esto cubre
-        // un fallo del lado de Strapi (p. ej. la escritura en news_context).
+        // syncBoletinOficial ya falla suave por término y por norma; esto cubre
+        // un fallo del lado de Strapi (p. ej. la escritura en la base).
         strapi.log.error("[cron] boletinOficial failed:", err);
       }
     },

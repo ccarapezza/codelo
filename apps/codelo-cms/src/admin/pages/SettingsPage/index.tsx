@@ -31,6 +31,7 @@ const ADMIN_API = "/api/site-setting/admin-config";
 
 type Settings = {
   openaiTextModel: string;
+  openaiNormaModel: string;
   openaiImageModel: string;
   adsensePublisherId: string;
   adsenseSidebarLeftSlot: string;
@@ -46,6 +47,7 @@ type Settings = {
 
 const EMPTY: Settings = {
   openaiTextModel: "gpt-4o-mini",
+  openaiNormaModel: "",
   openaiImageModel: "gpt-image-1-mini",
   adsensePublisherId: "",
   adsenseSidebarLeftSlot: "",
@@ -122,6 +124,7 @@ function SettingsPage() {
         const { data } = await get<Settings>(ADMIN_API);
         const next: Settings = {
           openaiTextModel: data.openaiTextModel ?? "gpt-4o-mini",
+          openaiNormaModel: data.openaiNormaModel ?? "",
           openaiImageModel: data.openaiImageModel ?? "gpt-image-1-mini",
           adsensePublisherId: data.adsensePublisherId ?? "",
           adsenseSidebarLeftSlot: data.adsenseSidebarLeftSlot ?? "",
@@ -204,6 +207,24 @@ function SettingsPage() {
                 value={form.openaiTextModel}
                 onChange={(val: string | number) => set("openaiTextModel", String(val))}
               >
+                {TEXT_MODELS.map((m) => (
+                  <SingleSelectOption key={m.value} value={m.value}>
+                    {m.label}
+                  </SingleSelectOption>
+                ))}
+              </SingleSelect>
+              <Field.Hint />
+            </Field.Root>
+
+            <Field.Root hint="Modelo para leer las normas del Boletín Oficial (triage + ficha). Vacío usa el modelo de texto. Conviene separarlo: son resoluciones largas y se corren pocas veces por día, así que se puede subir de modelo sin encarecer los artículos.">
+              <Field.Label>Modelo de análisis normativo</Field.Label>
+              <SingleSelect
+                value={form.openaiNormaModel}
+                onChange={(val: string | number) => set("openaiNormaModel", String(val))}
+              >
+                <SingleSelectOption value="">
+                  (usar el modelo de texto)
+                </SingleSelectOption>
                 {TEXT_MODELS.map((m) => (
                   <SingleSelectOption key={m.value} value={m.value}>
                     {m.label}

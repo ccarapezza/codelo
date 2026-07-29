@@ -39,17 +39,34 @@ export default ({ strapi }: { strapi: any }) => ({
   // ── Boletín Oficial ──────────────────────────────────────────────────────
   async boletin(ctx: any) {
     if (!(await requireAdmin(ctx, strapi))) return;
-    // Las normas del Boletín se guardan en news-context con source
-    // "Boletín Oficial" (o "Boletín Oficial · <rubro>").
-    const items = await strapi.db.query("api::news-context.news-context").findMany({
-      where: { source: { $startsWith: "Boletín Oficial" } },
-      orderBy: { itemPublishedAt: "desc" },
+
+    const q = strapi.db.query("api::norma.norma");
+    const items = await q.findMany({
+      orderBy: { publicadaEl: "desc" },
       limit: 8,
-      select: ["title", "url", "source", "itemPublishedAt", "fetchedAt"],
+      select: [
+        "documentId",
+        "titulo",
+        "norma",
+        "url",
+        "rubro",
+        "publicadaEl",
+        "relevancia",
+        "relevanciaMotivo",
+        "resumen",
+        "analisisEstado",
+      ],
     });
-    const total = await strapi.db
-      .query("api::news-context.news-context")
-      .count({ where: { source: { $startsWith: "Boletín Oficial" } } });
+
+    // Conteos por estado: es lo que dice si el análisis está al día o si hay
+    // una pila de errores esperando reintento.
+    const [total, listas, descartadas, pendientes, errores] = await Promise.all([
+      q.count(),
+      q.count({ where: { analisisEstado: "listo" } }),
+      q.count({ where: { analisisEstado: "descartada" } }),
+      q.count({ where: { analisisEstado: "pendiente" } }),
+      q.count({ where: { analisisEstado: "error" } }),
+    ]);
 
     ctx.body = {
       cron: cronInfo(strapi, "boletinOficial"),
@@ -57,6 +74,7 @@ export default ({ strapi }: { strapi: any }) => ({
       // Ventana de días hacia atrás que barre cada corrida (ver cron-tasks.ts).
       sinceDays: 7,
       total,
+      estados: { listas, descartadas, pendientes, errores },
       items,
     };
   },

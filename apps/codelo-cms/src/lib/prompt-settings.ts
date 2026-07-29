@@ -38,5 +38,6 @@ export async function getPromptSettings(strapi: StrapiLike): Promise<PromptSetti
     imageSystemInstructions: pick("imageSystemInstructions"),
     imageThemeGuide: pick("imageThemeGuide"),
     imageAnchorTaxonomy: pick("imageAnchorTaxonomy"),
+    boletinAnalysisInstructions: pick("boletinAnalysisInstructions"),
   };
 }

@@ -49,6 +49,22 @@ export async function getOpenAITextModel(strapi: StrapiLike, fallback = "gpt-4o-
   return process.env.OPENAI_TEXT_MODEL?.trim() || fallback;
 }
 
+/**
+ * Modelo para la lectura de normas del Boletín Oficial.
+ *
+ * Separado del modelo de texto a propósito: el triage y la ficha se corren
+ * sobre resoluciones largas con anexos, donde conviene poder subir de modelo
+ * sin encarecer la generación de artículos (que es mucho más frecuente).
+ * Vacío → cae al modelo de texto, que es el comportamiento por defecto.
+ */
+export async function getOpenAINormaModel(strapi: StrapiLike): Promise<string> {
+  const fromDb = await readSettingModel(strapi, "openaiNormaModel");
+  if (fromDb) return fromDb;
+  const fromEnv = process.env.OPENAI_NORMA_MODEL?.trim();
+  if (fromEnv) return fromEnv;
+  return getOpenAITextModel(strapi);
+}
+
 // Holds an OpenAI (gpt-image-* / dall-e-3) OR an OpenRouter ("google/gemini-*")
 // model id; the provider is inferred from the id downstream (see isOpenRouterModel).
 export async function getOpenAIImageModel(strapi: StrapiLike, fallback = "gpt-image-1-mini"): Promise<string> {

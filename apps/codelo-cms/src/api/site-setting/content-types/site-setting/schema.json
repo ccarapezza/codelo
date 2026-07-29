@@ -24,6 +24,9 @@
       "default": "gpt-4o-mini",
       "private": true
     },
+    "openaiNormaModel": {
+      "type": "string"
+    },
     "openaiImageModel": {
       "type": "string",
       "default": "gpt-image-1-mini",

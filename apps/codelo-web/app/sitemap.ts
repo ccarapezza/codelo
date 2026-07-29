@@ -18,6 +18,7 @@ const STATIC_PATHS = [
   "",
   "/quienes-somos",
   "/reprocann",
+  "/normativa",
   "/actividades",
   "/contacto",
   "/blog",

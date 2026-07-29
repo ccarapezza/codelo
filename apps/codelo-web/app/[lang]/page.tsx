@@ -9,7 +9,7 @@ import { LocalTime } from "@/components/LocalTime";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { getLatestPosts, type CmsLocale, type CmsPostListItem } from "@/lib/cms";
-import { getEvents, getBoletinEntries } from "@/lib/content";
+import { boletinTitulo, getEvents, getBoletinEntries } from "@/lib/content";
 import { formatPostDate } from "@/lib/intl";
 import { localizedAlternates } from "@/lib/seo";
 import { SemillasRail } from "@/components/SemillasRail";
@@ -28,19 +28,6 @@ export async function generateMetadata({
     description: t("description"),
     alternates: localizedAlternates(lang, ""),
   };
-}
-
-/** Rubro del Boletín ("Boletín Oficial · RESOLUCIONES" → "RESOLUCIONES"). */
-function rubroOf(source: string): string {
-  const parts = source.split("·");
-  return (parts[1] ?? parts[0] ?? "").trim();
-}
-
-/** Quita el prefijo de norma del título ("Ley 27669 — X" → "X"). */
-function stripNorma(title: string): { norma: string | null; rest: string } {
-  const idx = title.indexOf("—");
-  if (idx === -1) return { norma: null, rest: title };
-  return { norma: title.slice(0, idx).trim(), rest: title.slice(idx + 1).trim() };
 }
 
 function Cover({
@@ -444,52 +431,70 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
               ) : (
                 <ol className="mt-6 border-t border-rule">
                   {boletin.map(entry => {
-                    const { norma, rest: titulo } = stripNorma(entry.title);
+                    const titulo = boletinTitulo(entry);
                     return (
-                      <li key={entry.url} className="border-b border-rule">
-                        <a
-                          href={entry.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="group block py-3.5"
-                        >
-                          <div className="label flex flex-wrap items-center gap-x-2 text-ember">
-                            <span>{rubroOf(entry.source)}</span>
-                            {entry.publishedAt ? (
-                              <>
-                                <span aria-hidden className="text-rule">
-                                  ·
-                                </span>
-                                <span>{formatPostDate(entry.publishedAt, locale)}</span>
-                              </>
-                            ) : null}
-                          </div>
-                          {norma ? (
-                            <p className="mt-1 font-mono text-sm font-semibold group-hover:underline">
-                              {norma}
-                            </p>
+                    <li key={entry.url} className="border-b border-rule">
+                      <a
+                        href={entry.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group block py-3.5"
+                      >
+                        <div className="label flex flex-wrap items-center gap-x-2 text-ember">
+                          <span>{entry.rubro ?? entry.organismo ?? "BOLETÍN OFICIAL"}</span>
+                          {entry.publishedAt ? (
+                            <>
+                              <span aria-hidden className="text-rule">
+                                ·
+                              </span>
+                              <span>{formatPostDate(entry.publishedAt, locale)}</span>
+                            </>
                           ) : null}
+                        </div>
+                        {entry.norma ? (
+                          <p className="mt-1 font-mono text-sm font-semibold group-hover:underline">
+                            {entry.norma}
+                          </p>
+                        ) : null}
+                        {titulo ? (
                           <p className="mt-0.5 font-serif text-sm leading-snug">{titulo}</p>
-                          {entry.excerpt ? (
-                            <p className="mt-1.5 font-serif text-[0.8125rem] leading-snug text-muted-foreground">
-                              {entry.excerpt}
-                            </p>
-                          ) : null}
-                        </a>
-                      </li>
+                        ) : null}
+                        {entry.resumen ? (
+                          <p className="mt-1.5 font-serif text-[0.8125rem] leading-snug text-muted-foreground">
+                            {entry.resumen}
+                          </p>
+                        ) : null}
+                        {/* A quién afecta va como chips y no en prosa: es el dato
+                            que hace que alguien decida si esto le toca o no. */}
+                        {entry.aQuienAfecta.length > 0 ? (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {entry.aQuienAfecta.map(quien => (
+                              <span
+                                key={quien}
+                                className="label rounded-full border border-rule px-2 py-0.5 text-[0.6875rem] text-muted-foreground"
+                              >
+                                {quien}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                      </a>
+                    </li>
                     );
                   })}
                 </ol>
               )}
 
-              <a
-                href="https://www.boletinoficial.gob.ar/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="label mt-5 inline-block text-ember hover:underline"
-              >
-                {t("boletinSource")} →
-              </a>
+              {/* El encuadre no es decorativo: la ficha es una lectura de la
+                  norma hecha por un modelo, y el lector tiene que saberlo antes
+                  de actuar sobre ella. Por eso va acá y no al pie. */}
+              <p className="mt-5 font-serif text-[0.75rem] leading-snug text-muted-foreground">
+                {t("boletinDisclaimer")}
+              </p>
+
+              <Link href="/normativa" className="label mt-3 inline-block text-ember hover:underline">
+                {t("boletinMore")} →
+              </Link>
             </div>
 
             {/* Registros de INASE. Va pegado al panel del Boletín porque son la

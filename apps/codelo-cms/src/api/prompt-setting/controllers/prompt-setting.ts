@@ -16,6 +16,7 @@ const ALLOWED_FIELDS = [
   "imageSystemInstructions",
   "imageThemeGuide",
   "imageAnchorTaxonomy",
+  "boletinAnalysisInstructions",
 ] as const;
 
 export default factories.createCoreController(UID, ({ strapi }) => ({
