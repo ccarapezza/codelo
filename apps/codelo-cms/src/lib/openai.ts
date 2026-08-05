@@ -684,6 +684,12 @@ export async function reviewPost(
   newsContext: string,
   fabricationProneFacts: string = DEFAULT_PROMPT_SETTINGS.fabricationProneFacts,
   brandName: string = DEFAULT_PROMPT_SETTINGS.brandName,
+  /**
+   * Las fuentes que el Redactor REALMENTE tuvo a la vista, guardadas con el
+   * borrador. Vacío en los borradores anteriores a este cambio, y ahí el
+   * revisor cae al contexto reconstruido como antes.
+   */
+  writerSources: string = "",
 ): Promise<ReviewResult> {
   const systemPrompt = [
     "You are a strict editor-in-chief whose ONLY job is to prevent hallucinated news from being published.",
@@ -692,22 +698,34 @@ export async function reviewPost(
     "## STEP 1 — TITLE VALIDATION (mandatory, do this FIRST)",
     "",
     "Extract every factual claim made by the TITLE only. For each claim, check:",
-    "  a) Is this exact claim supported by AT LEAST ONE source in the verified context?",
-    "  b) Does this claim contradict any source in the verified context?",
+    "  a) Is this exact claim supported by AT LEAST ONE of the sources the writer used?",
+    "  b) Does this claim contradict any source in either block?",
     "  c) Does this claim contradict the body of the article itself?",
+    "A claim backed by the writer's sources is SUPPORTED — do not reject it for being absent from the additional context.",
     "",
     "REJECT the article if ANY of the following is true:",
-    "  - The title makes a claim about a person/team that no source mentions (e.g. 'Player X is injured' when no source mentions X).",
-    "  - The title contradicts a source (e.g. title says 'X will not play' but source says 'X says playing is my dream').",
-    "  - The title contradicts the body (e.g. body says 'X is excited to play' but title says 'X is out').",
-    "  - The title combines two unrelated subjects into one claim (e.g. 'X and Y are injured' when only Y is injured).",
+    "  - The title makes a claim about a person or organisation that no source mentions (e.g. 'Province X approved licences' when no source mentions X).",
+    "  - The title contradicts a source (e.g. title says 'the ruling denied self-cultivation' but the source says it recognised the right).",
+    "  - The title contradicts the body (e.g. body says 'the bill was introduced' but title says 'the bill was passed').",
+    "  - The title combines two unrelated subjects into one claim (e.g. 'X and Y obtained licences' when only Y did).",
     "  - The title states as fact something that is only speculation/opinion in the body.",
     "  - The title reproduces or closely paraphrases a source's HEADLINE instead of being an original headline (compare the wording against the source titles in the context — sharing the facts is required, sharing the phrasing is plagiarism).",
+    "",
+    // Sin esta distinción el revisor rechazaba por sinónimos: la fuente decía
+    // "la medida establece cómo deberán presentarse las iniciativas y los
+    // criterios de seguimiento" y el título "define protocolos para la
+    // evaluación", y lo trataba como hecho inventado. Rechazar una paráfrasis
+    // fiel no protege de nada y deja al sitio sin publicar.
+    "## STEP 1.5 — PARAPHRASE IS NOT FABRICATION (apply before rejecting)",
+    "",
+    "A title does not have to reuse the source's words — in fact it must NOT (see the plagiarism rule above).",
+    "If a title claim is supported IN SUBSTANCE by the writer's sources but its wording is stronger, broader or more specific than the source's, do NOT reject: REWRITE the title so it matches what the source actually says, and approve.",
+    "Reject a claim ONLY when it is ABSENT from every source, or CONTRADICTS one. 'The source words it differently' is a rewrite, not a rejection.",
     "",
     "## STEP 2 — BODY FACT-CHECK",
     "",
     `REJECT if the body contains a SPECIFIC claim about an already-occurred event (${fabricationProneFacts})`,
-    "that is NOT supported by any source in the verified context.",
+    "that is NOT supported by any source in EITHER block above.",
     "Opinion, analysis, historical references, and previews of upcoming events are ALLOWED.",
     "",
     "## STEP 2.5 — BRAND GUARDRAIL (mandatory)",
@@ -733,8 +751,17 @@ export async function reviewPost(
     "## Editorial guidelines:",
     directorInstructions,
     "",
-    "## Verified news context (last 24h):",
-    newsContext || "(empty — be especially strict: reject anything that asserts a recent event as fact)",
+    // Dos bloques, no uno. El primero es la evidencia real del borrador; el
+    // segundo es material de época que puede no tener nada que ver. Cuando
+    // estaban mezclados, el revisor trataba la ausencia de una noticia en el
+    // relleno como prueba de invención y rechazaba notas bien fundadas.
+    "## SOURCES THE WRITER ACTUALLY USED — this is the evidence for THIS draft. Judge it against these.",
+    writerSources ||
+      "(not recorded for this draft — it predates source tracking. Fall back to the context below, and give the draft the benefit of the doubt on sourcing.)",
+    "",
+    "## Additional recent context — unrelated material from the same period, for cross-checking only.",
+    "A claim missing from THIS block is NOT evidence of fabrication: these items were not necessarily about this story.",
+    newsContext || "(empty)",
   ].join("\n");
 
   const userPrompt = `Review this draft and return only the JSON.\n\n${JSON.stringify(draft, null, 2)}`;

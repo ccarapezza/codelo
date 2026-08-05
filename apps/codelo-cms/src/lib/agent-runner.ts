@@ -21,6 +21,11 @@ import {
 } from "./openai-config";
 import { getPromptSettings } from "./prompt-settings";
 import { logAgentAction } from "./audit";
+import {
+  buildSourceContext,
+  formatSourceContext,
+  parseSourceContext,
+} from "./source-context";
 import { ensurePostTranslation } from "./translate-post";
 
 type ScheduleEntry = {
@@ -407,6 +412,13 @@ export async function runRedactor(
       continue;
     }
 
+    // La evidencia que ESTE borrador tuvo a la vista. En modo asignado es la
+    // noticia que le tocó; en modo libre, el pool que se le mostró al modelo.
+    // Se guarda con el borrador para que el Director revise contra lo que el
+    // Redactor realmente vio y no contra una reconstrucción por palabras clave
+    // (ver source-context.ts).
+    const evidencia = buildSourceContext(assignedItem ? [assignedItem] : recentNews);
+
     const createdDraft = (await strapi.documents("api::post.post").create({
       data: {
         title: generated.title,
@@ -415,6 +427,7 @@ export async function runRedactor(
         content: generated.content,
         authorName: agent.name,
         generatedByAgent: agent.documentId,
+        sourceContext: evidencia,
         // La etiqueta viaja desde la configuración del agente: es lo que
         // agrupa las secciones por área en la home. Determinista a propósito
         // —no la elige el modelo— para que la sección no dependa de que el
@@ -487,6 +500,7 @@ async function runDirector(
     title: string;
     excerpt: string | null;
     content: string | null;
+    sourceContext: unknown;
   }>;
 
   const publishedIds = new Set(
@@ -529,25 +543,52 @@ async function runDirector(
   for (const draft of candidates) {
     if (publishedCount >= notesCount) break; // reached the publication target
     try {
+      // La evidencia real del borrador, guardada por el Redactor. Es la que
+      // decide: el contexto reconstruido de abajo es sólo material de época.
+      const writerSources = parseSourceContext(draft.sourceContext);
+
       const draftQuery = `${draft.title ?? ""} ${draft.excerpt ?? ""}`;
       const [keywordNews, broadNews] = await Promise.all([
         getRecentNewsForTopic(strapi, draftQuery, 25),
         getRecentNewsForTopic(strapi, "", 40),
       ]);
+      // Las fuentes del Redactor se excluyen del relleno para no repetirlas
+      // numeradas dos veces, que confundía al revisor sobre cuántas fuentes
+      // distintas respaldaban un mismo hecho.
       const byUrl = new Map<string, (typeof keywordNews)[number]>();
+      const yaEnEvidencia = new Set(writerSources.map((s) => s.url));
       for (const n of [...keywordNews, ...broadNews]) {
-        if (!byUrl.has(n.url)) byUrl.set(n.url, n);
+        if (!yaEnEvidencia.has(n.url) && !byUrl.has(n.url)) byUrl.set(n.url, n);
       }
       const finalNews = Array.from(byUrl.values()).slice(0, 50);
       const newsContextForReview = finalNews
-        .map((n, i) => `[${i + 1}] ${n.source} | ${n.title}\n${(n.summary ?? "").slice(0, 300)}`)
+        .map(
+          (n, i) =>
+            `[${writerSources.length + i + 1}] ${n.source} | ${n.title}\n${(n.summary ?? "").slice(0, 300)}`,
+        )
         .join("\n");
 
-      const result = await reviewPost(client, textModel, agent.instructions, {
-        title: draft.title,
-        excerpt: draft.excerpt ?? "",
-        content: draft.content ?? "",
-      }, newsContextForReview, promptSettings.fabricationProneFacts, promptSettings.brandName);
+      if (writerSources.length === 0) {
+        strapi.log.info(
+          `[agent-runner] Director: "${draft.title}" no tiene fuentes guardadas ` +
+            `(borrador previo al tracking); se revisa con contexto reconstruido.`,
+        );
+      }
+
+      const result = await reviewPost(
+        client,
+        textModel,
+        agent.instructions,
+        {
+          title: draft.title,
+          excerpt: draft.excerpt ?? "",
+          content: draft.content ?? "",
+        },
+        newsContextForReview,
+        promptSettings.fabricationProneFacts,
+        promptSettings.brandName,
+        formatSourceContext(writerSources),
+      );
 
       if (result.rejected) {
         strapi.log.warn(

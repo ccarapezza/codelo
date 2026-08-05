@@ -342,6 +342,52 @@ export async function fetchAndSaveNews(
   strapi.log.info("[rss-fetcher] RSS fetch cycle complete.");
 }
 
+/**
+ * Palabras que NO sirven para buscar: aparecen en casi cualquier titular.
+ *
+ * El filtro de abajo es un `$or` sobre todas las palabras del query, así que
+ * una sola stopword lo vuelve inútil. Medido contra el pool de producción el
+ * 04/08/2026: el query de un borrador real matcheaba 6.082 filas incluyendo
+ * "para" y "sobre", y 154 sin ellas. Como el prefiltro toma las primeras 300
+ * ordenadas por fecha, el primer caso reducía la ventana a DOS HORAS de RSS y
+ * el segundo cubre los 7 días enteros.
+ *
+ * Sólo palabras funcionales: cualquier término con carga temática se conserva,
+ * aunque sea frecuente, porque distingue una nota de otra.
+ */
+const STOPWORDS = new Set([
+  "para", "sobre", "como", "pero", "porque", "aunque", "mientras", "cuando",
+  "donde", "desde", "hasta", "entre", "ante", "bajo", "contra", "según", "tras",
+  "este", "esta", "estos", "estas", "esto", "ese", "esa", "esos", "esas",
+  "aquel", "aquella", "todo", "toda", "todos", "todas", "otro", "otra",
+  "otros", "otras", "cada", "unos", "unas", "mismo", "misma", "mismos",
+  "también", "tampoco", "sólo", "solo", "además", "menos", "muy", "más",
+  "ser", "son", "sea", "sean", "era", "eran", "está", "están", "estar",
+  "fue", "fueron", "haber", "había", "hacer", "hace", "hacen", "tiene",
+  "tienen", "tener", "puede", "pueden", "poder", "será", "serán", "hubo",
+  "dice", "dijo", "según", "ello", "ellos", "ellas", "nuestro", "nuestra",
+  "sus", "les", "una", "uno", "del", "las", "los", "por", "con", "que",
+  "the", "this", "that", "with", "from", "have", "been", "will", "their",
+  "which", "about", "after", "before", "than", "then", "these", "those",
+]);
+
+/**
+ * Palabras buscables de un texto: sin stopwords, sin números sueltos y de más
+ * de 3 letras. Exportada para poder testearla sin base de datos.
+ */
+export function extractKeywords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/[\s,;.:¿?¡!()"'“”«»/–—-]+/)
+    .filter(
+      (w) =>
+        w.length > 3 &&
+        !STOPWORDS.has(w) &&
+        // Un año ("2026") o un número suelto no distingue una nota de otra.
+        !/^\d+$/.test(w),
+    );
+}
+
 export async function getRecentNewsForTopic(
   strapi: Core.Strapi,
   topic: string,
@@ -353,10 +399,7 @@ export async function getRecentNewsForTopic(
   // Planteo tenía 50 notas y 0 dentro de las últimas 24 h; Cáñamo, 100 y 0.
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-  const keywords = topic
-    .toLowerCase()
-    .split(/[\s,;.]+/)
-    .filter((w) => w.length > 3);
+  const keywords = extractKeywords(topic);
 
   // El filtro por keywords va en la CONSULTA, no en memoria. Si se recorta
   // primero por fecha y se filtra después, los generalistas (Infobae y
@@ -376,10 +419,18 @@ export async function getRecentNewsForTopic(
   // Ordenado por fetchedAt (cuándo lo ingerimos), NO por itemPublishedAt: las
   // normas del Boletín llevan la fecha de la norma (semanas atrás) y por
   // itemPublishedAt caían siempre al fondo.
+  //
+  // ⚠️ Este tope se aplica ANTES de puntuar y ordenado por fecha, así que
+  // recorta por lo más nuevo, no por lo más relevante: todo lo que quede
+  // afuera es invisible para el scoring de abajo. Mientras el filtro sea
+  // selectivo (ver STOPWORDS) el conjunto entero entra y no hay recorte real
+  // —un query de borrador da ~150 filas en 7 días—, pero con un query ancho
+  // el tope se vuelve una ventana de horas. 1000 deja margen para que eso no
+  // vuelva a pasar en silencio si el pool sigue creciendo.
   const all = (await strapi.documents("api::news-context.news-context").findMany({
     filters: { fetchedAt: { $gte: since.toISOString() }, ...keywordFilter },
     sort: { fetchedAt: "desc" },
-    limit: 300,
+    limit: 1000,
   })) as unknown as Array<{
     title: string;
     url: string;
