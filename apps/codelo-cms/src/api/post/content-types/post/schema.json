@@ -145,7 +145,8 @@
       }
     },
     "sourceContext": {
-      "type": "json"
+      "type": "json",
+      "private": true
     }
   }
 }
