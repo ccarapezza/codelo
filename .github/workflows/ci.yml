@@ -1,0 +1,68 @@
+name: CI
+
+# El repo del motor no se deploya: lo que se verifica es que siga compilando y
+# que las dos imágenes se construyan. Los proyectos que lo adoptan tienen su
+# propio pipeline de deploy.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      # pnpm ANTES de setup-node: `cache: pnpm` necesita que el binario ya
+      # exista para resolver el store. Al revés, el cache no se activa nunca.
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+
+      # Los tipos de Strapi están gitignoreados y el typecheck del CMS los
+      # necesita: sin ellos, cada `.update()` falla contra el ContentType
+      # genérico. El comando no toca la base; los valores son de descarte.
+      - name: Generar tipos de Strapi
+        working-directory: apps/cms
+        env:
+          DATABASE_CLIENT: postgres
+          APP_KEYS: a,b
+          API_TOKEN_SALT: ci
+          ADMIN_JWT_SECRET: ci
+          TRANSFER_TOKEN_SALT: ci
+          JWT_SECRET: ci
+          ENCRYPTION_KEY: ciciciciciciciciciciciciciciciii
+        run: pnpm exec strapi ts:generate-types
+
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  docker:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        app: [cms, web]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      # Sin base de datos ni CMS: el Dockerfile del CMS genera sus tipos con env
+      # de descarte, y la web buildea contra fetchers que fallan suave.
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/${{ matrix.app }}/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

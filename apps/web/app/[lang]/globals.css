@@ -110,3 +110,11 @@
 /* Banda de pie: la tinta del logo. Se fija en los mismos valores en claro y
    en oscuro —no usa los tokens que se invierten con el tema— porque es el
    remate de identidad, no una superficie más de la interfaz. */
+
+/* Los cuatro roles tipográficos apuntan por defecto a la misma familia; el
+   proyecto los separa redefiniéndolos en fonts.ts + theme.css. */
+.nib-fonts {
+  --font-wordmark: var(--font-sans-base);
+  --font-display: var(--font-sans-base);
+  --font-serif: var(--font-sans-base);
+}

@@ -12,15 +12,16 @@
   "header": {
     "mobileMenu": "Abrir menú",
     "drawerTitle": "Menú",
-    "themeLabel": "Tema"
+    "themeLabel": "Tema",
+    "logoAlt": "Inicio"
   },
   "footer": {
-    "sectionSite": "La asociación",
+    "sectionSite": "El sitio",
     "sectionInfo": "Información",
     "sectionEditorial": "Editorial",
-    "tagline": "Asociación civil sin fines de lucro del oeste de la Ciudad de Buenos Aires: investigación y cultivo en el marco de la Ley 27.350, etnobotánica, derechos humanos, reducción de daños y ambiente.",
+    "tagline": "",
     "ariaNav": "Mapa del sitio",
-    "disclaimer": "Información de divulgación · +18",
+    "disclaimer": "",
     "copyright": "© {year}"
   },
   "home": {
@@ -42,7 +43,7 @@
   },
   "blog": {
     "title": "Noticias",
-    "tagline": "Notas, guías y novedades de la asociación.",
+    "tagline": "Notas y novedades.",
     "eyebrow": "Editorial",
     "empty": "Todavía no hay notas publicadas.",
     "emptyContent": "Esta nota no tiene contenido.",
@@ -69,5 +70,9 @@
     "count": "{count, plural, one {# nota} other {# notas}}",
     "backToBlog": "Ver todas las noticias",
     "seoDescription": "Notas y novedades sobre {name}."
+  },
+  "site": {
+    "title": "Nib",
+    "description": "Portal de noticias."
   }
 }

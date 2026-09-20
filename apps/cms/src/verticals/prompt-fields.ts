@@ -2,14 +2,10 @@
 //
 // El motor define los campos comunes en lib/prompt-defaults.ts; los que sólo
 // tienen sentido para este proyecto se declaran acá y el motor los mezcla sin
-// conocerlos. Los valores guardados por el admin siguen viniendo del single
-// type `prompt-setting`, así que un campo nuevo necesita además su atributo en
-// el schema.json de ese content-type.
+// conocerlos. Un campo nuevo necesita además su atributo en el schema.json del
+// single type `prompt-setting`, que es de donde salen los valores que guarda el
+// admin.
 
-import { BOLETIN_ANALYSIS_INSTRUCTIONS } from "./boletin-prompts";
-
-export const verticalPromptDefaults: Record<string, string> = {
-  boletinAnalysisInstructions: BOLETIN_ANALYSIS_INSTRUCTIONS,
-};
+export const verticalPromptDefaults: Record<string, string> = {};
 
 export const verticalPromptKeys = Object.keys(verticalPromptDefaults);

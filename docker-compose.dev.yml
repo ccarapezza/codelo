@@ -5,24 +5,24 @@
 services:
   postgres:
     image: postgres:18
-    container_name: codelo-postgres
+    container_name: nib-postgres
     restart: unless-stopped
     ports:
-      - "127.0.0.1:5435:5432"
+      - "127.0.0.1:5436:5432"
     environment:
-      POSTGRES_DB: codelo
-      POSTGRES_USER: codelo
-      POSTGRES_PASSWORD: codelo
+      POSTGRES_DB: nib
+      POSTGRES_USER: nib
+      POSTGRES_PASSWORD: nib
     volumes:
       - postgres-data:/var/lib/postgresql
 
   redis:
     image: redis:7
-    container_name: codelo-redis
+    container_name: nib-redis
     command: ["redis-server", "--appendonly", "yes"]
     restart: unless-stopped
     ports:
-      - "127.0.0.1:6381:6379"
+      - "127.0.0.1:6382:6379"
     volumes:
       - redis-data:/data
 

@@ -1,0 +1,78 @@
+// TEMPLATE. Copiar a la raíz del proyecto como Jenkinsfile y reemplazar
+// <slug>, <dominio> y los ids de las credenciales.
+@Library('westcode-shared') _
+
+pipeline {
+  agent any
+
+  options {
+    timestamps()
+    timeout(time: 40, unit: 'MINUTES')      // Strapi + Next builds tardan más
+    disableConcurrentBuilds()
+    buildDiscarder(logRotator(numToKeepStr: '20'))
+  }
+
+  parameters {
+    booleanParam(
+      name: 'SKIP_BUILD',
+      defaultValue: false,
+      description: 'DANGEROUS: skip `docker compose build` on the VPS. Use ONLY when redeploying with no code changes. Requires interactive confirmation.',
+    )
+  }
+
+  stages {
+    stage('Confirm SKIP_BUILD') {
+      when { expression { params.SKIP_BUILD } }
+      steps {
+        timeout(time: 2, unit: 'MINUTES') {
+          input(
+            message: 'SKIP_BUILD is active. Deploy WITHOUT rebuilding images?',
+            ok: 'Yes, skip build',
+          )
+        }
+      }
+    }
+
+    stage('Deploy → cc-lab-contabo') {
+      steps {
+        deployDockerCompose([
+          sshHost           : 'cc-lab-contabo',
+          sshKeyCredentialId: 'westcode-cc-lab-deploy-ssh',
+          gitBranch         : 'main',
+          remoteDir         : '/opt/<slug>',
+          composeFile       : 'docker-compose.prod.yml',
+          skipBuild         : params.SKIP_BUILD,
+          nonSecretEnv: [
+            PROJECT_SLUG:            '<slug>',
+            PROJECT_NAME:            '<Nombre del proyecto>',
+            POSTGRES_DB:             '<slug>',
+            POSTGRES_USER:           '<slug>',
+            // Public origins (domain TBD — update when the real domain lands)
+            SITE_PUBLIC_URL:         'https://<dominio>',
+            CMS_PUBLIC_URL:          'https://cms.<dominio>',
+            // Strapi CORS allowlist + rate-limit defaults
+            CORS_ALLOWED_ORIGINS:    'https://<dominio>',
+            RATE_LIMIT_WINDOW_MS:    '60000',
+            RATE_LIMIT_MAX:          '60',
+          ],
+          secrets: [
+            POSTGRES_PASSWORD:           '<slug>-postgres-password',
+            STRAPI_APP_KEYS:             '<slug>-strapi-app-keys',
+            STRAPI_API_TOKEN_SALT:       '<slug>-strapi-api-token-salt',
+            STRAPI_ADMIN_JWT_SECRET:     '<slug>-strapi-admin-jwt-secret',
+            STRAPI_JWT_SECRET:           '<slug>-strapi-jwt-secret',
+            STRAPI_TRANSFER_TOKEN_SALT:  '<slug>-strapi-transfer-token-salt',
+            STRAPI_ENCRYPTION_KEY:       '<slug>-strapi-encryption-key',
+            INTERNAL_API_KEY:            '<slug>-internal-api-key',
+            // Secreto compartido para la vista previa de borradores (CMS ↔ web).
+            PREVIEW_SECRET:              '<slug>-preview-secret',
+            REDIS_PASSWORD:              '<slug>-redis-password',
+            OPENAI_API_KEY:              '<slug>-openai-api-key',
+            OPENROUTER_API_KEY:          '<slug>-openrouter-api-key',
+          ],
+          // <slug>-web exposes /api/health for readiness checks.
+        ])
+      }
+    }
+  }
+}
