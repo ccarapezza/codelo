@@ -10,6 +10,15 @@ set -euo pipefail
 
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/codelo}"
 RETENTION_DAYS="${RETENTION_DAYS:-30}"
+# Los uploads se retienen MUCHO menos que los dumps, y no es una decisión de
+# gusto: el dump comprimido pesa unas decenas de MB y el tarball de uploads más
+# de un GB, pero el tarball es casi el mismo archivo todos los días —las
+# imágenes ya subidas no cambian—, así que treinta copias son treinta veces lo
+# mismo. En fulbo, con 30 días para los dos, esto llegó a 68 GB y se comió el
+# 40 % del disco. Lo que una copia vieja de uploads aporta sobre la última es
+# poder recuperar un archivo BORRADO, que es raro; el historial que de verdad
+# importa es el de la base, y ese se conserva entero.
+UPLOADS_RETENTION_DAYS="${UPLOADS_RETENTION_DAYS:-7}"
 RCLONE_REMOTE="${RCLONE_REMOTE:-}"   # e.g. "b2:codelo-backups" — leave empty to skip
 PG_CONTAINER="${PG_CONTAINER:-codelo-postgres}"
 CMS_CONTAINER="${CMS_CONTAINER:-codelo-cms}"
@@ -38,7 +47,7 @@ if [[ -n "$RCLONE_REMOTE" ]]; then
   rclone delete --min-age "${RETENTION_DAYS}d" "$RCLONE_REMOTE/" --quiet
 fi
 
-find "$BACKUP_DIR" -name "codelo-pg-*.sql.gz"    -mtime "+$RETENTION_DAYS" -delete
-find "$BACKUP_DIR" -name "codelo-uploads-*.tar.gz" -mtime "+$RETENTION_DAYS" -delete
+find "$BACKUP_DIR" -name "codelo-pg-*.sql.gz"      -mtime "+$RETENTION_DAYS" -delete
+find "$BACKUP_DIR" -name "codelo-uploads-*.tar.gz" -mtime "+$UPLOADS_RETENTION_DAYS" -delete
 
 echo "[$(date -Iseconds)] backup complete: pg=$(du -h "$PG_FILE" | cut -f1) uploads=$(du -h "$UPLOADS_FILE" | cut -f1)"
