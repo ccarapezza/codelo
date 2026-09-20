@@ -34,7 +34,7 @@ const ALERTAS: Array<{ nivel: Nivel; nombre: string; criterio: string }> = [
 export default function TermohigrometroWidget() {
   useUncapHeight();
   return (
-    <Flex className="codelo-widget-body" direction="column" alignItems="stretch" gap={3}>
+    <Flex className="nib-widget-body" direction="column" alignItems="stretch" gap={3}>
       <Typography variant="pi" textColor="neutral600">
         El termohigrómetro de la web muestra el clima para cultivo —temperatura, humedad y VPD
         (déficit de presión de vapor, cuánta “sed” tiene el aire)— y dispara alertas agronómicas.

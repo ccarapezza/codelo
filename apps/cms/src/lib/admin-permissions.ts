@@ -6,11 +6,16 @@
 // que el token sea de un admin activo, sin mirar el rol. Un Editor o un Author
 // podía abrir Site Settings o Prompts IA y guardar.
 //
+// El prefijo es `nib` —el producto— y no `codelo`. Estas acciones son del motor
+// compartido: el mismo uid tiene que valer en todos los proyectos montados
+// sobre él, o cada adopción del upstream rompería los permisos ya concedidos.
+// Es un identificador de producto, no de instalación.
+//
 // Cómo queda restringido a super admin: Strapi le asigna al rol super admin
 // TODAS las acciones registradas en cada arranque (`resetSuperAdminPermissions`),
 // así que alcanza con registrar la acción para que sólo él la tenga. Los demás
 // roles la reciben únicamente si un super admin se la concede a mano desde
-// Settings → Roles → pestaña Configuración (aparecen bajo la categoría "codelo").
+// Settings → Roles → pestaña Configuración (aparecen bajo la categoría "nib").
 //
 // ⚠️ Se registran desde el `register()` de src/index.ts, NUNCA desde el
 // `bootstrap()`. El bootstrap del plugin admin corre ANTES que el del usuario, y
@@ -33,17 +38,17 @@ type AdminPermissionAction = {
 
 export const ADMIN_PERMISSION_ACTIONS: readonly AdminPermissionAction[] = [
   {
-    uid: "codelo.site-settings.manage",
+    uid: "nib.site-settings.manage",
     displayName: "Ver y editar",
     section: "settings",
-    category: "codelo",
+    category: "nib",
     subCategory: "configuración del sitio",
   },
   {
-    uid: "codelo.prompt-settings.manage",
+    uid: "nib.prompt-settings.manage",
     displayName: "Ver y editar",
     section: "settings",
-    category: "codelo",
+    category: "nib",
     subCategory: "prompts de ia",
   },
 ];
@@ -58,8 +63,8 @@ export const ADMIN_PERMISSION_ACTIONS: readonly AdminPermissionAction[] = [
  * si las dos puntas se desincronizan, el menú aparece y la API responde 403.
  */
 export const ADMIN_PERMISSIONS = {
-  siteSettings: "api::codelo.site-settings.manage",
-  promptSettings: "api::codelo.prompt-settings.manage",
+  siteSettings: "api::nib.site-settings.manage",
+  promptSettings: "api::nib.prompt-settings.manage",
 } as const;
 
 // Tipado estructural mínimo para no importar `@strapi/strapi` en un módulo que

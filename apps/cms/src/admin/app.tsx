@@ -49,6 +49,37 @@ const COLORS_DARK = {
 // justo cuando ya están registrados sus widgets y recién ahí se pueden filtrar.
 let appRef: StrapiApp | null = null;
 
+// Los widgets que registra ESTE proyecto. Declarados en un solo lugar porque
+// bootstrap() necesita después sus ids para saber cuáles dejar en la home: la
+// lista es la fuente de verdad, en vez de un prefijo en el id que hay que
+// acordarse de mantener sincronizado en dos lados (ya se desincronizó una vez y
+// la home quedó vacía).
+const WIDGETS_PROPIOS = [
+  {
+    icon: Book,
+    title: { id: "codelo.widget.boletin", defaultMessage: "Boletín Oficial" },
+    id: "codelo-boletin",
+    component: async () => (await import("./components/widgets/BoletinWidget")).default,
+  },
+  {
+    icon: Cloud,
+    title: {
+      id: "codelo.widget.termohigrometro",
+      defaultMessage: "Termohigrómetro (clima de cultivo)",
+    },
+    id: "codelo-termohigrometro",
+    component: async () => (await import("./components/widgets/TermohigrometroWidget")).default,
+  },
+  {
+    icon: Plant,
+    title: { id: "codelo.widget.inase", defaultMessage: "INASE — cultivares y operadores" },
+    id: "codelo-inase",
+    component: async () => (await import("./components/widgets/InaseWidget")).default,
+  },
+];
+
+const IDS_PROPIOS = new Set(WIDGETS_PROPIOS.map(w => w.id));
+
 // Apaga el guided tour de Strapi ("Discover your application" + los tooltips
 // paso a paso). No hay flag de config: `isGuidedTourEnabled` está hardcodeado a
 // `NODE_ENV !== 'test'`, y sólo lo ve el primer super admin. El tour guarda su
@@ -157,40 +188,19 @@ export default {
     // Widgets informativos (sólo lectura) para que TODO usuario del panel
     // —admin, editor o author— entienda de dónde y cuándo sale la información.
     // No llevan `permissions`/`roles`, así que son visibles para todos.
-    app.widgets.register([
-      {
-        icon: Book,
-        title: { id: "codelo.widget.boletin", defaultMessage: "Boletín Oficial" },
-        id: "codelo-boletin",
-        component: async () => (await import("./components/widgets/BoletinWidget")).default,
-      },
-      {
-        icon: Cloud,
-        title: {
-          id: "codelo.widget.termohigrometro",
-          defaultMessage: "Termohigrómetro (clima de cultivo)",
-        },
-        id: "codelo-termohigrometro",
-        component: async () => (await import("./components/widgets/TermohigrometroWidget")).default,
-      },
-      {
-        icon: Plant,
-        title: { id: "codelo.widget.inase", defaultMessage: "INASE — cultivares y operadores" },
-        id: "codelo-inase",
-        component: async () => (await import("./components/widgets/InaseWidget")).default,
-      },
-    ]);
+    app.widgets.register(WIDGETS_PROPIOS);
   },
 
+
   bootstrap(app: StrapiApp) {
-    // Home: dejar SÓLO los widgets de codelo. Va en bootstrap —no en register—
+    // Home: dejar SÓLO los widgets propios. Va en bootstrap —no en register—
     // a propósito: el content-manager registra sus widgets (last-edited-entries,
     // last-published-entries, chart-entries) en SU bootstrap, y los bootstraps
     // de plugins corren antes que este. Filtrar acá los alcanza; en register no
     // existían todavía. Se usa `appRef` porque la fachada de bootstrap no expone
-    // `widgets`. Si más adelante se quiere un widget nativo de Strapi en la home,
-    // se lo agrega a esta allowlist por prefijo.
-    appRef?.widgets.register(prev => prev.filter(w => String(w.id ?? "").startsWith("codelo-")));
+    // `widgets`. Para dejar además un widget nativo de Strapi, se agrega su id a
+    // la allowlist.
+    appRef?.widgets.register(prev => prev.filter(w => IDS_PROPIOS.has(String(w.id ?? ""))));
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (app.getPlugin("content-manager") as any).apis.addEditViewSidePanel([SocialStudioPanel]);

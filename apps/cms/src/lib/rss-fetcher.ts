@@ -1,5 +1,6 @@
 import type { Core } from "@strapi/strapi";
 import * as rssScope from "../verticals/rss-scope";
+import * as project from "./project";
 
 export type NewsItem = {
   title: string;
@@ -78,7 +79,7 @@ async function fetchFeed(feedUrl: string, source: string, timeoutMs = 8000): Pro
   try {
     res = await fetch(feedUrl, {
       signal: controller.signal,
-      headers: { "User-Agent": "CodeloBot/1.0 (RSS aggregator)" },
+      headers: { "User-Agent": project.userAgent },
     });
   } catch (err) {
     const msg = (err as Error).message || "fetch failed";
@@ -116,7 +117,7 @@ async function fetchFeed(feedUrl: string, source: string, timeoutMs = 8000): Pro
 const INGEST_WINDOW_DAYS = 7;
 
 /** Clave en el core store con el ISO de la última corrida completa del cron. */
-const RSS_LAST_RUN_KEY = "codelo:rss-last-run";
+const RSS_LAST_RUN_KEY = project.coreStoreKey("rss-last-run");
 
 export async function getRssLastRun(strapi: Core.Strapi): Promise<string | null> {
   const value = await strapi.store({ type: "core" }).get({ key: RSS_LAST_RUN_KEY });
@@ -162,7 +163,7 @@ export async function validateFeed(
   try {
     res = await fetch(feedUrl, {
       signal: controller.signal,
-      headers: { "User-Agent": "CodeloBot/1.0 (RSS aggregator)" },
+      headers: { "User-Agent": project.userAgent },
     });
   } catch (err) {
     clearTimeout(timer);

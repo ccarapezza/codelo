@@ -24,13 +24,13 @@ function findScrollBox(start: Element | null): HTMLElement | null {
 export function useUncapHeight(): void {
   React.useEffect(() => {
     const uncap = () => {
-      document.querySelectorAll<HTMLElement>(".codelo-widget-body").forEach((body) => {
+      document.querySelectorAll<HTMLElement>(".nib-widget-body").forEach((body) => {
         const box = findScrollBox(body);
-        if (box && box.dataset.codeloUncapped !== "1") {
+        if (box && box.dataset.uncapped !== "1") {
           box.style.height = "auto";
           box.style.maxHeight = "none";
           box.style.overflow = "hidden"; // alto ya ajustado al contenido: no recorta
-          box.dataset.codeloUncapped = "1";
+          box.dataset.uncapped = "1";
         }
       });
     };

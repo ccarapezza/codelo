@@ -1,6 +1,7 @@
 // Social Studio controller: config/registries, AI-backgrounds listing, async
 // generation jobs (poll-based), free satori re-renders for the editable
 // preview, and the final save (full-res render server-side → Media / post).
+import * as project from "../../../lib/project";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { requireAdmin } from "../../../lib/admin-auth";
@@ -157,7 +158,7 @@ export default ({ strapi }: { strapi: any }) => ({
     ctx.set("Content-Type", "video/mp4");
     ctx.set("Accept-Ranges", "bytes");
     if (ctx.query.download) {
-      ctx.set("Content-Disposition", `attachment; filename="reel-codelo-${ctx.params.jobId.slice(0, 8)}.mp4"`);
+      ctx.set("Content-Disposition", `attachment; filename="reel-${project.slug}-${ctx.params.jobId.slice(0, 8)}.mp4"`);
     }
 
     // Range support (206): sin esto el <video> no puede buscar y algunos

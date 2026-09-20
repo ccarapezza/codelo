@@ -456,7 +456,7 @@ export default function PostReviewPage() {
   // draftMode antes de avisar.)
   React.useEffect(() => {
     const onMessage = (e: MessageEvent) => {
-      if (e?.data?.type === "codelo-preview-close") setPreview(null);
+      if (e?.data?.type === "nib-preview-close") setPreview(null);
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);

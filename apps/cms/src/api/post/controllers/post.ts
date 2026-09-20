@@ -1,3 +1,4 @@
+import * as project from "../../../lib/project";
 import type { Core } from "@strapi/strapi";
 import { factories } from "@strapi/strapi";
 import { requireAdmin } from "../../../lib/admin-auth";
@@ -932,7 +933,7 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
           authorName:
             authorName?.trim() ||
             (ctx.state.user?.firstname as string) ||
-            "Redacción Cogollos del Oeste",
+            `Redacción ${project.name}`,
         } as never,
         status: "draft",
       })) as unknown as { documentId: string; slug: string };

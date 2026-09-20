@@ -4,6 +4,8 @@
 // markup (~$0.039/image for gemini-2.5-flash-image) and accepts prepaid credit / USDC.
 // Credentials come from OPENROUTER_API_KEY (env only, never persisted) — see openai-config.ts.
 
+import * as project from "./project";
+
 export type OpenRouterImageOptions = { aspectRatio?: string; imageSize?: string };
 
 // Inyectado en TODO prompt de imagen de Gemini: la regla "una sola imagen" en
@@ -42,8 +44,7 @@ async function once(
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
       // Attribution headers (surface the app in the OpenRouter dashboard).
-      "HTTP-Referer": "https://cogollosdeloeste.com.ar",
-      "X-Title": "codelo-cms",
+      ...project.openRouterHeaders,
     },
     body: JSON.stringify({
       model,

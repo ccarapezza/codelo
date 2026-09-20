@@ -43,7 +43,7 @@ export function PreviewBanner({ exitTo }: { exitTo: string }) {
       /* no-op */
     }
     try {
-      window.parent.postMessage({ type: "codelo-preview-close" }, "*");
+      window.parent.postMessage({ type: "nib-preview-close" }, "*");
     } catch {
       /* no-op */
     }

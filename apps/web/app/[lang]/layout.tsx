@@ -134,7 +134,7 @@ export default async function RootLayout({
       <body
         className={`${bigShoulders.variable} ${zillaSlab.variable} ${literata.variable} ${plexMono.variable} min-h-screen overflow-x-hidden bg-background font-sans text-foreground antialiased`}
       >
-        <Script id="codelo-theme-init" strategy="beforeInteractive">
+        <Script id="nib-theme-init" strategy="beforeInteractive">
           {THEME_SCRIPT}
         </Script>
         {/* Identidad del sitio para el Knowledge Graph: quién publica y qué

@@ -1,3 +1,4 @@
+import * as project from "./lib/project";
 import type { Core } from "@strapi/strapi";
 import { registerAdminPermissionActions } from "./lib/admin-permissions";
 import { ensurePostCover } from "./lib/social-studio/post-cover";
@@ -67,7 +68,31 @@ export default {
     // after the first run, and re-stamping those would corrupt them).
     try {
       const coreStore = strapi.store({ type: "core" });
-      const migrated = await coreStore.get({ key: "codelo:i18n-posts-migrated" });
+      const migrationKey = project.coreStoreKey("i18n-posts-migrated");
+      let migrated = await coreStore.get({ key: migrationKey });
+
+      // Cinturón de seguridad, además del flag. Esta migración re-estampa TODOS
+      // los posts al idioma por defecto, así que correrla de más destruye las
+      // traducciones. El flag vive bajo una clave con el slug del proyecto: si
+      // alguien arranca con el slug equivocado, la clave no aparece, la
+      // migración se cree pendiente y arrasa con todo. Si ya hay filas en otro
+      // idioma, esta base pasó por acá — se marca y no se toca nada.
+      if (!migrated) {
+        const [{ count }] = (await strapi.db
+          .connection("posts")
+          .whereNot({ locale: "es" })
+          .whereNotNull("locale")
+          .count({ count: "*" })) as unknown as Array<{ count: number | string }>;
+        if (Number(count) > 0) {
+          await coreStore.set({ key: migrationKey, value: true });
+          migrated = true;
+          strapi.log.warn(
+            `[i18n-migration] hay ${count} post(s) en otro idioma: esta base ya fue ` +
+              `migrada. Se marca el flag bajo "${migrationKey}" y NO se re-estampa nada.`,
+          );
+        }
+      }
+
       if (!migrated) {
         const locales = strapi.plugin("i18n").service("locales");
         const existing = (await locales.find()) as Array<{ code: string }>;
@@ -79,7 +104,7 @@ export default {
         }
         await locales.setDefaultLocale({ code: "es" });
         const updated = await strapi.db.connection("posts").update({ locale: "es" });
-        await coreStore.set({ key: "codelo:i18n-posts-migrated", value: true });
+        await coreStore.set({ key: migrationKey, value: true });
         strapi.log.info(
           `[i18n-migration] default locale set to "es"; ${updated} post row(s) re-stamped as es.`,
         );

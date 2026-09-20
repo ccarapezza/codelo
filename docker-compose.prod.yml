@@ -20,7 +20,7 @@ x-restart-policy: &restart_policy
 services:
   postgres:
     image: postgres:18-alpine
-    container_name: codelo-postgres
+    container_name: ${PROJECT_SLUG:?required}-postgres
     <<: *restart_policy
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-codelo}
@@ -39,7 +39,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: codelo-redis
+    container_name: ${PROJECT_SLUG:?required}-redis
     <<: *restart_policy
     command:
       - "redis-server"
@@ -63,7 +63,7 @@ services:
     build:
       context: .
       dockerfile: apps/cms/Dockerfile
-    container_name: codelo-cms
+    container_name: ${PROJECT_SLUG:?required}-cms
     <<: *restart_policy
     # The VPS (8GB) also hosts fulbo and x100 — keep limits modest.
     deploy:
@@ -102,6 +102,11 @@ services:
       # Public URL behind Caddy (used in admin emails, oembeds, etc.)
       URL: ${CMS_PUBLIC_URL:-https://cms.cogollosdeloeste.com.ar}
       ADMIN_URL: /admin
+      # Identidad de la instalación. PROJECT_SLUG NO tiene default: con ella se
+      # arman las claves del core store, y una equivocada haría que una migración
+      # de arranque ya cumplida se crea pendiente (ver src/lib/project.ts).
+      PROJECT_SLUG: ${PROJECT_SLUG:?required}
+      PROJECT_NAME: ${PROJECT_NAME:-Cogollos del Oeste}
       STRAPI_TELEMETRY_DISABLED: "true"
       NODE_ENV: production
     volumes:
@@ -120,7 +125,7 @@ services:
         # frame-ancestors (CSP) se hornea en build: pasamos el origen del CMS
         # para permitir el iframe de "Vista previa" del panel en prod.
         PREVIEW_FRAME_ANCESTOR: ${CMS_PUBLIC_URL:-https://cms.cogollosdeloeste.com.ar}
-    container_name: codelo-web
+    container_name: ${PROJECT_SLUG:?required}-web
     <<: *restart_policy
     deploy:
       resources:
@@ -142,7 +147,7 @@ services:
 
 networks:
   internal:
-    name: codelo-internal
+    name: ${PROJECT_SLUG:?required}-internal
   proxy-edge:
     external: true
 

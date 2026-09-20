@@ -4,6 +4,7 @@
 // Generation takes minutes; callers run this inside a Studio job and surface
 // progress via onTick. Same OPENROUTER_API_KEY as image generation.
 import { writeFileSync } from "node:fs";
+import * as project from "../project";
 
 const SUBMIT = "https://openrouter.ai/api/v1/videos";
 
@@ -37,8 +38,7 @@ function headers(apiKey: string): Record<string, string> {
   return {
     Authorization: `Bearer ${apiKey}`,
     "Content-Type": "application/json",
-    "HTTP-Referer": "https://cogollosdeloeste.com.ar",
-    "X-Title": "codelo-cms",
+    ...project.openRouterHeaders,
   };
 }
 

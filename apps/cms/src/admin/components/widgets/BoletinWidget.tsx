@@ -83,7 +83,7 @@ export default function BoletinWidget() {
   if (!data) return <Widget.Loading />;
 
   return (
-    <Flex className="codelo-widget-body" direction="column" alignItems="stretch" gap={3}>
+    <Flex className="nib-widget-body" direction="column" alignItems="stretch" gap={3}>
       <Typography variant="pi" textColor="neutral600">
         Cada día el sistema busca en el Boletín Oficial normas nuevas que mencionen los temas de la
         asociación, guarda su texto íntegro y lo hace leer por IA: un puntaje de relevancia que

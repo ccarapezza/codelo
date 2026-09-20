@@ -41,6 +41,8 @@ pipeline {
           composeFile       : 'docker-compose.prod.yml',
           skipBuild         : params.SKIP_BUILD,
           nonSecretEnv: [
+            PROJECT_SLUG:            'codelo',
+            PROJECT_NAME:            'Cogollos del Oeste',
             POSTGRES_DB:             'codelo',
             POSTGRES_USER:           'codelo',
             // Public origins (domain TBD — update when the real domain lands)

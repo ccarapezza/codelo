@@ -62,7 +62,7 @@ export default function InaseWidget() {
   if (!data) return <Widget.Loading />;
 
   return (
-    <Flex className="codelo-widget-body" direction="column" alignItems="stretch" gap={3}>
+    <Flex className="nib-widget-body" direction="column" alignItems="stretch" gap={3}>
       <Typography variant="pi" textColor="neutral600">
         Espejamos dos registros públicos del INASE para que obtentores, productores y cultivadores
         puedan verificar qué compran. Se sincronizan solos por cron; “datos hasta” es la última vez
