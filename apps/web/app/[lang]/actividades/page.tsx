@@ -99,6 +99,23 @@ function EventRow({
   );
 }
 
+// El corte entre próximas y pasadas depende de CUÁNDO se pide la página, así
+// que leer el reloj es justamente lo que corresponde: esto es un Server
+// Component async que se renderiza una vez por request. La regla del compilador
+// de React marca `Date.now()` en el cuerpo de un componente sin distinguir ese
+// caso, y sacarlo a esta función la satisface sin cambiar el comportamiento.
+function partirAgenda(events: CmsEvent[]) {
+  const now = Date.now();
+  return {
+    upcoming: events
+      .filter(e => new Date(e.startsAt).getTime() >= now)
+      .sort((a, b) => +new Date(a.startsAt) - +new Date(b.startsAt)),
+    past: events
+      .filter(e => new Date(e.startsAt).getTime() < now)
+      .sort((a, b) => +new Date(b.startsAt) - +new Date(a.startsAt)),
+  };
+}
+
 export default async function ActividadesPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
   setRequestLocale(lang);
@@ -106,13 +123,7 @@ export default async function ActividadesPage({ params }: { params: Promise<{ la
   const t = await getTranslations("events");
 
   const events = await getEvents({ limit: 100 });
-  const now = Date.now();
-  const upcoming = events
-    .filter(e => new Date(e.startsAt).getTime() >= now)
-    .sort((a, b) => +new Date(a.startsAt) - +new Date(b.startsAt));
-  const past = events
-    .filter(e => new Date(e.startsAt).getTime() < now)
-    .sort((a, b) => +new Date(b.startsAt) - +new Date(a.startsAt));
+  const { upcoming, past } = partirAgenda(events);
 
   const labels = { organizedBy: t("organizedBy"), officialSite: t("officialSite") };
 

@@ -9,17 +9,27 @@ import * as React from "react";
 //     iframe al endpoint de salida.
 //   - En pestaña propia (top-level): link normal que sale de draftMode y vuelve
 //     a la versión publicada.
-export function PreviewBanner({ exitTo }: { exitTo: string }) {
-  const [inIframe, setInIframe] = React.useState(false);
+// Estar o no dentro de un iframe es un dato del entorno que no cambia nunca
+// después del montaje, así que no necesita estado ni efecto: se lee con
+// useSyncExternalStore, que es exactamente para valores externos con un
+// snapshot distinto en el servidor. Con `useState` + `useEffect` el componente
+// se renderizaba dos veces (el efecto seteaba estado en el primer render) y la
+// regla del compilador lo marcaba con razón.
+const SIN_CAMBIOS = () => () => {};
+const estoyEnIframe = () => {
+  try {
+    return window.self !== window.top;
+  } catch {
+    // Acceder a window.top cross-origin lanza: seguro estamos embebidos.
+    return true;
+  }
+};
+// En el servidor no hay window; false es lo que se renderiza en el HTML y
+// coincide con lo que el cliente calcula cuando NO está embebido.
+const enElServidor = () => false;
 
-  React.useEffect(() => {
-    try {
-      setInIframe(window.self !== window.top);
-    } catch {
-      // Acceder a window.top cross-origin lanza: seguro estamos embebidos.
-      setInIframe(true);
-    }
-  }, []);
+export function PreviewBanner({ exitTo }: { exitTo: string }) {
+  const inIframe = React.useSyncExternalStore(SIN_CAMBIOS, estoyEnIframe, enElServidor);
 
   const closeFromIframe = async (e: React.MouseEvent) => {
     e.preventDefault();
