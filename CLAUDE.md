@@ -5,12 +5,42 @@ lucro (oeste de CABA). Monorepo pnpm hermano de fulbo/x100, pero **sin APIs exte
 de datos y sin Prisma**: todo el contenido (posts, páginas, eventos) vive en
 Strapi y la web lo consume por REST.
 
+## Este repo es Nib + el vertical de la asociación
+
+El motor —agentes, portadas, RSS, Social Studio, gestor de notas, la web— vive
+en un repo propio: **Nib** (`github.com/ccarapezza/nib`), registrado acá como
+`upstream`. Este repo es ese motor MÁS lo de Cogollos del Oeste.
+
+```sh
+git fetch upstream && git merge upstream/main   # traer mejoras del motor
+```
+
+**La regla, y no es negociable:** lo específico de la asociación va en las
+costuras; los archivos del motor no se editan acá. Si hace falta cambiar algo
+del motor, el cambio va a Nib y baja por merge — si se edita acá, el próximo
+merge lo pisa o conflictúa.
+
+Dónde vive lo nuestro:
+
+| Costura | Qué hay |
+| --- | --- |
+| `apps/cms/src/verticals/` | INASE, Boletín, prompts del tema, crons, alcance RSS, marca de placas |
+| `apps/cms/src/admin/verticals.ts` | Widgets del panel y la identidad visual (logo, paleta, login) |
+| `apps/cms/src/api/{cultivar,operador-semilla,norma,event,dashboard}/` | Content-types propios |
+| `apps/web/app/[lang]/(vertical)/` | semillas, clima, normativa, actividades, quiénes somos, reprocann |
+| `apps/web/components/vertical/`, `lib/vertical/` | Componentes y librerías propias |
+| `apps/web/lib/site.ts`, `app/[lang]/{theme.css,vertical.css,fonts.ts}` | Identidad del sitio |
+| `apps/web/messages/es.vertical.json` | Cadenas propias (se mezclan con las del motor) |
+
+`docs/adoptar-nib.md` en el repo de Nib tiene la tabla completa de qué archivo
+es de quién. Antes de tocar algo fuera de esa lista, pensar dos veces.
+
 ## Arquitectura
 
 | Pieza | Qué es | Puerto dev |
 | --- | --- | --- |
-| `apps/cms` | Strapi 5: posts + pages + events + tags + motor de agentes IA + settings | 1339 |
-| `apps/web` | Next.js 16 (App Router, next-intl **ES-only**, shadcn sin estilo) | 3200 |
+| `apps/cms` | Strapi 5: el motor de Nib + los content-types del vertical | 1339 |
+| `apps/web` | Next.js 16 (App Router, next-intl **ES-only**, shadcn) | 3200 |
 | Postgres / Redis | `docker-compose.dev.yml` | 5435 / 6381 |
 
 **Los puertos dev están corridos a propósito** para convivir con fulbo
@@ -61,7 +91,7 @@ pnpm dev:web    # Next en http://localhost:3200
   matcheen su topic, el redactor NO escribe (evita el "modo análisis", que
   redacta de memoria del modelo e inventa datos).
 - Motor IA: `agent`, `agent-action`, `news-context`, `rss-feed`,
-  `prompt-setting` (overrides de los defaults en `src/lib/prompt-defaults.ts`),
+  `prompt-setting` (overrides de los defaults en `src/verticals/prompt-defaults.ts`),
   `site-setting`, `house-ad`, `social-studio`.
 - Roles de agente: `director | redactor | image-generator`. (Existía un rol
   `analyst` heredado de la plantilla de fulbo —analizaba partidos de fútbol—
@@ -98,7 +128,7 @@ pantalla curada, no por el CM.
 
 `/semillas` espeja dos registros públicos de INASE para que obtentores,
 productores y cultivadores puedan verificar qué compran. Módulos en
-`src/lib/inase/`, crons `inaseCultivares` (semanal) e `inaseOperadores` (cada 2
+`src/verticals/inase/`, crons `inaseCultivares` (semanal) e `inaseOperadores` (cada 2
 días), y sync manual por `POST /api/inase/sync-{cultivares,operadores}` con
 `x-internal-key`.
 
@@ -162,14 +192,14 @@ vertical sobre papel curvo: `CRAIG` se lee `CRAI1` con facilidad. Un match
 exacto respondería "no está registrado" para una variedad que sí lo está, que es
 la peor respuesta posible acá porque es sobre la que alguien podría actuar.
 
-Tests: `src/lib/inase/*.test.ts`. Los de red están en `live.test.ts` y sólo
+Tests: `src/verticals/inase/*.test.ts`. Los de red están en `live.test.ts` y sólo
 corren con `INASE_LIVE=1` — ahí viven las aserciones que distinguen "INASE
 cambió algo" de "lo rompimos nosotros". Ojo: crear archivos dentro de
 `apps/cms/src/` reinicia el dev server y corta un sync en curso.
 
 ## Vigilancia normativa — Boletín Oficial
 
-`src/lib/boletin-oficial.ts` alimenta `news-context` con normas nuevas
+`src/verticals/boletin-oficial.ts` alimenta `news-context` con normas nuevas
 (cannabis, cáñamo, estupefacientes) para que el Redactor escriba sobre cambios
 regulatorios con la norma como fuente. Corre por cron a las 07:15 (ventana de
 7 días, ver `config/cron-tasks.ts`).
@@ -192,7 +222,7 @@ complementa. Tres cosas no obvias, todas verificadas contra el sitio real:
 
 ## Reglas editoriales del vertical (prompts)
 
-`src/lib/prompt-defaults.ts` define el dominio con reglas duras que NO deben
+`src/verticals/prompt-defaults.ts` define el dominio con reglas duras que NO deben
 relajarse. El temario sale de los **objetos estatutarios (Art. 2° del estatuto
 reformado 2024/25, ver `docs/estatuto-2025.md`)**: investigación y estudio del
 cultivo de cannabis y sus derivados en el marco de la Ley 27.350 y la Res.
