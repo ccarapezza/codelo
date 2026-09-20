@@ -27,6 +27,8 @@ import {
   parseSourceContext,
 } from "./source-context";
 import { ensurePostTranslation } from "./translate-post";
+import { verticalAgentRoles } from "../verticals/agent-roles";
+import { extraDirectorFilters } from "../verticals/director-filters";
 
 type ScheduleEntry = {
   id?: number;
@@ -41,7 +43,12 @@ type ScheduleEntry = {
 type AgentDoc = {
   documentId: string;
   name: string;
-  role: "director" | "redactor" | "image-generator";
+  /**
+   * Los tres del motor, más los que registre el vertical. Es `string` y no una
+   * unión cerrada a propósito: el motor no conoce los roles de cada proyecto
+   * (ver src/verticals/agent-roles.ts).
+   */
+  role: string;
   instructions: string;
   topic: string | null;
   /**
@@ -490,6 +497,10 @@ async function runDirector(
       // Skip drafts the Director already rejected (archived, not deleted) so it
       // doesn't re-review and re-reject them on every run.
       directorRejectionReason: { $null: true },
+      // Condiciones propias del vertical, si las hay: sirven para dejar afuera
+      // borradores que no se fundan en noticias y que el Director rechazaría
+      // por no poder verificarlos (ver verticals/director-filters.ts).
+      ...extraDirectorFilters,
     },
     status: "draft",
     populate: ["generatedByAgent"],
@@ -794,12 +805,9 @@ export async function runDueAgents(strapi: Core.Strapi): Promise<void> {
     for (const schedule of dueSchedules) {
       try {
         const notesCount = schedule.notesCount ?? 1;
-        if (agent.role === "redactor") {
-          await runRedactor(strapi, agent, notesCount);
-        } else if (agent.role === "director") {
-          await runDirector(strapi, agent, notesCount);
-        }
-        // "image-generator" has no autonomous execution — it only provides config
+        // "image-generator" no corre solo: sólo aporta configuración, así que
+        // dispatchAgent devuelve false y no pasa nada.
+        await dispatchAgent(strapi, agent, notesCount);
         schedule.lastRunAt = now.toISOString();
       } catch (err) {
         strapi.log.error(`[agent-runner] Agent "${agent.name}" schedule failed:`, err);
@@ -823,6 +831,30 @@ export async function runDueAgents(strapi: Core.Strapi): Promise<void> {
   }
 }
 
+// Despacho por rol: primero los del motor, después lo que aporte el vertical.
+// Un rol sin runner no es un error acá —image-generator no corre solo, sólo
+// aporta configuración—; devuelve false y el llamador decide qué hacer.
+async function dispatchAgent(
+  strapi: Core.Strapi,
+  agent: AgentDoc,
+  notesCount: number,
+): Promise<boolean> {
+  if (agent.role === "redactor") {
+    await runRedactor(strapi, agent, notesCount);
+    return true;
+  }
+  if (agent.role === "director") {
+    await runDirector(strapi, agent, notesCount);
+    return true;
+  }
+  const propio = verticalAgentRoles[agent.role];
+  if (propio) {
+    await propio(strapi, agent, notesCount);
+    return true;
+  }
+  return false;
+}
+
 export async function runAgentNow(
   strapi: Core.Strapi,
   documentId: string,
@@ -841,11 +873,7 @@ export async function runAgentNow(
 
   if (!agent) throw new Error(`Agent ${documentId} not found.`);
 
-  if (agent.role === "redactor") {
-    await runRedactor(strapi, agent, notesCount);
-  } else if (agent.role === "director") {
-    await runDirector(strapi, agent, notesCount);
-  } else {
+  if (!(await dispatchAgent(strapi, agent, notesCount))) {
     throw new Error(`Agent role "${agent.role}" cannot be run directly.`);
   }
 

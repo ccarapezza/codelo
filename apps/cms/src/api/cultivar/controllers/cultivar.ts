@@ -1,6 +1,6 @@
 import { factories } from "@strapi/strapi";
-import { syncCultivares } from "../../../lib/inase/cultivares";
-import { syncOperadores } from "../../../lib/inase/operadores";
+import { syncCultivares } from "../../../verticals/inase/cultivares";
+import { syncOperadores } from "../../../verticals/inase/operadores";
 
 /** Same shared-secret check the other internal endpoints use. */
 function verifyInternalKey(ctx: any): boolean {

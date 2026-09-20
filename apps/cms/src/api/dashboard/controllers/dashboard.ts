@@ -4,7 +4,7 @@
 // author). A propósito NO usa requireAdminPermission — la idea es que editores
 // y autores entiendan de dónde y cuándo sale la información, sin poder tocarla.
 import { requireAdmin } from "../../../lib/admin-auth";
-import { DEFAULT_BO_TERMS } from "../../../lib/boletin-oficial";
+import { DEFAULT_BO_TERMS } from "../../../verticals/boletin-oficial";
 
 // Traduce las reglas de cron que realmente usamos (config/cron-tasks.ts) a una
 // frase legible. Sólo cubre esos patrones; cualquier otro se muestra crudo, en

@@ -22,7 +22,7 @@
 // The RSS feeds remain the primary source; this is complementary.
 
 import type { Core } from "@strapi/strapi";
-import type { NewsItem } from "./rss-fetcher";
+import type { NewsItem } from "../lib/rss-fetcher";
 import {
   analisisEsUtil,
   analizarNorma,

@@ -1,35 +1,28 @@
 // Identidad de ESTA instalación del motor.
 //
-// Todo lo que abajo se lee de env es lo que cambia entre un proyecto y otro
+// Todo lo que se lee de env acá es lo que cambia entre un proyecto y otro
 // montado sobre el mismo código: el slug técnico, el nombre visible y la URL
 // pública. Nada de esto puede quedar escrito en el código del motor, porque el
 // mismo árbol corre en varios sitios.
 //
-// ⚠️ `PROJECT_SLUG` no tiene default en producción A PROPÓSITO. Con él se
-// arman las claves del core store (`<slug>:i18n-posts-migrated`), y esa clave
-// es lo único que impide que una migración de arranque vuelva a correr y
-// re-estampe cada post al idioma por defecto. Un default silencioso haría que
-// un proyecto mal configurado escribiera bajo la clave equivocada, encontrara
-// la migración "sin correr" y pisara las traducciones. Mejor no arrancar.
+// ⚠️ Nada de este módulo LANZA al cargarse, y es deliberado: `strapi build`
+// carga config/ (y con ella media aplicación) sin el env de runtime, así que
+// una validación en el cuerpo del módulo rompe el build de la imagen. La
+// exigencia real vive en dos lugares mejores: `:?required` en el compose, que
+// no deja ni levantar el container, y la guardia de src/index.ts justo antes de
+// la migración que sí es peligrosa.
 
-function required(name: string, fallbackEnDev: string): string {
-  const value = process.env[name]?.trim();
-  if (value) return value;
-  if (process.env.NODE_ENV === "production") {
-    throw new Error(
-      `[project] Falta ${name}. Es obligatoria en producción: con ella se arman ` +
-        `las claves del core store, y una equivocada puede disparar migraciones ` +
-        `de arranque que ya corrieron.`,
-    );
-  }
-  return fallbackEnDev;
-}
+/** Valor por defecto para desarrollo; en producción lo impone el compose. */
+const SLUG_POR_DEFECTO = "codelo";
+
+/** true si el slug vino de la configuración y no del default de desarrollo. */
+export const slugExplicito = Boolean(process.env.PROJECT_SLUG?.trim());
 
 /** Slug técnico: containers, claves internas, nombre del cliente ante terceros. */
-export const slug = required("PROJECT_SLUG", "codelo");
+export const slug = process.env.PROJECT_SLUG?.trim() || SLUG_POR_DEFECTO;
 
 /** Nombre visible de la marca. El de la voz editorial vive en prompt-settings. */
-export const name = required("PROJECT_NAME", "Cogollos del Oeste");
+export const name = process.env.PROJECT_NAME?.trim() || "Cogollos del Oeste";
 
 /** Origen público del sitio, para los headers que piden identificarse. */
 export const siteUrl = (
@@ -43,7 +36,7 @@ export const siteUrl = (
  *
  * El prefijo tiene que seguir siendo el mismo que usaba el proyecto antes de
  * parametrizar esto: son filas que YA existen en la base y que marcan
- * migraciones cumplidas.
+ * migraciones cumplidas. Cambiarlo equivale a decir "ninguna migración corrió".
  */
 export function coreStoreKey(key: string): string {
   return `${slug}:${key}`;

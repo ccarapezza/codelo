@@ -1,47 +1,12 @@
-import {
-  Magic,
-  Cog,
-  Cast,
-  Pencil,
-  Images,
-  Feather,
-  Book,
-  Cloud,
-  Plant,
-  Files,
-} from "@strapi/icons";
+import { Magic, Cog, Cast, Pencil, Images, Feather, Files } from "@strapi/icons";
 import type { StrapiApp } from "@strapi/strapi/admin";
 import { ADMIN_PERMISSIONS } from "../lib/admin-permissions";
 import SocialStudioPanel from "./components/SocialStudioPanel";
-import LogoCodelo from "./assets/logo-codelo.png";
+import * as verticals from "./verticals";
 // Oculta "Marketplace" del menú; ver el comentario del propio archivo para
 // por qué no se puede resolver por configuración ni por permisos.
 import "./hide-marketplace.css";
 
-// Acento naranja "Cogollos del Oeste" en vez del violeta de Strapi, para
-// distinguir este panel de otros. La rampa se derivó del naranja del logo
-// (atardecer del isotipo) manteniendo la lógica de Strapi: en claro, primary600
-// es el tono oscuro de los botones (texto blanco, contraste AA ~4.5:1); en
-// oscuro, primary600 es el tono claro que resalta sobre el fondo, y los botones
-// usan buttonPrimary600 (el naranja quemado) para no perder contraste.
-const COLORS_LIGHT = {
-  primary100: "#fdefe0",
-  primary200: "#f8d6af",
-  primary500: "#de7a22",
-  primary600: "#bc5b0d",
-  primary700: "#94480a",
-  buttonPrimary500: "#de7a22",
-  buttonPrimary600: "#bc5b0d",
-};
-const COLORS_DARK = {
-  primary100: "#2a1b0d",
-  primary200: "#6b4a28",
-  primary500: "#bc5b0d",
-  primary600: "#eb9a4e",
-  primary700: "#eb9a4e",
-  buttonPrimary500: "#de7a22",
-  buttonPrimary600: "#bc5b0d",
-};
 
 // Referencia a la app COMPLETA capturada en register(). La necesitamos en
 // bootstrap() para tocar `app.widgets`: la fachada de bootstrap no lo expone,
@@ -49,36 +14,11 @@ const COLORS_DARK = {
 // justo cuando ya están registrados sus widgets y recién ahí se pueden filtrar.
 let appRef: StrapiApp | null = null;
 
-// Los widgets que registra ESTE proyecto. Declarados en un solo lugar porque
-// bootstrap() necesita después sus ids para saber cuáles dejar en la home: la
-// lista es la fuente de verdad, en vez de un prefijo en el id que hay que
-// acordarse de mantener sincronizado en dos lados (ya se desincronizó una vez y
-// la home quedó vacía).
-const WIDGETS_PROPIOS = [
-  {
-    icon: Book,
-    title: { id: "codelo.widget.boletin", defaultMessage: "Boletín Oficial" },
-    id: "codelo-boletin",
-    component: async () => (await import("./components/widgets/BoletinWidget")).default,
-  },
-  {
-    icon: Cloud,
-    title: {
-      id: "codelo.widget.termohigrometro",
-      defaultMessage: "Termohigrómetro (clima de cultivo)",
-    },
-    id: "codelo-termohigrometro",
-    component: async () => (await import("./components/widgets/TermohigrometroWidget")).default,
-  },
-  {
-    icon: Plant,
-    title: { id: "codelo.widget.inase", defaultMessage: "INASE — cultivares y operadores" },
-    id: "codelo-inase",
-    component: async () => (await import("./components/widgets/InaseWidget")).default,
-  },
-];
-
-const IDS_PROPIOS = new Set(WIDGETS_PROPIOS.map(w => w.id));
+// Los widgets que se dejan en la home: los que aporta el vertical. La lista es
+// la fuente de verdad para el filtro del bootstrap, en vez de un prefijo en el
+// id que hay que acordarse de mantener sincronizado en dos lados (ya se
+// desincronizó una vez y la home quedó vacía).
+const IDS_PROPIOS = new Set(verticals.widgets.map(w => w.id));
 
 // Apaga el guided tour de Strapi ("Discover your application" + los tooltips
 // paso a paso). No hay flag de config: `isGuidedTourEnabled` está hardcodeado a
@@ -119,27 +59,9 @@ function disableGuidedTour(): void {
 
 export default {
   config: {
-    // Logo de Cogollos del Oeste en login y en el menú lateral.
-    auth: { logo: LogoCodelo },
-    menu: { logo: LogoCodelo },
-    // Acento naranja de marca (ver COLORS_LIGHT/DARK arriba).
-    theme: {
-      light: { colors: COLORS_LIGHT },
-      dark: { colors: COLORS_DARK },
-    },
-    // Textos de marca en la pantalla de login (sobreescriben las claves i18n
-    // de Strapi). Se ponen en en+es para que aparezcan sea cual sea el idioma
-    // del panel.
-    translations: {
-      en: {
-        "Auth.form.welcome.title": "Bienvenido a Cogollos del Oeste",
-        "Auth.form.welcome.subtitle": "Panel de gestión del portal",
-      },
-      es: {
-        "Auth.form.welcome.title": "Bienvenido a Cogollos del Oeste",
-        "Auth.form.welcome.subtitle": "Panel de gestión del portal",
-      },
-    },
+    // Logo, paleta y textos de marca del login: todo eso es del proyecto, no
+    // del motor, así que viene de la costura.
+    ...verticals.adminConfig,
     // Menos ruido: saca los videos tutoriales del menú de ayuda y el aviso de
     // "nueva versión de Strapi". (El guided tour de la home se apaga aparte, en
     // register() → disableGuidedTour; `tutorials:false` NO lo cubre.)
@@ -184,11 +106,20 @@ export default {
       },
     });
 
+    // Rutas propias del vertical, si las hay. Van acá y no en bootstrap por la
+    // misma razón que las de arriba: `app.router` sólo existe en register.
+    for (const r of verticals.routes) {
+      app.router.addRoute({
+        path: r.path,
+        lazy: async () => ({ Component: (await r.Component()) as never }),
+      });
+    }
+
     // ── Home: tarjetas de sistema/crons ──────────────────────────────────
     // Widgets informativos (sólo lectura) para que TODO usuario del panel
     // —admin, editor o author— entienda de dónde y cuándo sale la información.
     // No llevan `permissions`/`roles`, así que son visibles para todos.
-    app.widgets.register(WIDGETS_PROPIOS);
+    app.widgets.register(verticals.widgets);
   },
 
 
@@ -288,5 +219,9 @@ export default {
       permissions: [],
       Component: () => import("./pages/RssFeedsPage"),
     });
+
+    // Entradas de menú propias del vertical, después de las del motor para que
+    // queden agrupadas al final del panel.
+    for (const link of verticals.menuLinks) app.addMenuLink(link);
   },
 };

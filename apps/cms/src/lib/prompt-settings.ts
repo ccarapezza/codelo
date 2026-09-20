@@ -5,6 +5,7 @@
 // unchanged until an admin saves the Prompts page.
 
 import { DEFAULT_PROMPT_SETTINGS, type PromptSettings } from "./prompt-defaults";
+import { verticalPromptKeys } from "../verticals/prompt-fields";
 
 type StrapiLike = {
   db: {
@@ -28,7 +29,12 @@ export async function getPromptSettings(strapi: StrapiLike): Promise<PromptSetti
     return value && value.length > 0 ? value : DEFAULT_PROMPT_SETTINGS[key];
   };
 
+  // Los campos del vertical se resuelven igual que los del motor: valor
+  // guardado si lo hay, default si no.
+  const delVertical = Object.fromEntries(verticalPromptKeys.map((k) => [k, pick(k)]));
+
   return {
+    ...delVertical,
     brandName: pick("brandName"),
     domainDescription: pick("domainDescription"),
     writingLanguage: pick("writingLanguage"),
@@ -38,6 +44,5 @@ export async function getPromptSettings(strapi: StrapiLike): Promise<PromptSetti
     imageSystemInstructions: pick("imageSystemInstructions"),
     imageThemeGuide: pick("imageThemeGuide"),
     imageAnchorTaxonomy: pick("imageAnchorTaxonomy"),
-    boletinAnalysisInstructions: pick("boletinAnalysisInstructions"),
   };
 }

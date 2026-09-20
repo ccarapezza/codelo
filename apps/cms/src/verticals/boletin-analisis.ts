@@ -15,9 +15,9 @@
 // vuelve, que NO se delega al modelo.
 
 import type { Core } from "@strapi/strapi";
-import { getOpenAIClient } from "./openai";
-import { getOpenAINormaModel, getOpenAITextKey } from "./openai-config";
-import { getPromptSettings } from "./prompt-settings";
+import { getOpenAIClient } from "../lib/openai";
+import { getOpenAINormaModel, getOpenAITextKey } from "../lib/openai-config";
+import { getPromptSettings } from "../lib/prompt-settings";
 
 /** Ficha de una norma, ya validada y lista para persistir. */
 export interface NormaAnalisis {

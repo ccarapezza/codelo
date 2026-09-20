@@ -66,7 +66,22 @@ export default {
     // in Spanish. Fix the default locale to "es" and re-stamp the rows. Guarded
     // by a core-store flag so it never runs twice (real "en" translations exist
     // after the first run, and re-stamping those would corrupt them).
-    try {
+    // Sin PROJECT_SLUG explícito en producción, el prefijo de la clave es un
+    // default del código y puede no ser el que usó esta base. Como la clave es
+    // justamente lo que marca "esto ya corrió", ante la duda NO se corre: es una
+    // migración que re-estampa todos los posts y sólo hacía falta una vez, en
+    // 2026. Saltearla de más no cuesta nada; correrla de más borra las
+    // traducciones. (El `return` sale de este bloque, no del bootstrap: lo de
+    // abajo —los permisos del rol público— tiene que correr igual.)
+    const migrarI18n = async () => {
+      if (process.env.NODE_ENV === "production" && !project.slugExplicito) {
+        strapi.log.error(
+          "[i18n-migration] PROJECT_SLUG no está configurada: no se puede saber si " +
+            "esta migración ya corrió en esta base. Se saltea por seguridad.",
+        );
+        return;
+      }
+
       const coreStore = strapi.store({ type: "core" });
       const migrationKey = project.coreStoreKey("i18n-posts-migrated");
       let migrated = await coreStore.get({ key: migrationKey });
@@ -109,6 +124,10 @@ export default {
           `[i18n-migration] default locale set to "es"; ${updated} post row(s) re-stamped as es.`,
         );
       }
+    };
+
+    try {
+      await migrarI18n();
     } catch (err) {
       // Never block boot on the migration — but make the failure loud so it
       // isn't silently skipped (the flag is only set on success, so it retries

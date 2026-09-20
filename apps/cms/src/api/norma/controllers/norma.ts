@@ -1,6 +1,6 @@
 import { factories } from "@strapi/strapi";
 import { requireAdmin } from "../../../lib/admin-auth";
-import { syncBoletinOficial } from "../../../lib/boletin-oficial";
+import { syncBoletinOficial } from "../../../verticals/boletin-oficial";
 
 /** Same shared-secret check the other internal endpoints use. */
 function verifyInternalKey(ctx: any): boolean {

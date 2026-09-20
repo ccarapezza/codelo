@@ -1,3 +1,4 @@
+import { LOGO_FILE } from "../../verticals/brand";
 import { readFileSync } from "node:fs";
 import { join, extname } from "node:path";
 
@@ -28,6 +29,6 @@ export function dataUriFromBuffer(buf: Buffer, mime = "image/png"): string {
 // Logo de la asociación (PNG con fondo transparente). Cacheado en memoria.
 let _logoMark: string | undefined;
 export function logoMark(): string {
-  if (!_logoMark) _logoMark = dataUriFromFile(assetPath("logo", "cogollosdeloeste.png"));
+  if (!_logoMark) _logoMark = dataUriFromFile(assetPath("logo", LOGO_FILE));
   return _logoMark;
 }
