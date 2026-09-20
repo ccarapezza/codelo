@@ -138,3 +138,14 @@
   color: var(--card-foreground);
   border-top: 1px solid var(--border);
 }
+
+/* Los cuatro roles tipográficos apuntan a la misma familia: la base no opina.
+   Separarlos —una condensada para la marca, una serif para el cuerpo— es de las
+   primeras cosas que le dan carácter a un sitio; se hace acá y en fonts.ts.
+   Va en theme.css y no en globals.css porque globals.css es del motor y tiene
+   que quedar idéntico en todos los proyectos. */
+.nib-fonts {
+  --font-wordmark: var(--font-sans-base);
+  --font-display: var(--font-sans-base);
+  --font-serif: var(--font-sans-base);
+}
