@@ -9,6 +9,16 @@ interface BatchRequestSlot {
   notesCount: number;
 }
 
+// Secreto compartido para el despacho de servicio a servicio (cron externo o
+// CLI post-deploy). Mismo patrón que regenerateCoverInternal: INTERNAL_API_KEY
+// en el header x-internal-key. Sin la variable configurada, nunca autoriza.
+function verifyInternalKey(ctx: any): boolean {
+  const expected = process.env.INTERNAL_API_KEY;
+  if (!expected) return false;
+  const provided = ctx.request.headers["x-internal-key"];
+  return typeof provided === "string" && provided === expected;
+}
+
 async function loadAgentSlots(
   strapi: any,
   slots: BatchRequestSlot[],
@@ -25,6 +35,38 @@ async function loadAgentSlots(
     out.push({ documentId: agent.documentId, name: agent.name, notesCount: s.notesCount });
   }
   return out;
+}
+
+// Planificación + despacho, compartido por el endpoint del panel y el interno.
+// Dispara cada redactor en paralelo (fire-and-forget) y devuelve el plan.
+async function planAndDispatch(strapi: any, agentSlots: AgentSlot[]) {
+  const plan = await planBatch(strapi, agentSlots);
+  strapi.log.info(
+    `[agent] batch plan: pool=${plan.poolSize} dupes_skipped=${plan.skippedDupes} ` +
+      `requested=${plan.requested} assigned=${plan.assigned}`,
+  );
+
+  for (const assignment of plan.assignments) {
+    if (assignment.items.length === 0) {
+      strapi.log.warn(`[agent] batch: "${assignment.agentName}" got 0 items; skipping.`);
+      continue;
+    }
+    const agent = (await strapi.documents("api::agent.agent").findOne({
+      documentId: assignment.agentDocumentId,
+    })) as any;
+    // Fire-and-forget por agente
+    runRedactor(strapi, agent, assignment.items.length, assignment.items)
+      .then(() =>
+        strapi.documents("api::agent.agent").update({
+          documentId: assignment.agentDocumentId,
+          data: { lastRunAt: new Date().toISOString() } as any,
+        }),
+      )
+      .catch((err) =>
+        strapi.log.error(`[agent] batch dispatch failed for ${assignment.agentName}:`, err),
+      );
+  }
+  return plan;
 }
 
 const UID = "api::agent.agent";
@@ -183,40 +225,48 @@ export default factories.createCoreController(UID, ({ strapi }) => ({
       return ctx.badRequest("OpenAI API key not configured (set OPENAI_API_KEY env var).");
     }
 
-    const plan = await planBatch(strapi, agentSlots);
-    strapi.log.info(
-      `[agent] batch plan: pool=${plan.poolSize} dupes_skipped=${plan.skippedDupes} ` +
-        `requested=${plan.requested} assigned=${plan.assigned}`,
-    );
+    ctx.body = { ok: true, plan: await planAndDispatch(strapi, agentSlots) };
+  },
 
-    // Dispatch each redactor in parallel with its assigned items.
-    for (const assignment of plan.assignments) {
-      if (assignment.items.length === 0) {
-        strapi.log.warn(
-          `[agent] batch: "${assignment.agentName}" got 0 items; skipping.`,
-        );
-        continue;
-      }
-      const agent = (await strapi.documents("api::agent.agent").findOne({
-        documentId: assignment.agentDocumentId,
-      })) as any;
-      // Fire-and-forget per agent
-      runRedactor(strapi, agent, assignment.items.length, assignment.items)
-        .then(() =>
-          strapi.documents("api::agent.agent").update({
-            documentId: assignment.agentDocumentId,
-            data: { lastRunAt: new Date().toISOString() } as any,
-          }),
-        )
-        .catch((err) =>
-          strapi.log.error(
-            `[agent] batch dispatch failed for ${assignment.agentName}:`,
-            err,
-          ),
-        );
+  // Misma tanda que runBatch pero para servicio a servicio (cron externo, CLI
+  // post-deploy): autentica con el secreto compartido en vez del JWT del panel,
+  // igual que regenerateCoverInternal. Sin `slots` reparte entre todos los
+  // redactores habilitados, que es lo que hace falta cuando no hay una persona
+  // eligiendo en la pantalla.
+  async runBatchInternal(ctx) {
+    if (!verifyInternalKey(ctx)) return ctx.unauthorized();
+    const { slots, notesCountPerAgent } = (ctx.request.body ?? {}) as {
+      slots?: BatchRequestSlot[];
+      notesCountPerAgent?: number;
+    };
+
+    try {
+      getOpenAITextKey();
+    } catch {
+      return ctx.badRequest("OpenAI API key not configured (set OPENAI_API_KEY env var).");
     }
 
-    ctx.body = { ok: true, plan };
+    let agentSlots: AgentSlot[];
+    try {
+      if (slots && slots.length > 0) {
+        agentSlots = await loadAgentSlots(strapi, slots);
+      } else {
+        const perAgent = Math.max(1, Math.min(5, Number(notesCountPerAgent) || 1));
+        const redactors = (await strapi.documents("api::agent.agent").findMany({
+          filters: { role: "redactor", enabled: true },
+        })) as Array<{ documentId: string; name: string }>;
+        if (!redactors.length) return ctx.badRequest("No enabled redactors found.");
+        agentSlots = redactors.map((r) => ({
+          documentId: r.documentId,
+          name: r.name,
+          notesCount: perAgent,
+        }));
+      }
+    } catch (err) {
+      return ctx.badRequest((err as Error).message);
+    }
+
+    ctx.body = { ok: true, plan: await planAndDispatch(strapi, agentSlots) };
   },
 
   async getImageGenerator(ctx) {

@@ -49,6 +49,12 @@ export default {
       config: ADMIN_ROUTE,
     },
     {
+      method: "POST",
+      path: "/agent/run-batch-internal",
+      handler: "api::agent.agent.runBatchInternal",
+      config: ADMIN_ROUTE,
+    },
+    {
       method: "GET",
       path: "/agent/image-generator",
       handler: "api::agent.agent.getImageGenerator",
