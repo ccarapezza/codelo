@@ -356,5 +356,18 @@
   "pages": {
     "eyebrowAbout": "La asociación",
     "eyebrowContact": "Contacto"
+  },
+  "site": {
+    "title": "Cogollos del Oeste — asociación civil",
+    "description": "Portal de Cogollos del Oeste, asociación civil sin fines de lucro del oeste de CABA: etnobotánica, derechos humanos, reducción de daños, ambiente y actividades."
+  },
+  "header": {
+    "logoAlt": "Cogollos del Oeste — inicio"
+  },
+  "footer": {
+    "copyright": "© {year} Cogollos del Oeste."
+  },
+  "tags": {
+    "seoDescription": "Notas y novedades sobre {name} en el portal de Cogollos del Oeste."
   }
 }

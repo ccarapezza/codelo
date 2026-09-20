@@ -133,7 +133,7 @@ function buildSystemPrompt(ps: PromptSettings): string {
     '  imágenes de consumo>" }.',
     "- Placas intermedias: elegí entre stat (un dato/número fuerte del texto), bullets (2 a 4 puntos),",
     "  quote (una frase textual + autor si aparece).",
-    '- Última placa = "cta": title corto, subtitle, url "cogollosdeloeste.com.ar".',
+    `- Última placa = "cta": title corto, subtitle, url "${BRAND.handle}.com.ar".`,
     "",
     `TEMPLATES VÁLIDOS (no inventes otros): ${TEMPLATE_NAMES.join(", ")}.`,
     "",
@@ -156,7 +156,7 @@ function buildSystemPrompt(ps: PromptSettings): string {
     '  { "template": "cover", "kicker": "...", "title": "...", "hint": "deslizá", "bg": { "ai": "<prompt en inglés>" } },',
     '  { "template": "stat", "kicker": "...", "big": "27%", "label": "..." },',
     '  { "template": "bullets", "kicker": "...", "title": "...", "items": ["...", "..."] },',
-    '  { "template": "cta", "title": "...", "subtitle": "...", "url": "cogollosdeloeste.com.ar" }',
+    `  { "template": "cta", "title": "...", "subtitle": "...", "url": "${BRAND.handle}.com.ar" }`,
     '], "caption": "..." }',
   ].join("\n");
 }

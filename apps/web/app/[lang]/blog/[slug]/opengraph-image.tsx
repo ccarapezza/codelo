@@ -41,12 +41,12 @@ export default async function Image({
 }) {
   const { lang, slug } = await params;
   const post = await getPostBySlug(slug, lang === "en" ? "en" : "es").catch(() => null);
-  const title = post?.title ?? "Cogollos del Oeste";
+  const title = post?.title ?? SITE_NAME;
   const [cover, logo] = await Promise.all([
     remoteDataUri(post?.coverImage?.url),
     logoDataUri(),
   ]);
-  const eyebrow = lang === "en" ? "Nota · Cogollos del Oeste" : "Nota · Cogollos del Oeste";
+  const eyebrow = `Nota · ${SITE_NAME}`;
 
   return new ImageResponse(
     (

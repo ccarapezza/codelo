@@ -52,7 +52,7 @@
     },
     "googleAnalyticsId": {
       "type": "string",
-      "description": "GA4 Measurement ID for gtag.js (e.g. G-XXXXXXXXXX). Public; injected by codelo-web in production when set."
+      "description": "GA4 Measurement ID for gtag.js (e.g. G-XXXXXXXXXX). Public; injected by the web app in production when set."
     },
     "googleSiteVerification": {
       "type": "string",
@@ -60,7 +60,7 @@
     },
     "clarityProjectId": {
       "type": "string",
-      "description": "Microsoft Clarity project ID (clarity.microsoft.com → Settings → Overview). Public; injected by codelo-web in production when set."
+      "description": "Microsoft Clarity project ID (clarity.microsoft.com → Settings → Overview). Public; injected by the web app in production when set."
     },
     "houseAdsEnabled": {
       "type": "boolean",

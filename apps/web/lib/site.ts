@@ -12,6 +12,31 @@ export const SITE_URL = (
 export const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? "Cogollos del Oeste";
 export const SITE_LOGO = `${SITE_URL}/icon.png`;
 
+/** Descripción corta para el manifest de la PWA. */
+export const SITE_DESCRIPTION =
+  "Portal de Cogollos del Oeste: información de cultivo, REPROCANN y actividades.";
+
+/**
+ * Colores del manifest: los de la marca, no los tokens de tema.
+ * "Dos Tintas": papel de fondo, tinta azul-negra de acento.
+ */
+export const MANIFEST_COLORS = { background: "#F6E6CC", theme: "#00001C" };
+
+/**
+ * Paleta e inscripciones de la tarjeta que se ve al compartir el sitio.
+ *
+ * Va acá y no en los tokens de tema porque satori no lee CSS: la imagen se
+ * arma con colores literales, y estos son los de la marca —tinta, sol y papel
+ * del logo—, que además no se invierten con el tema.
+ */
+export const OG_CARD = {
+  ink: "#00001C",
+  sun: "#E4B569",
+  paper: "#F6E6CC",
+  eyebrow: "Asociación civil · Oeste de CABA",
+  tagline: "Etnobotánica, derechos humanos, reducción de daños y ambiente.",
+};
+
 /**
  * Idiomas del sitio.
  *

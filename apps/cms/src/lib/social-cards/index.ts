@@ -1,4 +1,5 @@
-// Motor de generación de placas para redes (Cogollos del Oeste).
+// Motor de generación de placas para redes. La marca (colores, tipografías,
+// logo) viene de src/verticals/brand.ts.
 // Portado de un prototipo externo: satori + resvg para el
 // render, y composer LLM para armar el deck desde un artículo.
 export { BRAND, FIRE, SIZES, type Size } from "./brand";

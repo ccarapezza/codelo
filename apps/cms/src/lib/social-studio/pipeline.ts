@@ -21,6 +21,7 @@ import {
   getOpenRouterImageKey,
 } from "../openai-config";
 import { getPromptSettings } from "../prompt-settings";
+import * as project from "../project";
 import { generateOpenRouterImage } from "../openrouter-image";
 import { logAgentAction } from "../audit";
 import {
@@ -225,7 +226,7 @@ async function generateOverlayFields(
       {
         role: "system",
         content:
-          "Sos el editor de redes de Cogollos del Oeste. Tono rioplatense claro, sin emojis. " +
+          `Sos el editor de redes de ${project.name}. Tono rioplatense claro, sin emojis. ` +
           "Usá SOLO información del material; no inventes datos. " + ask,
       },
       { role: "user", content: `Título: ${material.title}\nResumen: ${material.excerpt}\n\n${material.content.slice(0, 3000)}` },

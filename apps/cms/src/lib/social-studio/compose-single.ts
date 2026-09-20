@@ -2,6 +2,7 @@
 // ONE slide (template chosen by the user) + optional caption, grounded in the
 // article (or in the user's custom brief). Reuses the carousel composer's
 // sanitization so field caps stay consistent.
+import * as project from "../project";
 import type OpenAI from "openai";
 import { sanitizeSlide, htmlToPlainText } from "../social-cards/composer";
 import type { Slide } from "../social-cards/templates";
@@ -30,7 +31,7 @@ const FIELDS_BY_TEMPLATE: Record<ComposeSingleInput["template"], string> = {
 
 function buildSystemPrompt(input: ComposeSingleInput): string {
   return [
-    "Sos el editor de redes sociales de Cogollos del Oeste, asociación civil sin fines",
+    `Sos el editor de redes sociales de ${project.name}, con la voz editorial del sitio.`,
     "de lucro. Generás UNA placa vertical de Instagram (historia, 1080x1920) a partir del",
     "material que te dan. Tono rioplatense, claro, cercano, sin solemnidad ni apología.",
     "Nunca fomentes el consumo, no des dosis ni consejo médico, no publicites marcas.",

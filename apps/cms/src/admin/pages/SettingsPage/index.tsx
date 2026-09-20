@@ -255,7 +255,7 @@ function SettingsPage() {
           icon={<Key />}
           title="Google AdSense"
           accent="warning"
-          description="IDs de publisher y slots para los banners del sitio. Se leen en tiempo real por codelo-web."
+          description="IDs de publisher y slots para los banners del sitio. Los lee el sitio en tiempo real."
         >
           <Flex direction="column" alignItems="stretch" gap={4}>
             <Field.Root hint="Publisher ID de tu cuenta de AdSense. Formato: ca-pub-XXXXXXXXXXXXXXXX">
@@ -362,7 +362,7 @@ function SettingsPage() {
           icon={<ChartPie />}
           title="Google Analytics & Search Console"
           accent="success"
-          description="GA4 + verificación de Search Console. Los lee codelo-web; el tag de GA solo se inyecta en producción."
+          description="GA4 + verificación de Search Console. Los lee el sitio; el tag de GA solo se inyecta en producción."
         >
           <Flex direction="column" alignItems="stretch" gap={4}>
             <Field.Root hint="Measurement ID de tu propiedad GA4. Formato: G-XXXXXXXXXX (Admin → Flujos de datos → tu sitio).">
@@ -395,7 +395,7 @@ function SettingsPage() {
           icon={<Eye />}
           title="Microsoft Clarity"
           accent="primary"
-          description="Heatmaps y grabaciones de sesión. Lo lee codelo-web; el script solo se inyecta en producción."
+          description="Heatmaps y grabaciones de sesión. Lo lee el sitio; el script solo se inyecta en producción."
         >
           <Field.Root hint="Project ID de Clarity (clarity.microsoft.com → Settings → Overview). Ej: wzkcreip2d">
             <Field.Label>Project ID</Field.Label>

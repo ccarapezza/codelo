@@ -1,8 +1,4 @@
 {
-  "site": {
-    "title": "Cogollos del Oeste — asociación civil",
-    "description": "Portal de Cogollos del Oeste, asociación civil sin fines de lucro del oeste de CABA: etnobotánica, derechos humanos, reducción de daños, ambiente y actividades."
-  },
   "common": {
     "loading": "Cargando…",
     "viewAll": "Ver todo",
@@ -14,7 +10,6 @@
     "contact": "Contacto"
   },
   "header": {
-    "logoAlt": "Cogollos del Oeste — inicio",
     "mobileMenu": "Abrir menú",
     "drawerTitle": "Menú",
     "themeLabel": "Tema"
@@ -25,8 +20,8 @@
     "sectionEditorial": "Editorial",
     "tagline": "Asociación civil sin fines de lucro del oeste de la Ciudad de Buenos Aires: investigación y cultivo en el marco de la Ley 27.350, etnobotánica, derechos humanos, reducción de daños y ambiente.",
     "ariaNav": "Mapa del sitio",
-    "copyright": "© {year} Cogollos del Oeste.",
-    "disclaimer": "Información de divulgación · +18"
+    "disclaimer": "Información de divulgación · +18",
+    "copyright": "© {year}"
   },
   "home": {
     "latestNews": "Últimas noticias",
@@ -73,6 +68,6 @@
     "eyebrow": "Área",
     "count": "{count, plural, one {# nota} other {# notas}}",
     "backToBlog": "Ver todas las noticias",
-    "seoDescription": "Notas y novedades sobre {name} en el portal de Cogollos del Oeste."
+    "seoDescription": "Notas y novedades sobre {name}."
   }
 }

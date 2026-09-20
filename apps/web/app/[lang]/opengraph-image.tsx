@@ -1,10 +1,11 @@
 import { ImageResponse } from "next/og";
+import { OG_CARD } from "@/lib/site";
 import { logoDataUri } from "@/lib/og-assets";
 import { SITE_NAME } from "@/lib/seo";
 
 // Card OG por defecto: aplica a toda página que no declare la suya (las notas
 // del blog tienen su propia card en blog/[slug]/opengraph-image.tsx). Es color
-// plano en la paleta Dos Tintas, así que el PNG queda muy por debajo del techo
+// plano en la paleta de la marca, así que el PNG queda muy por debajo del techo
 // de ~300 KB de WhatsApp incluso a resolución estándar.
 export const alt = SITE_NAME;
 export const size = { width: 1200, height: 630 };
@@ -13,9 +14,9 @@ export const revalidate = 3600;
 
 // Paleta muestreada del logo (ver MASTER.md): tinta azul-negra, sol ámbar,
 // papel. Constantes de marca — no siguen al tema.
-const INK = "#00001C";
-const SUN = "#E4B569";
-const PAPER = "#F6E6CC";
+// La paleta y las inscripciones son identidad del sitio (lib/site.ts): satori
+// no lee CSS, así que la tarjeta se arma con colores literales.
+const { ink: INK, sun: SUN, paper: PAPER } = OG_CARD;
 
 export default async function Image() {
   const logo = await logoDataUri();
@@ -58,7 +59,7 @@ export default async function Image() {
               marginBottom: 16,
             }}
           >
-            Asociación civil · Oeste de CABA
+            {OG_CARD.eyebrow}
           </div>
           <div
             style={{
@@ -83,7 +84,7 @@ export default async function Image() {
               opacity: 0.75,
             }}
           >
-            Etnobotánica, derechos humanos, reducción de daños y ambiente.
+            {OG_CARD.tagline}
           </div>
         </div>
         <div style={{ display: "flex", width: "100%", height: 8, backgroundColor: SUN, marginTop: 48 }} />

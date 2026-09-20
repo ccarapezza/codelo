@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { SITE_NAME, FOOTER_SECTIONS } from "@/lib/site";
+import { SITE_NAME, SITE_URL, FOOTER_SECTIONS } from "@/lib/site";
 import { FooterArt } from "@/components/vertical";
 
 export async function SiteFooter() {
@@ -56,7 +56,7 @@ export async function SiteFooter() {
               <p className="mt-4 max-w-sm font-serif text-sm leading-relaxed opacity-75">
                 {t("tagline")}
               </p>
-              <p className="label mt-5 text-sun">cogollosdeloeste.com.ar</p>
+              <p className="label mt-5 text-sun">{SITE_URL.replace(/^https?:\/\//, "")}</p>
             </div>
           </div>
 

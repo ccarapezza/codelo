@@ -9,10 +9,9 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Constantes de marca. A diferencia de los tokens de tema, estas NO se
-   invierten: son las dos tintas físicas del logo. Las usan el duotono y la
-   banda del pie, que son tratamientos de impresión y no superficies de UI. */
-
+/* Puente de tokens: los nombres que usan los componentes del motor
+   —background, foreground, primary…— apuntan a variables que define el
+   proyecto en theme.css. Esto es del MOTOR; los valores, del proyecto. */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -69,12 +68,6 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 }
-
-/* ── Dirección "Dos Tintas" ──────────────────────────────────────────────
-   Tomada del logo: NO es negro neutro sobre crema. La tinta es #00001C, un
-   negro azulado (0,0,28) muestreado del propio logo, y la luz es el ámbar
-   #E4B569 del sol. Dos tintas sobre papel cálido, como una serigrafía.
-   Muestreo: 34.6% tinta · 34.2% ámbar · 22% ocre.                          */
 
 @layer base {
   * {
