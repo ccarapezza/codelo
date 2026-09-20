@@ -1,4 +1,5 @@
 import type { Core } from "@strapi/strapi";
+import * as rssScope from "../verticals/rss-scope";
 
 export type NewsItem = {
   title: string;
@@ -340,6 +341,37 @@ export async function fetchAndSaveNews(
   }
 
   strapi.log.info("[rss-fetcher] RSS fetch cycle complete.");
+}
+
+// ---------------------------------------------------------------------------
+// Relevancia editorial
+//
+// Mecanismo genérico; las palabras del vertical viven en verticals/rss-scope.ts.
+// Sirve para los caminos que NO filtran por tema en la consulta —el pool de
+// `planBatch()` se arma con topic vacío—, donde los feeds generalistas dominan
+// por volumen y el redactor termina escribiendo del tema equivocado con toda
+// diligencia.
+//
+// Con las listas vacías deja pasar todo, así que activarlo no cambia nada hasta
+// que el vertical las complete.
+
+// Coincidencia de palabra (o frase) completa, con soporte de acentos. Evita que
+// "river" matchee dentro de "riverside" sin perder los nombres con tilde.
+function matchesWholeWord(haystack: string, kw: string): boolean {
+  const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, "u").test(haystack);
+}
+
+export function isEditoriallyRelevant(item: { title: string; summary?: string | null }): boolean {
+  // Sin alcance declarado no hay nada que filtrar: pasa todo.
+  if (rssScope.scope.length === 0 && rssScope.ambiguous.length === 0) return true;
+
+  const haystack = `${item.title} ${item.summary ?? ""}`.toLowerCase();
+  if (rssScope.denylist.some((kw) => haystack.includes(kw))) return false;
+  if (rssScope.scope.some((kw) => matchesWholeWord(haystack, kw))) return true;
+  // Un término ambiguo sólo cuenta si hay una pista de contexto que lo confirme.
+  if (!rssScope.contextCues.some((cue) => haystack.includes(cue))) return false;
+  return rssScope.ambiguous.some((kw) => matchesWholeWord(haystack, kw));
 }
 
 /**

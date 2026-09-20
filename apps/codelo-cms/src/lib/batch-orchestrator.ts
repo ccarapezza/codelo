@@ -1,5 +1,5 @@
 import type { Core } from "@strapi/strapi";
-import { getRecentNewsForTopic, type NewsItem } from "./rss-fetcher";
+import { getRecentNewsForTopic, isEditoriallyRelevant, type NewsItem } from "./rss-fetcher";
 
 // ---------------------------------------------------------------------------
 // Deterministic assignment of news items to redactors.
@@ -82,7 +82,19 @@ export async function planBatch(
   // Batch mode deliberately ignores per-agent topics: it distributes whatever
   // is fresh round-robin. For beat-based coverage use per-agent schedules,
   // which DO filter by `agent.topic`.
-  const pool = await getRecentNewsForTopic(strapi, "", 200);
+  //
+  // Por eso el único filtro de tema acá es el alcance editorial del vertical
+  // (verticals/rss-scope.ts). Sin él, los feeds generalistas dominan el pool
+  // por volumen y cada redactor escribe con diligencia sobre lo que le tocó,
+  // que puede no tener nada que ver con el sitio. Con el alcance vacío esto no
+  // filtra nada y el comportamiento es el de siempre.
+  const raw = await getRecentNewsForTopic(strapi, "", 200);
+  const pool = raw.filter(isEditoriallyRelevant);
+  if (pool.length < raw.length) {
+    strapi.log.info(
+      `[batch] alcance editorial: ${pool.length}/${raw.length} ítems del pool son del tema.`,
+    );
+  }
 
   // Sort by recency (most recent first) so dedup keeps the freshest version
   // when multiple sources cover the same event.
