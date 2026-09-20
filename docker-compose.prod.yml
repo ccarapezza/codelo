@@ -62,7 +62,7 @@ services:
   cms:
     build:
       context: .
-      dockerfile: apps/codelo-cms/Dockerfile
+      dockerfile: apps/cms/Dockerfile
     container_name: codelo-cms
     <<: *restart_policy
     # The VPS (8GB) also hosts fulbo and x100 — keep limits modest.
@@ -105,7 +105,7 @@ services:
       STRAPI_TELEMETRY_DISABLED: "true"
       NODE_ENV: production
     volumes:
-      - cms-uploads:/repo/apps/codelo-cms/public/uploads
+      - cms-uploads:/repo/apps/cms/public/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -115,7 +115,7 @@ services:
   web:
     build:
       context: .
-      dockerfile: apps/codelo-web/Dockerfile
+      dockerfile: apps/web/Dockerfile
       args:
         # frame-ancestors (CSP) se hornea en build: pasamos el origen del CMS
         # para permitir el iframe de "Vista previa" del panel en prod.

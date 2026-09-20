@@ -9,8 +9,8 @@ externas de datos: **todo el contenido vive en el CMS**.
 
 | App | Descripción |
 | --- | --- |
-| `apps/codelo-web` | Frontend Next.js (App Router, ES-only, shadcn) — blog + secciones administrables |
-| `apps/codelo-cms` | Strapi 5: posts, páginas estáticas, eventos, motor de agentes IA y settings |
+| `apps/web` | Frontend Next.js (App Router, ES-only, shadcn) — blog + secciones administrables |
+| `apps/cms` | Strapi 5: posts, páginas estáticas, eventos, motor de agentes IA y settings |
 
 ## Desarrollo
 
@@ -18,8 +18,8 @@ externas de datos: **todo el contenido vive en el CMS**.
 cp .env.example .env
 docker compose -f docker-compose.dev.yml up -d   # postgres :5435, redis :6381
 pnpm install
-cp apps/codelo-cms/.env.example apps/codelo-cms/.env   # generar secrets reales
-cp apps/codelo-web/.env.example apps/codelo-web/.env
+cp apps/cms/.env.example apps/cms/.env   # generar secrets reales
+cp apps/web/.env.example apps/web/.env
 
 pnpm dev:cms   # Strapi en :1339 (primer boot compila el admin)
 pnpm dev:web   # Next.js en :3200

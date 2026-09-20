@@ -41,10 +41,10 @@ secret-envs/
 *.bak
 
 # Strapi
-apps/codelo-cms/.strapi
-apps/codelo-cms/build/
-apps/codelo-cms/.tmp/
-apps/codelo-cms/types/generated/
+apps/cms/.strapi
+apps/cms/build/
+apps/cms/.tmp/
+apps/cms/types/generated/
 
 # TypeScript incremental build info
 *.tsbuildinfo

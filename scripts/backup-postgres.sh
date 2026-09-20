@@ -22,7 +22,7 @@ UPLOADS_RETENTION_DAYS="${UPLOADS_RETENTION_DAYS:-7}"
 RCLONE_REMOTE="${RCLONE_REMOTE:-}"   # e.g. "b2:codelo-backups" — leave empty to skip
 PG_CONTAINER="${PG_CONTAINER:-codelo-postgres}"
 CMS_CONTAINER="${CMS_CONTAINER:-codelo-cms}"
-UPLOADS_PATH="${UPLOADS_PATH:-/repo/apps/codelo-cms/public/uploads}"
+UPLOADS_PATH="${UPLOADS_PATH:-/repo/apps/cms/public/uploads}"
 DB_NAME="${DB_NAME:-codelo}"
 DB_USER="${DB_USER:-codelo}"
 

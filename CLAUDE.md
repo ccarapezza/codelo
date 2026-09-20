@@ -9,8 +9,8 @@ Strapi y la web lo consume por REST.
 
 | Pieza | Qué es | Puerto dev |
 | --- | --- | --- |
-| `apps/codelo-cms` | Strapi 5: posts + pages + events + tags + motor de agentes IA + settings | 1339 |
-| `apps/codelo-web` | Next.js 16 (App Router, next-intl **ES-only**, shadcn sin estilo) | 3200 |
+| `apps/cms` | Strapi 5: posts + pages + events + tags + motor de agentes IA + settings | 1339 |
+| `apps/web` | Next.js 16 (App Router, next-intl **ES-only**, shadcn sin estilo) | 3200 |
 | Postgres / Redis | `docker-compose.dev.yml` | 5435 / 6381 |
 
 **Los puertos dev están corridos a propósito** para convivir con fulbo
@@ -26,8 +26,8 @@ pnpm install
 docker compose -f docker-compose.dev.yml up -d     # postgres :5435, redis :6381
 
 cp .env.example .env                                # raíz (OpenAI keys, CORS…)
-cp apps/codelo-cms/.env.example apps/codelo-cms/.env   # generar secrets: openssl rand -base64 32
-cp apps/codelo-web/.env.example apps/codelo-web/.env   # NEXT_PUBLIC_CMS_URL=http://localhost:1339
+cp apps/cms/.env.example apps/cms/.env   # generar secrets: openssl rand -base64 32
+cp apps/web/.env.example apps/web/.env   # NEXT_PUBLIC_CMS_URL=http://localhost:1339
 
 pnpm dev:cms    # Strapi en http://localhost:1339 (primer boot compila el admin, ~1 min)
 pnpm dev:web    # Next en http://localhost:3200
@@ -55,7 +55,7 @@ pnpm dev:web    # Next en http://localhost:3200
 - `event` — agenda del sector (title, slug, startsAt, endsAt?, place?,
   **organizer?**, **sourceUrl?**, description markdown, coverImage). Son eventos
   de TERCEROS: ver "Agenda" más abajo. `/actividades` y la home los leen vía
-  `apps/codelo-web/lib/content.ts`.
+  `apps/web/lib/content.ts`.
 - `tag.kind` ∈ `topic | event` (el type espejo está en `lib/cms.ts`).
 - `agent` tiene `requireNewsContext`: si está activo y no hay noticias que
   matcheen su topic, el redactor NO escribe (evita el "modo análisis", que
@@ -142,7 +142,7 @@ afirma.
   un vendedor con nombre propio es irregular, a partir del OCR de una foto, es
   difamatorio si está mal.
 - **Las categorías se traducen SÓLO con la leyenda oficial.** Está en
-  `apps/codelo-web/lib/categorias-rncyfs.ts`, tomada del PDF de INASE
+  `apps/web/lib/categorias-rncyfs.ts`, tomada del PDF de INASE
   (`docs/inase/`, con copia versionada porque la URL lleva `v09-24` y rota) y
   respaldada por la **Res. INASE 474/2024, Anexo I**. Un código desconocido se
   renderiza crudo, nunca con el significado de un vecino. Y la UI aclara que
@@ -165,7 +165,7 @@ la peor respuesta posible acá porque es sobre la que alguien podría actuar.
 Tests: `src/lib/inase/*.test.ts`. Los de red están en `live.test.ts` y sólo
 corren con `INASE_LIVE=1` — ahí viven las aserciones que distinguen "INASE
 cambió algo" de "lo rompimos nosotros". Ojo: crear archivos dentro de
-`apps/codelo-cms/src/` reinicia el dev server y corta un sync en curso.
+`apps/cms/src/` reinicia el dev server y corta un sync en curso.
 
 ## Vigilancia normativa — Boletín Oficial
 
@@ -268,7 +268,7 @@ silencio y la paleta por artículo nunca llegaba al prompt. Falla sin error.
 
 ## Diseño de la web — dirección "Dos Tintas"
 
-La paleta se **muestreó del logo real** (`apps/codelo-web/public/icons/logo.png`),
+La paleta se **muestreó del logo real** (`apps/web/public/icons/logo.png`),
 no se eligió de un catálogo: tinta azul-negra `#00001C` (el "negro" del logo NO
 es neutro), sol ámbar `#E4B569`, papel `#F6E6CC`. Tipografía en cuatro roles:
 Big Shoulders **solo** para el nombre de la asociación, Zilla Slab en titulares,
@@ -280,7 +280,7 @@ invierten con el tema**. Con los tokens normales, en modo oscuro la imagen
 quedaba en `screen` sobre fondo claro y el velo ámbar la tapaba.
 
 Spec completa, incluidas las razones de cada decisión y los anti-patrones:
-`apps/codelo-web/design-system/codelo-—-cogollos-del-oeste/MASTER.md`.
+`apps/web/design-system/codelo-—-cogollos-del-oeste/MASTER.md`.
 
 ## Agenda: eventos de terceros
 
@@ -293,7 +293,7 @@ atribuiría eventos ajenos. La copy evita cualquier "nuestras actividades".
 
 ```bash
 pnpm typecheck                          # ambas apps
-pnpm --filter codelo-web build          # build de producción
+pnpm --filter @nib/web build          # build de producción
 curl localhost:3200/api/health          # {"status":"ok","cms":"ok"}
 curl localhost:1339/_health             # 204
 curl "localhost:1339/api/posts?locale=es"
@@ -302,9 +302,9 @@ curl "localhost:1339/api/pages" ; curl "localhost:1339/api/events"
 
 Gotchas:
 - Si el blog o las páginas aparecen vacíos sin error: falta
-  `NEXT_PUBLIC_CMS_URL` en `apps/codelo-web/.env` (los fetchers fail-soft
+  `NEXT_PUBLIC_CMS_URL` en `apps/web/.env` (los fetchers fail-soft
   devuelven vacío/null en silencio).
-- Tras tocar content-types del CMS: `cd apps/codelo-cms && pnpm exec strapi
+- Tras tocar content-types del CMS: `cd apps/cms && pnpm exec strapi
   ts:generate-types` (los generados están gitignoreados). El Dockerfile del CMS
   lo corre solo antes de `strapi build`: un build limpio parte de un checkout
   sin `types/generated/`, y sin eso el typecheck falla en cada `.update()`
@@ -318,7 +318,7 @@ Gotchas:
 
 ## Convenciones y decisiones
 
-- **Branding**: `SITE_NAME`/`SITE_URL` viven SOLO en `apps/codelo-web/lib/site.ts`
+- **Branding**: `SITE_NAME`/`SITE_URL` viven SOLO en `apps/web/lib/site.ts`
   (+ env `NEXT_PUBLIC_SITE_URL`). Dominio real: `cogollosdeloeste.com.ar`
   (fijado por el Estatuto, Art. 2°, inciso d del listado de medios); el CMS va
   en `cms.cogollosdeloeste.com.ar`.
