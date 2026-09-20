@@ -83,7 +83,7 @@ export async function generatePost(
 // in the editable imageSystemInstructions field) guarantees the no-faces /
 // no-logos likeness rule can never be removed by an admin edit.
 const SAFETY_SUFFIX =
-  "Hard constraint: NO recognizable real faces (silhouettes/backs/hands OK). End with: No text, no watermarks, no logos.";
+  "Hard constraint: NO recognizable real faces — hide identity from behind, at distance, backlit or cropped by the frame, NEVER by removing a head or showing detached limbs. End with: No text, no watermarks, no logos.";
 
 // The domain-specific image system instructions and the THEME → SCENE CUES guide
 // now live in the editable `prompt-setting` single type (defaults in
@@ -94,14 +94,16 @@ const SAFETY_SUFFIX =
 // from a per-article seed so the same post regenerated twice yields identical
 // constraints, but different posts (different seeds) yield different combos.
 
+// OJO: acá no puede entrar ninguna composición partida. El pool se elige por
+// seed, así que una entrada tipo "split two-panel" le tocaba a 1 de cada 8 notas
+// y peleaba de frente con la HARD RULE de imagen única y con SINGLE_FRAME_SUFFIX
+// (openrouter-image.ts): el modelo obedecía a la composición y devolvía diptychs
+// con costura al medio. Toda composición nueva tiene que ser de un solo cuadro.
 const COMPOSITIONS = [
   "macro close-up with shallow depth of field",
   "aerial top-down flat lay",
   "wide environmental shot with leading lines",
   "through-window or doorway framed composition",
-  // NOT a split/two-panel composition: that contradicts the anti-diptych hard
-  // rule in imageSystemInstructions, and the model obeyed the composition over
-  // the rule every time the seed landed here.
   "centred symmetric composition with a single subject",
   "diagonal low-angle perspective",
   "backlit silhouette against a bright ground",
@@ -174,6 +176,23 @@ function pickFromPool<T>(pool: ReadonlyArray<T>, seed: number, offset = 0): T {
   return pool[(seed + offset) % pool.length];
 }
 
+// Finalizador de murmur3. Hace falta porque los bits BAJOS de hashSeed son
+// débiles: djb2 multiplica por 33 (≡ 1 mod 4), así que módulo 4 el hash se reduce
+// a un XOR de los bits bajos de cada carácter. Y como las variantes de escena son
+// 4 y las composiciones 8, tomar el mismo seed para las dos ataba una a la otra
+// (4 divide a 8): misma composición ⇒ misma escena, siempre. Un `imul` no alcanza
+// para romperlo —solo propaga hacia arriba—; los `>>>` de acá bajan los bits
+// altos, que es lo que hace que el módulo chico dependa del hash entero.
+function avalancha(x: number): number {
+  let h = x >>> 0;
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x85ebca6b);
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
+  return h >>> 0;
+}
+
 // Article-derived constraints we feed the prompt generator. Anchors come from
 // extractArticleAnchors(); composition/mood/style come from the seed rotation.
 export interface PromptConstraints {
@@ -181,6 +200,8 @@ export interface PromptConstraints {
   /** Lighting (photo) or ink/palette (art) — whichever the treatment implies. */
   mood: string;
   treatment: Treatment;
+  /** El hash del artículo, para sortear también la variante de escena. */
+  seed: number;
   anchors: ArticleAnchors;
 }
 
@@ -198,8 +219,48 @@ export function resolvePromptConstraints(
     // Offsets are coprime with each pool size to de-correlate the picks.
     mood: pickFromPool(moodPool, seed, 7).value,
     treatment,
+    seed,
     anchors,
   };
+}
+
+// El catálogo de escenas trae cuatro variantes por categoría —(a) a (d)— y hasta
+// ahora elegía el modelo de texto. Los LLM se quedan con la primera de una lista:
+// medido en fulbo sobre 478 prompts de producción, la variante (a) de una misma
+// categoría salió 122 veces contra 12 de las otras tres juntas. De ahí que todas
+// las tapas de una categoría terminen siendo la misma escena. Así que la variante
+// se sortea con el mismo seed que composición/humor/tratamiento y al modelo le
+// llega UNA sola por categoría: elige la categoría, que es lo que sí depende del
+// artículo, y la escena ya viene resuelta.
+//
+// Si el catálogo editado por un admin no tiene el formato "  (x) ...", no hay
+// nada que sortear y devuelve el texto igual.
+export function fixThemeVariants(themeGuide: string, seed: number): string {
+  const out: string[] = [];
+  let variantes: string[] = [];
+  let categoria = 0;
+
+  const revuelto = avalancha(seed);
+
+  const cerrar = () => {
+    if (variantes.length === 0) return;
+    // Offset por categoría para que dos categorías del mismo artículo no caigan
+    // siempre en la misma letra; el 3 es coprimo con las 4 variantes.
+    const elegida = variantes[(revuelto + categoria * 3) % variantes.length];
+    out.push(elegida.replace(/^(\s*)\([a-z]\)\s*/, "$1"));
+    categoria++;
+    variantes = [];
+  };
+
+  for (const linea of themeGuide.split("\n")) {
+    if (/^\s*\([a-z]\)\s/.test(linea)) variantes.push(linea);
+    else {
+      cerrar();
+      out.push(linea);
+    }
+  }
+  cerrar();
+  return out.join("\n");
 }
 
 // ─── Article anchors (Fase D) ────────────────────────────────────────────
@@ -381,12 +442,14 @@ function buildUserPrompt(
   sections.push(
     `STEPS:`,
     `1. Identify the core theme of THIS specific article.`,
-    `2. Choose ONE category from THEME → SCENE CUES, then ONE variant (a/b/c/d) — this is the SUBJECT only.`,
+    `2. Choose the ONE category from THEME → SCENE CUES that matches it. Each category already`,
+    `   carries its scene cue for this cover — use that cue as given, this is the SUBJECT only.`,
     `3. Render that subject in the medium and treatment specified above.`,
     `4. Bake in the composition and ink/lighting constraints, plus any anchors.`,
     `5. Output a single dense paragraph, 2-3 sentences max.`,
     ``,
-    themeGuide,
+    // Una sola variante por categoría, sorteada con el seed del artículo.
+    constraints ? fixThemeVariants(themeGuide, constraints.seed) : themeGuide,
   );
 
   if (constraints) {
