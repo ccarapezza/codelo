@@ -2,7 +2,7 @@
   "name": "@nib/cms",
   "version": "0.1.0",
   "private": true,
-  "description": "x100 CMS — Strapi application",
+  "description": "Nib CMS — Strapi application",
   "scripts": {
     "build": "strapi build",
     "console": "strapi console",
