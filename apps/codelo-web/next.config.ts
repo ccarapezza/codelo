@@ -51,9 +51,18 @@ const previewFrameAncestor = resolvePreviewFrameAncestor();
 //   - adservice.google.com       → ad serving
 //   - fundingchoicesmessages.…   → the Funding Choices consent CMP (script + dialog iframe)
 //   - tpc / *.safeframe.…        → the creative iframes (frame-src)
+//   - *.adtrafficquality.google  → sodar2.js, la verificación de calidad de
+//                                   tráfico que AdSense carga SIEMPRE (ep1/ep2)
 // Missing any of these makes the ad slot fail to fill or render a blocked
-// (broken) iframe — which is what was breaking the Hero's mobile banner.
-// www.clarity.ms is the Microsoft Clarity tag loader.
+// (broken) iframe.
+//
+// OJO con los comodines: acá lo que importa no es el host que uno escribe en el
+// tag sino el que termina pidiendo el navegador, y varios de estos cargan un
+// SEGUNDO script desde otro subdominio. Clarity es el caso claro: el snippet
+// pide www.clarity.ms/tag/<id> y ESE baja scripts.clarity.ms/<ver>/clarity.js,
+// que con `www.clarity.ms` a secas quedaba bloqueado — la analítica no midió
+// nada. Mismo mecanismo con AdSense → ep2.adtrafficquality.google. Por eso van
+// por comodín de dominio y no por host exacto.
 const cspDirectives = [
   "default-src 'self'",
   "base-uri 'self'",
@@ -65,9 +74,9 @@ const cspDirectives = [
   "img-src 'self' data: blob: https:",
   "font-src 'self' data: https://fonts.gstatic.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.googlesyndication.com https://adservice.google.com https://www.googletagservices.com https://www.googletagmanager.com https://fundingchoicesmessages.google.com https://www.clarity.ms",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.googlesyndication.com https://adservice.google.com https://www.googletagservices.com https://www.googletagmanager.com https://fundingchoicesmessages.google.com https://*.adtrafficquality.google https://*.clarity.ms",
   "connect-src 'self' https: wss:",
-  "frame-src 'self' https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://*.safeframe.googlesyndication.com https://www.google.com https://fundingchoicesmessages.google.com",
+  "frame-src 'self' https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://*.safeframe.googlesyndication.com https://www.google.com https://fundingchoicesmessages.google.com https://*.adtrafficquality.google",
   "upgrade-insecure-requests",
 ].join("; ");
 
