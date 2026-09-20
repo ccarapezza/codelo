@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { routing } from "@/i18n/routing";
 import { getAllPostSlugs, getLatestPosts, type CmsLocale } from "@/lib/cms";
-import { getCultivares } from "@/lib/semillas";
+import { VERTICAL_STATIC_PATHS, extraSitemapPaths } from "@/lib/vertical/sitemap";
 import { SITE_URL, isLocaleIndexable } from "@/lib/seo";
 
 // Locales eligible for the index — the sitemap must not advertise the rest
@@ -13,21 +13,9 @@ const INDEXABLE_LOCALES = routing.locales.filter(isLocaleIndexable);
 // build-time render would bake an empty list. At runtime both are up.
 export const dynamic = "force-dynamic";
 
-// Indexable static routes (without locale prefix).
-const STATIC_PATHS = [
-  "",
-  "/quienes-somos",
-  "/reprocann",
-  "/normativa",
-  "/actividades",
-  "/contacto",
-  "/blog",
-  "/clima",
-  "/semillas",
-  "/semillas/operadores",
-  "/semillas/rotulo",
-  "/semillas/leer",
-];
+// Rutas estáticas indexables (sin el prefijo de idioma). Las del motor, más
+// las que declare el proyecto (lib/vertical/sitemap.ts).
+const STATIC_PATHS = ["", "/blog", ...VERTICAL_STATIC_PATHS];
 
 function languageAlternates(path: string): Record<string, string> {
   const languages: Record<string, string> = {};
@@ -107,18 +95,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Same fail-soft as posts.
   }
 
-  // Cultivar detail pages (/semillas/<registro>) — the INASE mirror. Each one
-  // is a stable public-record page worth indexing (people search by variety
-  // name); the mirror refreshes weekly, hence the low churn.
+  // Páginas dinámicas propias del proyecto, si las hay: fichas de un espejo,
+  // catálogos, lo que sea. El motor no sabe qué son, sólo las agrega.
   try {
-    const cultivares = await getCultivares();
-    for (const c of cultivares) {
-      entries.push(
-        ...entriesForPath(`/semillas/${c.numeroRegistro}`, now, "monthly", 0.4),
-      );
+    for (const path of await extraSitemapPaths()) {
+      entries.push(...entriesForPath(path, now, "monthly", 0.4));
     }
   } catch {
-    // CMS down — skip the mirror pages.
+    // Mismo criterio que arriba: si la fuente no responde, se omiten.
   }
 
   return entries;

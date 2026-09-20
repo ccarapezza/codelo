@@ -18,5 +18,5 @@ async function fileDataUri(absPath: string, mime = "image/png"): Promise<string 
 // asset ever goes missing this returns null — callers must render a text
 // wordmark fallback.
 export function logoDataUri(): Promise<string | null> {
-  return fileDataUri(pub("icons", "logo.png"));
+  return fileDataUri(pub("brand", "logo.png"));
 }

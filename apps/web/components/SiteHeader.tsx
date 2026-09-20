@@ -1,23 +1,15 @@
 import { getTranslations } from "next-intl/server";
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
-import { SITE_NAME } from "@/lib/site";
+import { SITE_NAME, NAV_ITEMS } from "@/lib/site";
 import { MobileNav, type NavItem } from "./MobileNav";
 import { ThemeToggle } from "./ThemeToggle";
 
 export async function SiteHeader() {
   const [tNav, tHeader] = await Promise.all([getTranslations("nav"), getTranslations("header")]);
-  const NAV: NavItem[] = [
-    { href: "/", label: tNav("home") },
-    { href: "/quienes-somos", label: tNav("about") },
-    { href: "/reprocann", label: tNav("reprocann") },
-    { href: "/normativa", label: tNav("normativa") },
-    { href: "/semillas", label: tNav("seeds") },
-    { href: "/clima", label: tNav("weather") },
-    { href: "/actividades", label: tNav("events") },
-    { href: "/blog", label: tNav("blog") },
-    { href: "/contacto", label: tNav("contact") },
-  ];
+  // La navegación es configuración del sitio (lib/site.ts); acá sólo se
+  // traduce cada clave.
+  const NAV: NavItem[] = NAV_ITEMS.map(item => ({ href: item.href, label: tNav(item.key) }));
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/30 bg-background/55 backdrop-blur-md supports-[backdrop-filter]:bg-background/45">
@@ -31,7 +23,7 @@ export async function SiteHeader() {
           className="flex shrink-0 items-center font-wordmark text-2xl font-extrabold tracking-tight uppercase"
         >
           <Image
-            src="/icons/logo.png"
+            src="/brand/logo.png"
             alt=""
             width={36}
             height={36}

@@ -1,8 +1,8 @@
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { CIUDAD_FOOTER } from "@/lib/laminas";
-import { SITE_NAME } from "@/lib/site";
+import { SITE_NAME, FOOTER_SECTIONS } from "@/lib/site";
+import { FooterArt } from "@/components/vertical";
 
 export async function SiteFooter() {
   const [t, tHeader, tNav] = await Promise.all([
@@ -11,30 +11,12 @@ export async function SiteFooter() {
     getTranslations("nav"),
   ]);
 
-  const SECTIONS = [
-    {
-      label: t("sectionSite"),
-      links: [
-        { href: "/", label: tNav("home") },
-        { href: "/quienes-somos", label: tNav("about") },
-        { href: "/contacto", label: tNav("contact") },
-      ],
-    },
-    {
-      label: t("sectionInfo"),
-      links: [
-        { href: "/reprocann", label: tNav("reprocann") },
-        { href: "/normativa", label: tNav("normativa") },
-        { href: "/semillas", label: tNav("seeds") },
-        { href: "/clima", label: tNav("weather") },
-        { href: "/actividades", label: tNav("events") },
-      ],
-    },
-    {
-      label: t("sectionEditorial"),
-      links: [{ href: "/blog", label: tNav("blog") }],
-    },
-  ];
+  // Las columnas del pie son configuración del sitio (lib/site.ts); acá sólo se
+  // traducen las claves.
+  const SECTIONS = FOOTER_SECTIONS.map(section => ({
+    label: t(section.labelKey),
+    links: section.items.map(item => ({ href: item.href, label: tNav(item.key) })),
+  }));
 
   const year = new Date().getFullYear();
 
@@ -43,26 +25,7 @@ export async function SiteFooter() {
        tinta. Mantiene el mismo par de colores en claro y en oscuro a
        propósito: es el remate de marca, no una superficie más de la interfaz. */
     <footer className="footer-ink relative mt-24 overflow-hidden">
-      {/* Friso del oeste como FONDO de la banda: horizonte apoyado en el borde
-          inferior, detrás del contenido y atenuado — cielo transparente (la
-          tinta se ve a través), techos en papel y sol en ámbar; la escena del
-          logo extendida a paisaje. Un solo bake porque la banda no sigue al
-          tema. width/height en vez de fill: el alto sale del aspect del asset
-          y el footer conserva el suyo propio. */}
-      {/* En mobile el friso se ensancha más allá del viewport y se ancla a la
-          derecha: a ancho completo la ciudad quedaba en una franja de ~50 px y
-          el sol —que vive en el extremo derecho— era un punto. El excedente se
-          recorta por la izquierda, que es la mitad tranquila del dibujo. */}
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-end">
-        <Image
-          src={CIUDAD_FOOTER.ink}
-          alt=""
-          width={1472}
-          height={199}
-          sizes="(min-width: 640px) 100vw, 220vw"
-          className="h-auto w-[220%] max-w-none opacity-45 sm:w-full"
-        />
-      </div>
+      {FooterArt ? <FooterArt /> : null}
       <div className="relative mx-auto w-full max-w-[1400px] px-5 py-16 sm:px-8 sm:py-20">
         <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-20">
           {/* Sello grande: la única forma circular del sitio, a escala de
@@ -79,7 +42,7 @@ export async function SiteFooter() {
               style={{ width: "fit-content" }}
             >
               <Image
-                src="/icons/logo.png"
+                src="/brand/logo.png"
                 alt=""
                 width={160}
                 height={160}

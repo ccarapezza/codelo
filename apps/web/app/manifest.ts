@@ -3,7 +3,7 @@ import { SITE_NAME } from "@/lib/site";
 
 // Web App Manifest. Next serves this at /manifest.webmanifest and injects the
 // <link rel="manifest"> automatically. Icons in /public/icons derive from the
-// real logo (public/icons/logo.png) — same source as app/icon.png y afines.
+// real logo (public/brand/logo.png) — same source as app/icon.png y afines.
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: SITE_NAME,
@@ -17,13 +17,13 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#00001C",
     icons: [
       {
-        src: "/icons/icon-192.png",
+        src: "/brand/icon-192.png",
         sizes: "192x192",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/icons/icon-512.png",
+        src: "/brand/icon-512.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "any",

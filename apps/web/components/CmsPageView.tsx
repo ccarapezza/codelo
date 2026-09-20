@@ -1,22 +1,23 @@
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { markdownToSafeHtml } from "@/lib/markdown";
-import type { CmsPage } from "@/lib/content";
-import { LAMINAS_TRANS, type LaminaId } from "@/lib/laminas";
+import type { CmsPage } from "@/lib/pages";
+import { PageDecoration } from "@/components/vertical";
 import { cn } from "@/lib/utils";
 
 // Renderer compartido de las páginas estáticas del CMS (quiénes somos,
 // REPROCANN, contacto…). El contenido es markdown escrito en el admin.
-// `lamina` es la portada de la casa cuando la página no tiene coverImage:
+// `decoration` es la portada de la casa cuando la página no tiene coverImage:
 // cada ruta fija la suya para que no cambie con el contenido.
 export async function CmsPageView({
   page,
   eyebrow,
-  lamina,
+  decoration,
 }: {
   page: CmsPage | null;
   eyebrow?: string;
-  lamina?: LaminaId;
+  /** Qué decoración usar cuando la página no trae portada; la interpreta el proyecto. */
+  decoration?: string;
 }) {
   const t = await getTranslations("pages");
 
@@ -50,7 +51,7 @@ export async function CmsPageView({
       </header>
 
       {page.coverImageUrl ? (
-        <div className="duotone relative mb-10 aspect-[2/1] w-full overflow-hidden">
+        <div className="cover-treatment relative mb-10 aspect-[2/1] w-full overflow-hidden">
           <Image
             src={page.coverImageUrl}
             alt=""
@@ -59,25 +60,10 @@ export async function CmsPageView({
             className="object-cover"
           />
         </div>
-      ) : lamina ? (
-        // Lámina transparente impresa directo sobre el papel de la página
-        // (sin marco ni duotone). Dos bakes por tema — ver lib/laminas.ts.
-        <div className="relative mb-10 aspect-[2/1] w-full">
-          <Image
-            src={LAMINAS_TRANS[lamina].light}
-            alt=""
-            fill
-            sizes="(min-width: 768px) 768px, 100vw"
-            className="object-contain dark:hidden"
-          />
-          <Image
-            src={LAMINAS_TRANS[lamina].dark}
-            alt=""
-            fill
-            sizes="(min-width: 768px) 768px, 100vw"
-            className="hidden object-contain dark:block"
-          />
-        </div>
+      ) : PageDecoration ? (
+        // El proyecto decide qué va donde iría la portada cuando la página no
+        // tiene una: acá, una lámina de la casa impresa sobre el papel.
+        <PageDecoration variant={decoration} />
       ) : null}
 
       {/* Mismo tratamiento de lectura que el artículo: cuerpo en Literata y

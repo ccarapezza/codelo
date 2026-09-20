@@ -1,6 +1,6 @@
+import { fontClassNames } from "./fonts";
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
-import { Big_Shoulders, IBM_Plex_Mono, Literata, Zilla_Slab } from "next/font/google";
 import Script from "next/script";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
@@ -10,7 +10,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { LocaleAlternatesProvider } from "@/components/locale-alternates";
 import { NavigationProgress } from "@/components/NavigationProgress";
 import { SiteFooter } from "@/components/SiteFooter";
-import { SiteSplash } from "@/components/splash/SiteSplash";
+import { LayoutExtras } from "@/components/vertical";
 import { resolveGaId, resolveClarityId } from "@/lib/analytics";
 import { getSiteSettings } from "@/lib/cms";
 import { JsonLd } from "@/components/JsonLd";
@@ -21,43 +21,6 @@ import "./globals.css";
 export function generateStaticParams() {
   return routing.locales.map(lang => ({ lang }));
 }
-
-// Dirección "Dos Tintas". Tres roles bien separados:
-//  · marca    → Big Shoulders: condensada industrial. Se usa SOLO en el
-//               nombre de la asociación (cabecera y pie). Toda la audacia
-//               tipográfica se gasta ahí y el resto queda disciplinado.
-//  · display  → Zilla Slab: egipcia, del mundo de la imprenta, para titulares.
-//               Elegida sobre un serif de alto contraste a propósito: ese es
-//               uno de los tres "looks por defecto" del diseño generado por IA.
-//  · lectura  → Literata: diseñada para leer largo en pantalla.
-//  · etiqueta → IBM Plex Mono: metadata, secciones y fechas. El mono da el
-//               registro de ficha/laboratorio que pide el temario (etnobotánica,
-//               relevamiento normativo) y separa el dato del relato.
-const bigShoulders = Big_Shoulders({
-  variable: "--font-wordmark",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const zillaSlab = Zilla_Slab({
-  variable: "--font-display",
-  weight: ["500", "600", "700"],
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const literata = Literata({
-  variable: "--font-serif",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const plexMono = IBM_Plex_Mono({
-  variable: "--font-mono",
-  weight: ["400", "500", "600"],
-  subsets: ["latin"],
-  display: "swap",
-});
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -132,7 +95,7 @@ export default async function RootLayout({
   return (
     <html lang={lang} translate="no" className={htmlClass} suppressHydrationWarning>
       <body
-        className={`${bigShoulders.variable} ${zillaSlab.variable} ${literata.variable} ${plexMono.variable} min-h-screen overflow-x-hidden bg-background font-sans text-foreground antialiased`}
+        className={`${fontClassNames} min-h-screen overflow-x-hidden bg-background font-sans text-foreground antialiased`}
       >
         <Script id="nib-theme-init" strategy="beforeInteractive">
           {THEME_SCRIPT}
@@ -161,7 +124,7 @@ export default async function RootLayout({
         ) : null}
         <NextIntlClientProvider>
           <LocaleAlternatesProvider>
-            <SiteSplash />
+            <LayoutExtras />
             <NavigationProgress />
             <SiteHeader />
             {children}

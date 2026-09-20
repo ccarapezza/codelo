@@ -179,7 +179,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ lang:
 
       {post.coverImage ? (
         <div className="mx-auto mt-6 w-full max-w-6xl px-6 sm:mt-8">
-          <div className="duotone relative aspect-[16/9] w-full overflow-hidden sm:aspect-[2/1]">
+          <div className="cover-treatment relative aspect-[16/9] w-full overflow-hidden sm:aspect-[2/1]">
             <PostCover
               image={post.coverImage}
               alt={post.title}

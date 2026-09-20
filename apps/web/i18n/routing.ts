@@ -1,4 +1,5 @@
 import { defineRouting } from "next-intl/routing";
+import { LOCALES, DEFAULT_LOCALE } from "@/lib/site";
 
 /**
  * Canonical routing config for next-intl. All UI routes live under
@@ -9,11 +10,10 @@ import { defineRouting } from "next-intl/routing";
  *   (`/es/...`, `/en/...`). No "default at root" exception, to keep
  *   canonical URLs unambiguous for SEO and caching.
  */
-// ES-only for now: the association's audience is local. Adding a locale later
-// is just extending this array + adding its messages bundle.
+// Los idiomas son configuración del sitio, no del motor: viven en lib/site.ts.
 export const routing = defineRouting({
-  locales: ["es"],
-  defaultLocale: "es",
+  locales: LOCALES,
+  defaultLocale: DEFAULT_LOCALE,
   localePrefix: "always",
 });
 

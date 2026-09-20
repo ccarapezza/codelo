@@ -28,7 +28,7 @@ function tagChipClass(tag: CmsTag): string {
   );
 }
 
-/** Portada impresa en las dos tintas (ver .duotone en globals.css). */
+/** Portada impresa en las dos tintas (ver .cover-treatment en vertical.css). */
 function Cover({
   post,
   format,
@@ -43,7 +43,7 @@ function Cover({
   className?: string;
 }) {
   return (
-    <div className={cn("duotone relative overflow-hidden", className)}>
+    <div className={cn("cover-treatment relative overflow-hidden", className)}>
       {post.coverImage ? (
         <PostCover
           image={post.coverImage}

@@ -1,21 +1,22 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
-import { Termohigrometro } from "@/components/termohigrometro/Termohigrometro";
-import { TermohigrometroSkeleton } from "@/components/termohigrometro/TermohigrometroSkeleton";
+import { Termohigrometro } from "@/components/vertical/termohigrometro/Termohigrometro";
+import { TermohigrometroSkeleton } from "@/components/vertical/termohigrometro/TermohigrometroSkeleton";
 import { PostCover } from "@/components/PostCover";
 import { PostCoverFallback } from "@/components/PostCoverFallback";
 import { LocalTime } from "@/components/LocalTime";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { getLatestPosts, type CmsLocale, type CmsPostListItem } from "@/lib/cms";
-import { boletinTitulo, getEvents, getBoletinEntries } from "@/lib/content";
+import { getEvents } from "@/lib/vertical/content";
+import { boletinTitulo, getBoletinEntries } from "@/lib/vertical/content";
 import { formatPostDate } from "@/lib/intl";
 import { localizedAlternates } from "@/lib/seo";
-import { SemillasRail } from "@/components/SemillasRail";
-import { MissionStrip } from "@/components/MissionStrip";
-import { AcuerdoRegulacion } from "@/components/AcuerdoRegulacion";
-import { FeaturedCarousel } from "@/components/FeaturedCarousel";
+import { SemillasRail } from "@/components/vertical/SemillasRail";
+import { MissionStrip } from "@/components/vertical/MissionStrip";
+import { AcuerdoRegulacion } from "@/components/vertical/AcuerdoRegulacion";
+import { FeaturedCarousel } from "@/components/vertical/FeaturedCarousel";
 
 export async function generateMetadata({
   params,
@@ -45,9 +46,9 @@ function Cover({
   eager?: boolean;
   className?: string;
 }) {
-  // `duotone` imprime la portada en las dos tintas del logo (ver globals.css).
+  // `cover-treatment` imprime la portada en las dos tintas del logo (ver globals.css).
   return (
-    <div className={`duotone relative overflow-hidden ${className ?? ""}`}>
+    <div className={`cover-treatment relative overflow-hidden ${className ?? ""}`}>
       {post.coverImage ? (
         <PostCover
           image={post.coverImage}

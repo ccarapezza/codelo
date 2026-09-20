@@ -139,7 +139,7 @@ type StrapiHouseAd = {
 
 type StrapiCollection<T> = { data: T[] };
 
-const getCmsBaseUrl = () => {
+export const getCmsBaseUrl = () => {
   const raw = process.env.NEXT_PUBLIC_CMS_URL ?? "";
   return raw.replace(/\/$/, "");
 };

@@ -80,7 +80,7 @@ export default async function TagPage({
           href={`/blog/${lead.slug}`}
           className="group grid gap-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]"
         >
-          <div className="duotone relative aspect-[16/9] overflow-hidden">
+          <div className="cover-treatment relative aspect-[16/9] overflow-hidden">
             {lead.coverImage ? (
               <PostCover
                 image={lead.coverImage}

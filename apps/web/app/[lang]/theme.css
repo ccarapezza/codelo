@@ -1,0 +1,201 @@
+/* Tokens de ESTE sitio: la dirección "Dos Tintas".
+ *
+ * Es una COSTURA: el motor define el PUENTE de tokens (@theme inline en
+ * globals.css) y los componentes usan siempre los mismos nombres —background,
+ * foreground, primary…—; acá se decide qué color es cada uno. Cambiar de marca
+ * es cambiar este archivo.
+ *
+ * Las tres constantes de abajo NO se invierten con el tema a propósito: son la
+ * tinta y el sol del logo, y el tratamiento de portada las usa para componer.
+ * Con los tokens normales, en oscuro la imagen quedaba en `screen` sobre fondo
+ * claro y el velo ámbar la tapaba.
+ */
+:root {
+  --brand-ink: #00001c;
+  --brand-sun: #e4b569;
+  --brand-paper: #f6e6cc;
+}
+
+/* Default shadcn tokens (neutral palette) — real branding/theme comes later.
+   font-display/serif/mono map to the sans stack so copied components keep
+   working; swap in real fonts when the visual identity lands. */
+
+:root {
+  --ink: oklch(0.145 0.045 275); /* #00001C — azul-negro del logo   */
+  --sun: oklch(0.807 0.104 76); /* #E4B569 — ámbar, la luz         */
+  --ember: oklch(0.715 0.113 52); /* #D89457 — ocre, acento cálido   */
+  --rule: oklch(0.145 0.045 275 / 18%); /* filete: tinta al 18%            */
+
+  /* ---- Tintas de DATO (gráficos de /semillas) --------------------------
+     Dos series, y las dos salen de la marca: el ocre del logo y la MISMA
+     tinta pero "abierta". El negro de codelo no es neutro —es azul, hue
+     275—, así que abrirlo da un hue a 199° del ocre sin traer un color
+     ajeno a la paleta. Eso es lo que permite tener color sin romper las
+     dos tintas ni meter el verde que el logo no tiene.
+
+     Significado FIJO en todo el sitio: ámbar = RNC (comercialización),
+     tinta = RNPC (propiedad). El color sigue a la entidad, nunca al orden
+     ni al valor.
+
+     Pasos validados con el validador del skill de dataviz (no elegidos a
+     ojo). Claro sobre papel #f6e6cc: CVD ΔE 20.3, visión normal 24.0,
+     contraste ≥3:1. El ocre está DELIBERADAMENTE más oscuro que --ember:
+     el ocre de interfaz da 2.13:1 sobre el papel y no llega al piso de
+     3:1 que exige una superficie de dato.                              */
+  --data-rnc: #b96831;
+  --data-rnpc: #525ca1;
+
+  /* Tintas de dato de /clima. Son tokens PROPIOS y no alias de --data-rnc/rnpc
+     aunque hoy compartan los pasos: aquellos tienen significado reservado
+     (ámbar = RNC, tinta = RNPC) y no puede depender de ellos otra página.
+
+     La paleta de /clima es de CINCO familias y no de dos: la página es un
+     tablero con muchos instrumentos a la vista al mismo tiempo, y con dos
+     tintas todos se parecían entre sí. Cada familia nombra una magnitud y esa
+     asignación no rota:
+       calor   → temperatura, sensación, máxima, DLI (energía)
+       agua    → punto de rocío, humedad, lluvia, mínima
+       vegetal → suelo: temperatura y humedad de la tierra
+       viento  → viento y ráfagas, lo que se mueve en el aire
+       uv      → índice UV, la única magnitud de riesgo directo a la persona
+     Cada nombre describe lo que muestra, no el color que tiene, así que la
+     asignación no se puede rotar sin renombrarla.
+
+     Las cinco pasaron el validador del skill de dataviz sobre papel #f6e6cc:
+     banda de luminosidad, piso de croma, separación CVD (peor par ΔE 10.2),
+     visión normal 25.5 y contraste ≥3:1. El verde estuvo dos iteraciones en
+     2,95:1 —apenas debajo del piso— y hubo que oscurecerlo.                */
+  --data-calor: #b96831;
+  --data-agua: #4a5bb0;
+  --data-vegetal: #6b8118;
+  --data-viento: #0f8fa8;
+  --data-uv: #a8305c;
+
+  --background: oklch(0.931 0.039 80); /* #F6E6CC papel tintado con el ámbar */
+  --foreground: oklch(0.145 0.045 275);
+  --card: oklch(0.972 0.022 80);
+  --card-foreground: oklch(0.145 0.045 275);
+  --popover: oklch(0.972 0.022 80);
+  --popover-foreground: oklch(0.145 0.045 275);
+  --primary: oklch(0.145 0.045 275); /* la tinta ES el color primario   */
+  --primary-foreground: oklch(0.931 0.039 80);
+  --secondary: oklch(0.893 0.05 80);
+  --secondary-foreground: oklch(0.145 0.045 275);
+  --muted: oklch(0.893 0.05 80);
+  --muted-foreground: oklch(0.44 0.035 275);
+  --accent: oklch(0.807 0.104 76);
+  --accent-foreground: oklch(0.145 0.045 275);
+  --destructive: oklch(0.55 0.2 27);
+  --border: oklch(0.145 0.045 275 / 18%);
+  --input: oklch(0.145 0.045 275 / 22%);
+  --ring: oklch(0.715 0.113 52);
+  --cta: oklch(0.715 0.113 52);
+  --cta-foreground: oklch(0.145 0.045 275);
+  --live: oklch(0.55 0.2 27);
+  --live-foreground: oklch(0.972 0.022 80);
+  --gold: oklch(0.807 0.104 76);
+  --gold-foreground: oklch(0.145 0.045 275);
+  --chart-1: oklch(0.145 0.045 275);
+  --chart-2: oklch(0.807 0.104 76);
+  --chart-3: oklch(0.715 0.113 52);
+  --chart-4: oklch(0.44 0.035 275);
+  --chart-5: oklch(0.6 0.09 140);
+  --radius: 0.125rem; /* casi cero: registro de imprenta */
+  --sidebar: oklch(0.931 0.039 80);
+  --sidebar-foreground: oklch(0.145 0.045 275);
+  --sidebar-primary: oklch(0.145 0.045 275);
+  --sidebar-primary-foreground: oklch(0.931 0.039 80);
+  --sidebar-accent: oklch(0.893 0.05 80);
+  --sidebar-accent-foreground: oklch(0.145 0.045 275);
+  --sidebar-border: oklch(0.145 0.045 275 / 18%);
+  --sidebar-ring: oklch(0.715 0.113 52);
+}
+
+/* Oscuro: se invierte la serigrafía — la tinta pasa a ser el lienzo y el
+   papel queda como texto. El ámbar sigue siendo la única fuente de luz.   */
+.dark {
+  --ink: oklch(0.931 0.039 80);
+  --sun: oklch(0.842 0.112 76);
+  --ember: oklch(0.762 0.124 52);
+  --rule: oklch(0.949 0.017 78 / 16%);
+
+  /* Pasos oscuros ELEGIDOS, no invertidos: la banda de luminosidad del
+     modo oscuro (L 0.48–0.67) es distinta de la clara, y el ocre claro
+     se sale por arriba. Revalidados sobre #090c20: CVD ΔE 23.1, visión
+     normal 25.7, contraste ≥3:1. */
+  --data-rnc: #ce773e;
+  --data-rnpc: #6977d3;
+
+  /* Revalidados aparte sobre #090c20: CVD ΔE 9.1 en el peor par, visión normal
+     25.7, contraste ≥3:1. ELEGIDOS, no invertidos: el verde y el cian claros se
+     salían por arriba de la banda del modo oscuro (L 0.48–0.67) y hubo que
+     bajarlos. */
+  --data-calor: #ce773e;
+  --data-agua: #6977d3;
+  --data-vegetal: #7f9c22;
+  --data-viento: #28a0b8;
+  --data-uv: #d4577f;
+
+  --background: oklch(0.165 0.042 275);
+  --foreground: oklch(0.93 0.015 78);
+  --card: oklch(0.205 0.04 275);
+  --card-foreground: oklch(0.93 0.015 78);
+  --popover: oklch(0.205 0.04 275);
+  --popover-foreground: oklch(0.93 0.015 78);
+  --primary: oklch(0.842 0.112 76);
+  --primary-foreground: oklch(0.165 0.042 275);
+  --secondary: oklch(0.26 0.04 275);
+  --secondary-foreground: oklch(0.93 0.015 78);
+  --muted: oklch(0.26 0.04 275);
+  --muted-foreground: oklch(0.72 0.03 78);
+  --accent: oklch(0.3 0.05 275);
+  --accent-foreground: oklch(0.93 0.015 78);
+  --destructive: oklch(0.65 0.19 27);
+  --border: oklch(0.949 0.017 78 / 16%);
+  --input: oklch(0.949 0.017 78 / 20%);
+  --ring: oklch(0.842 0.112 76);
+  --cta: oklch(0.762 0.124 52);
+  --cta-foreground: oklch(0.165 0.042 275);
+  --live: oklch(0.65 0.19 27);
+  --live-foreground: oklch(0.93 0.015 78);
+  --gold: oklch(0.842 0.112 76);
+  --gold-foreground: oklch(0.165 0.042 275);
+  --chart-1: oklch(0.842 0.112 76);
+  --chart-2: oklch(0.762 0.124 52);
+  --chart-3: oklch(0.93 0.015 78);
+  --chart-4: oklch(0.72 0.03 78);
+  --chart-5: oklch(0.7 0.1 140);
+  --sidebar: oklch(0.205 0.04 275);
+  --sidebar-foreground: oklch(0.93 0.015 78);
+  --sidebar-primary: oklch(0.842 0.112 76);
+  --sidebar-primary-foreground: oklch(0.165 0.042 275);
+  --sidebar-accent: oklch(0.3 0.05 275);
+  --sidebar-accent-foreground: oklch(0.93 0.015 78);
+  --sidebar-border: oklch(0.949 0.017 78 / 16%);
+  --sidebar-ring: oklch(0.842 0.112 76);
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Filete de sección: regla gruesa en ámbar sobre la que se apoya el título,
+   tomado de la gramática de las secciones de un diario. */
+.section-rule {
+  border-top: 3px solid var(--sun);
+}
+
+.footer-ink {
+  background-color: var(--brand-ink);
+  color: var(--brand-paper);
+}
+
+/* Panel del Boletín Oficial: la segunda superficie en tinta del sitio, después
+   del pie. Se le da peso propio porque no es una barra lateral de enlaces sino
+   la pieza que distingue al portal — vigilancia normativa en fuente primaria.
+   Igual que el pie y el duotono, usa las constantes de marca y NO se invierte
+   con el tema: es una pieza impresa, no una superficie de interfaz. */
