@@ -21,7 +21,7 @@ function resolveCmsUpstream(): string {
   return (
     process.env.CMS_URL ??
     process.env.NEXT_PUBLIC_CMS_URL ??
-    "http://localhost:1339"
+    "http://localhost:1340"
   ).replace(/\/$/, "");
 }
 
