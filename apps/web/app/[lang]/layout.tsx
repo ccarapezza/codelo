@@ -124,7 +124,7 @@ export default async function RootLayout({
         ) : null}
         <NextIntlClientProvider>
           <LocaleAlternatesProvider>
-            <LayoutExtras />
+            {LayoutExtras ? <LayoutExtras /> : null}
             <NavigationProgress />
             <SiteHeader />
             {children}
