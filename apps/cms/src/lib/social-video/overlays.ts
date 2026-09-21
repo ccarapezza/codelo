@@ -110,7 +110,7 @@ export function countdownOverlay(o: CountdownOverlayFields, size: Size): SatoriN
       {
         style: {
           display: "flex", fontFamily: BRAND.fontDisplay, fontSize: 520, lineHeight: 0.82,
-          color: BRAND.terracotta, letterSpacing: 2,
+          color: BRAND.accentWarm, letterSpacing: 2,
         },
       },
       String(o.big),
@@ -157,7 +157,7 @@ export function titleOverlay(o: TitleOverlayFields, size: Size): SatoriNode {
           {
             style: {
               display: "flex", fontFamily: BRAND.fontBody, fontWeight: 700, fontSize: 34,
-              letterSpacing: 8, textTransform: "uppercase", color: BRAND.greenLight,
+              letterSpacing: 8, textTransform: "uppercase", color: BRAND.accentLight,
               marginBottom: 22, textShadow: SHADOW,
             },
           },
