@@ -9,15 +9,19 @@
  * Esta es la base neutra: grises de shadcn, sin personalidad. Sirve para ver la
  * estructura sin que el diseño opine, y está pensada para reemplazarse.
  *
- * Las dos constantes de marca NO se invierten con el tema a propósito: las usan
- * los tratamientos de impresión (portadas, bandas), que se componen con tintas
+ * Las constantes de marca NO se invierten con el tema a propósito: las usan los
+ * tratamientos de impresión (portadas, bandas), que se componen con tintas
  * fijas y no con superficies de interfaz.
+ *
+ * Y son lo ÚNICO que trae la marca de Nib: la escala de shadcn de abajo queda
+ * en gris a propósito. Un proyecto que arranca de acá tiene que poder pintar su
+ * identidad sin antes despintar la nuestra.
  */
 
 :root {
-  --brand-ink: #111111;
-  --brand-sun: #b8542f;
-  --brand-paper: #ffffff;
+  --brand-ink: #1b1b1f;
+  --brand-sun: #f4b04a;
+  --brand-paper: #f9f9f9;
 }
 
 :root {

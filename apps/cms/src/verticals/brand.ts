@@ -17,15 +17,17 @@
 //   fontDisplay / fontBody     titulares y cuerpo
 //   handle          el dominio o usuario que se imprime en la placa de cierre
 
+// Los valores son los de Nib: grafito y ámbar, muestreados del logo. Un
+// proyecto que adopta el motor reescribe este archivo entero con los suyos.
 export const BRAND = {
-  bg: "#111111",
-  bgSoft: "#1C1C1C",
+  bg: "#1B1B1F",
+  bgSoft: "#26262B",
   white: "#FFFFFF",
   offwhite: "#EDEDED",
-  muted: "#9A9A9A",
-  accent: "#2F6F4E",
-  accentLight: "#63B98A",
-  accentWarm: "#B8542F",
+  muted: "#9A9AA2",
+  accent: "#F4B04A",
+  accentLight: "#F9CF8F",
+  accentWarm: "#C2661A",
   fontDisplay: "Anton",
   fontBody: "Inter",
   handle: "nib",

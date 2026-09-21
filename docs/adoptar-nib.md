@@ -46,7 +46,7 @@ Lo que el motor le pide al proyecto, todo con default vacío:
 | `verticals/prompt-fields.ts` | Campos de prompt propios |
 | `verticals/rss-scope.ts` | Qué ítems del pool RSS son del tema |
 | `verticals/brand.ts` | Colores, tipografías y logo de las placas de redes |
-| `admin/verticals.ts` | Widgets, menú, rutas y la identidad visual del panel |
+| `admin/verticals.ts` | Widgets, menú, rutas y la identidad visual del panel (pisa la de Nib) |
 | `lib/site.ts` | Nombre, dominio, idiomas y navegación del sitio |
 | `app/[lang]/theme.css` | Los colores del sitio |
 | `components/vertical/index.ts` | Cuatro ranuras opcionales de la web |

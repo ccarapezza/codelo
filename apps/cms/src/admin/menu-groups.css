@@ -1,0 +1,53 @@
+/*
+ * Separa visualmente el bloque de Nib del de Strapi en el menú lateral.
+ *
+ * Strapi 5 no tiene secciones en el nav: `addMenuLink` empuja todo a una sola
+ * lista de iconos que se ordena por `position` (ver app.tsx). El agrupado, que
+ * sí existe conceptualmente —primero el flujo de redacción, después el
+ * sustrato de Strapi—, hay que dibujarlo.
+ *
+ * El corte se ancla en Home y no en Content Manager: Home es el primer ítem de
+ * Strapi (`position: 0`, contra 1 del Content Manager) y además es el único que
+ * no depende de permisos, así que está para cualquier usuario logueado.
+ *
+ * Va por href y no por clase: las clases son hashes de styled-components y
+ * cambian en cada build (misma razón que hide-marketplace.css). El href de Home
+ * es la base del admin, así que esto asume la base por defecto `/admin`; con
+ * otra base no aparece la línea y no pasa nada más.
+ *
+ * ALCANCE: es cosmético y falla en silencio. Si Strapi cambia el DOM, el menú
+ * sigue funcionando igual, sin separador.
+ *
+ * El breakpoint 1080px es el `large` del design-system: abajo de eso el nav es
+ * una fila horizontal, así que el corte va al costado y no arriba.
+ */
+
+@media (min-width: 1080px) {
+  nav li:has(a[href="/admin"]) {
+    position: relative;
+    margin-top: 1.6rem;
+  }
+
+  /* La línea se dibuja con un pseudo-elemento posicionado, no con border-top
+     del <li>: el <li> se encoge al ancho del icono (el <ul> es columna con
+     align-items: center), así que un borde saldría de 3.2rem y descentrado.
+     `currentColor` + opacidad la deja correcta en tema claro y oscuro sin
+     hardcodear ningún token. */
+  nav li:has(a[href="/admin"])::before {
+    content: "";
+    position: absolute;
+    top: -0.8rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2rem;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.18;
+  }
+}
+
+@media (max-width: 1079px) {
+  nav li:has(a[href="/admin"]) {
+    margin-left: 1.2rem;
+  }
+}

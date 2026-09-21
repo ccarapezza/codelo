@@ -15,7 +15,7 @@ export const SITE_LOGO = `${SITE_URL}/icon.png`;
 export const SITE_DESCRIPTION = "Portal de noticias.";
 
 /** Colores del manifest: los de la marca, no los tokens de tema. */
-export const MANIFEST_COLORS = { background: "#FFFFFF", theme: "#111111" };
+export const MANIFEST_COLORS = { background: "#F9F9F9", theme: "#38383A" };
 
 /**
  * Paleta e inscripciones de la tarjeta que se ve al compartir el sitio.
@@ -24,9 +24,12 @@ export const MANIFEST_COLORS = { background: "#FFFFFF", theme: "#111111" };
  * con colores literales.
  */
 export const OG_CARD = {
-  ink: "#111111",
-  sun: "#B8542F",
-  paper: "#FFFFFF",
+  ink: "#1B1B1F",
+  // Ámbar medio y no el de la marca (#F4B04A): las bandas van sobre el papel
+  // blanco de la tarjeta, donde el ámbar claro se lava y casi no se ve. El
+  // ámbar de marca lo pone el logo, que trae su propio fondo grafito.
+  sun: "#C98A2A",
+  paper: "#F9F9F9",
   eyebrow: "",
   tagline: "",
 };

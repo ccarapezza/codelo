@@ -11,20 +11,27 @@
 import type { StrapiApp } from "@strapi/strapi/admin";
 
 /**
- * Se mergea con la `config` del panel: logo, tema y textos del login.
+ * Se mergea con la identidad por defecto del motor (src/admin/default-brand.ts):
+ * logo, tema y textos del login.
  *
- * Vacío = el panel queda con el violeta y el logo de Strapi. Para cambiarlo:
- * `{ auth: { logo }, menu: { logo }, theme: { light: { colors }, dark: { colors } },
- * translations: { es: { "Auth.form.welcome.title": "…" } } }`.
+ * Vacío = el panel queda con la marca de Nib (pluma ámbar sobre grafito), NO
+ * con el violeta de Strapi. Para pisarla:
+ * `{ auth: { logo }, menu: { logo }, head: { favicon }, theme: { light: { colors },
+ * dark: { colors } }, translations: { es: { "Auth.form.welcome.title": "…" } } }`.
+ *
+ * El merge es por clave y por locale, así que alcanza con declarar lo que se
+ * quiere cambiar: definir sólo `theme.light` no borra el tema oscuro del motor,
+ * y traducir una clave del login no borra las demás.
  */
 export const adminConfig = {};
 
 /**
  * Tarjetas propias en la home del panel.
  *
- * ⚠️ El motor deja en la home SÓLO los widgets de esta lista: filtra los del
- * content-manager para que la home sea del proyecto. Con la lista vacía, la
- * home del panel queda sin tarjetas.
+ * ⚠️ Si la lista tiene algo, el motor deja en la home SÓLO esos widgets: filtra
+ * los del content-manager para que la home sea del proyecto. Si está vacía no
+ * filtra nada y quedan las tarjetas nativas de Strapi — dejar la home en blanco
+ * es peor que mostrarlas.
  */
 export const widgets: Array<{
   icon: unknown;

@@ -71,6 +71,21 @@ admin.** Por eso `agent` y `rss-feed` tienen su propio CRUD; no es capricho.
 **El editor de notas va por `app.router.addRoute` en `register()`.** `app.router`
 sólo existe ahí: llamarlo desde `bootstrap` deja el panel en blanco.
 
+**El menú lateral NO respeta el orden de registro.** Strapi junta los links de
+plugins con los generales, los ordena ALFABÉTICAMENTE por etiqueta y recién ahí
+por `position` (con `?? 6` de fallback). Cambiar el orden de los `addMenuLink`
+no hace nada; lo único que manda es `position`. Strapi se reserva 1 Content
+Manager · 2 Releases · 4 Media · 5 CTB · 7 Marketplace · 9 Settings, así que lo
+del motor va en negativo (constante `POS` en `app.tsx`) para quedar antes. Las
+posiciones son únicas a propósito: el comparador de Strapi nunca devuelve 0, y
+con empates el orden queda a merced de cómo desempate el sort de V8.
+
+**El panel trae la marca de Nib por defecto, no la de Strapi.** Vive en
+`src/admin/default-brand.ts` (archivo del MOTOR, nombrado por su rol) y
+`app.tsx` la mergea con `admin/verticals.ts`, clave por clave y locale por
+locale. Lo que el panel no esconde es sobre qué corre: el subtítulo del login
+lo dice y la pantalla de versión de Strapi queda intacta.
+
 **Los tipos de Strapi están gitignoreados.** Tras tocar un content-type:
 `cd apps/cms && pnpm exec strapi ts:generate-types`. Sin eso el typecheck falla
 en cada `.update()`. El comando no necesita base de datos.
