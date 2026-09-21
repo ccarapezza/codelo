@@ -20,6 +20,7 @@ import {
 import { Plus, Trash, Pencil, Feather, Magic, PlusCircle, Play, Eye } from "@strapi/icons";
 import { useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { useNavigate } from "react-router-dom";
+import * as verticals from "../../verticals";
 import { PageContainer, PageHeader, Hairline } from "../../components/ui";
 import { useIsMobile } from "../../hooks/useIsMobile";
 
@@ -168,7 +169,7 @@ type Agent = {
   id: number;
   documentId: string;
   name: string;
-  role: "director" | "redactor" | "image-generator";
+  role: string;
   instructions: string;
   topic: string | null;
   requireNewsContext?: boolean;
@@ -182,7 +183,7 @@ type Agent = {
 
 type FormData = {
   name: string;
-  role: "director" | "redactor" | "image-generator";
+  role: string;
   instructions: string;
   topic: string;
   requireNewsContext: boolean;
@@ -626,6 +627,11 @@ function AgentFormModal({
                   <SingleSelectOption value="director" startIcon={<Magic />}>
                     Director
                   </SingleSelectOption>
+                  {verticals.agentRoles.map((r) => (
+                    <SingleSelectOption key={r.value} value={r.value} startIcon={<Magic />}>
+                      {r.label}
+                    </SingleSelectOption>
+                  ))}
                   <SingleSelectOption value="image-generator" startIcon={<Magic />}>
                     Generador de imágenes
                   </SingleSelectOption>

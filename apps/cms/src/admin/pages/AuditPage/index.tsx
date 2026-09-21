@@ -26,6 +26,7 @@ import {
 import { Eye, ArrowLeft } from "@strapi/icons";
 import { useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { useNavigate } from "react-router-dom";
+import * as verticals from "../../verticals";
 import { PageContainer, PageHeader, EmptyState } from "../../components/ui";
 import { useIsMobile } from "../../hooks/useIsMobile";
 
@@ -52,19 +53,25 @@ type ListResponse = {
   pagination: PaginationMeta;
 };
 
-const ROLE_LABEL: Record<AuditItem["agentRole"], string> = {
-  director: "Director",
-  redactor: "Redactor",
-  "image-generator": "Generador IMG",
-  system: "Sistema",
-};
+// Los roles del motor, más los que aporte el vertical (admin/verticals.ts).
+// Un rol sin etiqueta se mostraría con su valor crudo, así que la lista del
+// vertical entra también acá y no sólo en el selector.
+const CORE_ROLES = [
+  { value: "director", label: "Director", badgeVariant: "primary" },
+  { value: "redactor", label: "Redactor", badgeVariant: "secondary" },
+  { value: "image-generator", label: "Generador IMG", badgeVariant: "success" },
+  { value: "system", label: "Sistema", badgeVariant: "neutral" },
+];
 
-const ROLE_COLOR: Record<AuditItem["agentRole"], string> = {
-  director: "primary",
-  redactor: "secondary",
-  "image-generator": "success",
-  system: "neutral",
-};
+const ALL_ROLES = [...CORE_ROLES, ...verticals.agentRoles];
+
+const ROLE_LABEL: Record<string, string> = Object.fromEntries(
+  ALL_ROLES.map((r) => [r.value, r.label]),
+);
+
+const ROLE_COLOR: Record<string, string> = Object.fromEntries(
+  ALL_ROLES.map((r) => [r.value, r.badgeVariant]),
+);
 
 const ACTION_LABEL: Record<string, string> = {
   draft_created: "Draft creado",
@@ -147,10 +154,10 @@ function DetailModal({ item, onClose }: { item: AuditItem | null; onClose: () =>
             <Flex direction="column" alignItems="stretch" gap={4}>
               <Flex gap={2} alignItems="center" wrap="wrap">
                 <Badge
-                  backgroundColor={`${ROLE_COLOR[item.agentRole]}100`}
-                  textColor={`${ROLE_COLOR[item.agentRole]}700`}
+                  backgroundColor={`${ROLE_COLOR[item.agentRole] ?? "neutral"}100`}
+                  textColor={`${ROLE_COLOR[item.agentRole] ?? "neutral"}700`}
                 >
-                  {ROLE_LABEL[item.agentRole]}
+                  {ROLE_LABEL[item.agentRole] ?? item.agentRole}
                 </Badge>
                 <Badge
                   backgroundColor={`${ACTION_COLOR[item.action] ?? "neutral"}100`}
@@ -245,8 +252,8 @@ function AuditCard({ item, onDetail }: { item: AuditItem; onDetail: () => void }
     <Box background="neutral0" borderColor="neutral200" borderWidth="1px" borderStyle="solid" hasRadius padding={3} shadow="tableShadow">
       <Flex justifyContent="space-between" alignItems="flex-start" gap={2}>
         <Flex gap={1} wrap="wrap">
-          <Badge backgroundColor={`${ROLE_COLOR[item.agentRole]}100`} textColor={`${ROLE_COLOR[item.agentRole]}700`}>
-            {ROLE_LABEL[item.agentRole]}
+          <Badge backgroundColor={`${ROLE_COLOR[item.agentRole] ?? "neutral"}100`} textColor={`${ROLE_COLOR[item.agentRole] ?? "neutral"}700`}>
+            {ROLE_LABEL[item.agentRole] ?? item.agentRole}
           </Badge>
           <Badge backgroundColor={`${ACTION_COLOR[item.action] ?? "neutral"}100`} textColor={`${ACTION_COLOR[item.action] ?? "neutral"}700`}>
             {ACTION_LABEL[item.action] ?? item.action}
@@ -367,10 +374,11 @@ export default function AuditPage() {
               onChange={(v: string | number) => setRoleFilter(String(v))}
             >
               <SingleSelectOption value="all">Todos los roles</SingleSelectOption>
-              <SingleSelectOption value="director">Director</SingleSelectOption>
-              <SingleSelectOption value="redactor">Redactor</SingleSelectOption>
-              <SingleSelectOption value="image-generator">Generador IMG</SingleSelectOption>
-              <SingleSelectOption value="system">Sistema</SingleSelectOption>
+              {ALL_ROLES.map((r) => (
+                <SingleSelectOption key={r.value} value={r.value}>
+                  {r.label}
+                </SingleSelectOption>
+              ))}
             </SingleSelect>
           </Field.Root>
         </Box>
@@ -461,10 +469,10 @@ export default function AuditPage() {
                     </Td>
                     <Td>
                       <Badge
-                        backgroundColor={`${ROLE_COLOR[item.agentRole]}100`}
-                        textColor={`${ROLE_COLOR[item.agentRole]}700`}
+                        backgroundColor={`${ROLE_COLOR[item.agentRole] ?? "neutral"}100`}
+                        textColor={`${ROLE_COLOR[item.agentRole] ?? "neutral"}700`}
                       >
-                        {ROLE_LABEL[item.agentRole]}
+                        {ROLE_LABEL[item.agentRole] ?? item.agentRole}
                       </Badge>
                     </Td>
                     <Td>
