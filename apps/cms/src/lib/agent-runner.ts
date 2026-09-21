@@ -168,14 +168,17 @@ export function makeSlug(title: string): string {
   return `${base || "post"}-${Date.now().toString(36)}`;
 }
 
-async function findActiveImageGenerator(strapi: Core.Strapi): Promise<ImageGeneratorAgentDoc | null> {
+export async function findActiveImageGenerator(strapi: Core.Strapi): Promise<ImageGeneratorAgentDoc | null> {
   const results = await strapi.documents("api::agent.agent").findMany({
     filters: { role: "image-generator", enabled: true },
   });
   return (results[0] as unknown as ImageGeneratorAgentDoc) ?? null;
 }
 
-async function findActiveDirector(strapi: Core.Strapi): Promise<AgentDoc | null> {
+// Exportadas para los runners que aporte el vertical (src/verticals/agent-roles.ts):
+// un rol propio que publique necesita el mismo director y el mismo generador de
+// imágenes que usan los del motor, y sin esto tendría que duplicar la consulta.
+export async function findActiveDirector(strapi: Core.Strapi): Promise<AgentDoc | null> {
   const directors = await strapi.documents("api::agent.agent").findMany({
     filters: { role: "director", enabled: true },
   });
