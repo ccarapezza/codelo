@@ -41,28 +41,30 @@ const IDS_PROPIOS = new Set([WIDGET_SETUP, ...verticals.widgets.map(w => w.id)])
 // ahí los reordena por `position` (`position ?? 6` de fallback). Registrar en
 // otro orden no cambia nada; lo único que manda es este número.
 //
-// Strapi se reserva: 1 Content Manager · 2 Releases · 4 Media Library ·
+// Strapi se reserva: 0 Home · 1 Content Manager · 2 Releases · 4 Media Library ·
 // 5 Content-Type Builder · 7 Marketplace · 9 Settings.
 //
-// Todo lo de Nib va en NEGATIVO, o sea antes del Content Manager, y en el orden
-// del flujo que propone el producto: mirar lo que salió → ajustar quién lo
-// escribe → repartirlo → y abajo los insumos y la configuración. El Content
+// Home queda PRIMERA —es la puerta de entrada y ahí vive el checklist de puesta
+// en marcha— y el bloque de Nib va justo después, antes del Content Manager, en
+// el orden del flujo que propone el producto: mirar lo que salió → ajustar quién
+// lo escribe → repartirlo → y abajo los insumos y la configuración. El Content
 // Manager es el sustrato con el que está construido esto, no la puerta de
 // entrada: quien entra al panel viene a ver notas, no a recorrer tablas.
 //
-// Los números van de a 10 para poder intercalar sin renumerar todo, y son
-// DISTINTOS entre sí a propósito: el comparador de Strapi nunca devuelve 0, así
-// que con posiciones empatadas el orden final queda a merced de cómo desempate
-// el sort del motor de JS. Con posiciones únicas es determinista.
+// ⚠️ Por eso son DECIMALES y no enteros: Strapi ya ocupó el 0 (Home) y el 1
+// (Content Manager), así que la única forma de quedar entre las dos es entre
+// medio. Son distintos entre sí a propósito — el comparador de Strapi nunca
+// devuelve 0, así que con posiciones empatadas el orden final queda a merced de
+// cómo desempate el sort del motor de JS.
 const POS = {
-  notas: -60,
-  agentes: -50,
-  socialStudio: -40,
-  fuentes: -30,
-  prompts: -20,
-  ajustes: -10,
+  notas: 0.1,
+  agentes: 0.2,
+  socialStudio: 0.3,
+  fuentes: 0.4,
+  prompts: 0.5,
+  ajustes: 0.6,
   /** Banda para las pantallas del vertical: después de las del motor, antes de Strapi. */
-  vertical: -5,
+  vertical: 0.7,
 } as const;
 
 /**

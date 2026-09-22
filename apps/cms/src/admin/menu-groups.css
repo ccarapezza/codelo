@@ -6,14 +6,12 @@
  * sí existe conceptualmente —primero el flujo de redacción, después el
  * sustrato de Strapi—, hay que dibujarlo.
  *
- * El corte se ancla en Home y no en Content Manager: Home es el primer ítem de
- * Strapi (`position: 0`, contra 1 del Content Manager) y además es el único que
- * no depende de permisos, así que está para cualquier usuario logueado.
+ * El corte va ANTES del Content Manager, que es donde empieza el sustrato de
+ * Strapi. Home queda arriba de todo, separada del bloque de Nib por el mismo
+ * criterio: es la puerta de entrada, no parte del flujo de redacción.
  *
  * Va por href y no por clase: las clases son hashes de styled-components y
- * cambian en cada build (misma razón que hide-marketplace.css). El href de Home
- * es la base del admin, así que esto asume la base por defecto `/admin`; con
- * otra base no aparece la línea y no pasa nada más.
+ * cambian en cada build (misma razón que hide-marketplace.css).
  *
  * ALCANCE: es cosmético y falla en silencio. Si Strapi cambia el DOM, el menú
  * sigue funcionando igual, sin separador.
@@ -23,7 +21,7 @@
  */
 
 @media (min-width: 1080px) {
-  nav li:has(a[href="/admin"]) {
+  nav li:has(a[href$="/content-manager"]) {
     position: relative;
     margin-top: 1.6rem;
   }
@@ -33,7 +31,7 @@
      align-items: center), así que un borde saldría de 3.2rem y descentrado.
      `currentColor` + opacidad la deja correcta en tema claro y oscuro sin
      hardcodear ningún token. */
-  nav li:has(a[href="/admin"])::before {
+  nav li:has(a[href$="/content-manager"])::before {
     content: "";
     position: absolute;
     top: -0.8rem;
@@ -47,7 +45,7 @@
 }
 
 @media (max-width: 1079px) {
-  nav li:has(a[href="/admin"]) {
+  nav li:has(a[href$="/content-manager"]) {
     margin-left: 1.2rem;
   }
 }
