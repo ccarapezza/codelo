@@ -2,7 +2,10 @@ import { factories } from "@strapi/strapi";
 import { requireAdminPermission } from "../../../lib/admin-auth";
 import { getOpenAITextKey, getOpenAITextModel } from "../../../lib/openai-config";
 import { getOpenAIClient } from "../../../lib/openai";
-import { translateFieldToEnglish } from "../../../lib/translate-field";
+import {
+  translateFieldToEnglish,
+  translateFieldsFromEnglish,
+} from "../../../lib/translate-field";
 import { ADMIN_PERMISSIONS } from "../../../lib/admin-permissions";
 import { DEFAULT_PROMPT_SETTINGS, ENGINE_PROMPT_KEYS } from "../../../lib/prompt-defaults";
 import { verticalPromptKeys } from "../../../verticals/prompt-fields";
@@ -42,6 +45,30 @@ export default factories.createCoreController(UID, ({ strapi }) => ({
       ctx.body = { translated: await translateFieldToEnglish(client, model, text) };
     } catch (err) {
       strapi.log.error("[prompt-setting] traducción falló:", err);
+      return ctx.badRequest("No se pudo traducir. Revisá que OPENAI_API_KEY esté configurada.");
+    }
+  },
+
+  /**
+   * Traduce varios campos DEL inglés al idioma del usuario, para poder verlos y
+   * editarlos en su idioma. No guarda nada: el resultado es un borrador que el
+   * usuario decide si conserva.
+   */
+  async translateBack(ctx) {
+    if (!(await requireAdminPermission(ctx, strapi, ADMIN_PERMISSIONS.promptSettings))) return;
+    const { fields, language } = ctx.request.body as {
+      fields?: Record<string, string>;
+      language?: string;
+    };
+    if (!fields || Object.keys(fields).length === 0) return ctx.badRequest("fields es obligatorio");
+    try {
+      const client = getOpenAIClient(getOpenAITextKey());
+      const model = await getOpenAITextModel(strapi);
+      ctx.body = {
+        translated: await translateFieldsFromEnglish(client, model, fields, language || "Spanish"),
+      };
+    } catch (err) {
+      strapi.log.error("[prompt-setting] traducción inversa falló:", err);
       return ctx.badRequest("No se pudo traducir. Revisá que OPENAI_API_KEY esté configurada.");
     }
   },

@@ -179,20 +179,20 @@ export const NEUTRAL_PROMPT_SETTINGS: PromptSettings = {
   brandPalette: "graphite and amber",
 
   socialVoice:
-    "Voz de marca: clara y cercana, sin solemnidad. No publicites productos, marcas ni comercios.",
+    "Brand voice: clear and close, without solemnity. Do not advertise products, brands or shops.",
   socialCoverStyle:
-    "que refleje el TEMA de la nota, sin texto, sin logos y sin caras reconocibles",
+    "reflecting the TOPIC of the article, no text, no logos and no recognisable faces",
   socialHashtags: "",
   socialCta: "Link en la bio 👇",
   coverFallbackPrompt: "Editorial image, cinematic, no text, no logos, no faces.",
   videoStyle:
-    "Estilo: video editorial y documental, atmosfera cinematografica, luz natural suave, " +
-    "camara lenta sutil y movimiento leve y continuo. Formato vertical 9:16. Dejar el centro " +
-    "y la mitad inferior mas oscuros y despejados para sobreimprimir texto. MUY IMPORTANTE: " +
-    "sin ningun texto, sin letras, sin numeros, sin logos, sin marcas de agua.",
+    "Style: documentary editorial video, cinematic atmosphere, soft natural light, subtle slow " +
+    "motion and light continuous movement. Vertical 9:16 format. Keep the centre and lower half " +
+    "darker and clear for text overlay. VERY IMPORTANT: no text at all, no letters, no numbers, " +
+    "no logos, no watermarks.",
   videoDefaultPrompt:
-    "Una superficie con textura a contraluz, movimiento leve, profundidad de campo corta, " +
-    "luz dorada de la manana, sin personas ni rostros",
+    "A textured surface backlit, light movement, shallow depth of field, golden morning light, " +
+    "no people and no faces",
 
   translationLanguage: "English",
   translationGlossary:

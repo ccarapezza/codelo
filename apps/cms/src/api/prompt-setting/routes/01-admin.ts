@@ -18,6 +18,12 @@ export default {
       config: ADMIN_ROUTE,
     },
     {
+      method: "POST",
+      path: "/prompt-setting/translate-back",
+      handler: "api::prompt-setting.prompt-setting.translateBack",
+      config: ADMIN_ROUTE,
+    },
+    {
       method: "PUT",
       path: "/prompt-setting/admin-config",
       handler: "api::prompt-setting.prompt-setting.adminUpdate",

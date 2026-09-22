@@ -28,6 +28,7 @@ import { ENGINE_PROMPT_CARDS } from "./cards";
 
 const ADMIN_API = "/api/prompt-setting/admin-config";
 const TRADUCIR_API = "/api/prompt-setting/translate-field";
+const TRADUCIR_INVERSA_API = "/api/prompt-setting/translate-back";
 
 /**
  * Las tarjetas del motor más las del proyecto.
@@ -168,6 +169,7 @@ function PromptSettingsPage() {
   const [borradores, setBorradores] = React.useState<Valores>({});
   const [borradoresGuardados, setBorradoresGuardados] = React.useState<Valores>({});
   const [traduciendo, setTraduciendo] = React.useState<string | null>(null);
+  const [preparando, setPreparando] = React.useState(false);
 
   // Dirty = el form se separó de lo último guardado. Maneja la píldora de
   // cambios sin guardar, los botones y el atajo ⌘/Ctrl+S.
@@ -211,6 +213,42 @@ function PromptSettingsPage() {
   const set = (key: string, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
   const setBorrador = (key: string, value: string) =>
     setBorradores((prev) => ({ ...prev, [key]: value }));
+
+  /**
+   * Al pasar a "escribir en mi idioma", llena los borradores que falten
+   * traduciendo el texto final.
+   *
+   * Sin esto el modo no sirve para nada en una instancia ya configurada: los
+   * borradores sólo existen si alguien ya escribió en su idioma, así que al
+   * cambiar de modo se veían campos VACÍOS. Se traduce sólo lo que falta y en
+   * una sola llamada; lo que el usuario ya escribió no se toca.
+   */
+  const irAModoBorrador = React.useCallback(async () => {
+    setModo("borrador");
+    const faltan: Valores = {};
+    for (const campo of FIELDS) {
+      if ((campo.lang ?? "prompt") !== "prompt") continue;
+      const final = (form[campo.key] ?? "").trim();
+      if (final && !(borradores[campo.key] ?? "").trim()) faltan[campo.key] = final;
+    }
+    if (Object.keys(faltan).length === 0) return;
+
+    setPreparando(true);
+    try {
+      const { data } = await post<{ translated: Valores }>(TRADUCIR_INVERSA_API, {
+        fields: faltan,
+        language: form.writingLanguage || "Spanish",
+      });
+      setBorradores((prev) => ({ ...data.translated, ...prev }));
+    } catch {
+      toggleNotification({
+        type: "warning",
+        message: "No se pudieron traducir los textos actuales. Podés escribirlos a mano.",
+      });
+    } finally {
+      setPreparando(false);
+    }
+  }, [form, borradores, post, toggleNotification]);
 
   /**
    * Traduce el borrador y deja el resultado en el campo final, SIN guardar.
@@ -277,10 +315,15 @@ function PromptSettingsPage() {
               <SingleSelect
                 aria-label="Modo de escritura"
                 value={modo}
-                onChange={(v: string) => setModo(v === "borrador" ? "borrador" : "final")}
+                onChange={(v: string) => {
+                  if (v === "borrador") void irAModoBorrador();
+                  else setModo("final");
+                }}
               >
                 <SingleSelectOption value="final">Ver el texto final</SingleSelectOption>
-                <SingleSelectOption value="borrador">Escribir en mi idioma</SingleSelectOption>
+                <SingleSelectOption value="borrador">
+                  {preparando ? "Traduciendo…" : "Escribir en mi idioma"}
+                </SingleSelectOption>
               </SingleSelect>
             </Box>
             <Button
@@ -293,6 +336,21 @@ function PromptSettingsPage() {
           </Flex>
         }
       />
+
+      {modo === "borrador" ? (
+        <Box
+          marginBottom={4}
+          padding={4}
+          background={preparando ? "primary100" : "neutral100"}
+          hasRadius
+        >
+          <Typography variant="pi" textColor="neutral700">
+            {preparando
+              ? "Traduciendo la configuración actual a tu idioma para que puedas leerla y editarla…"
+              : "Estás viendo un borrador en tu idioma. Lo que se le manda al modelo es el texto final, en inglés: traducí un campo para actualizarlo, o cambiá a «Ver el texto final» para revisarlo."}
+          </Typography>
+        </Box>
+      ) : null}
 
       <Box
         style={{
