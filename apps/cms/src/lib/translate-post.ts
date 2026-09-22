@@ -13,6 +13,7 @@ import { getOpenAIClient, translatePost } from "./openai";
 import { getOpenAITextKey, getOpenAITextModel } from "./openai-config";
 import { logAgentAction } from "./audit";
 import { getPromptSettings } from "./prompt-settings";
+import * as project from "./project";
 
 const UID = "api::post.post";
 
@@ -51,7 +52,7 @@ async function uniqueEnSlug(
   let slug = base;
   for (let n = 2; n <= 50; n++) {
     const clash = (await strapi.documents(UID).findMany({
-      locale: "en",
+      locale: project.translationLocale,
       filters: { slug: { $eq: slug }, documentId: { $ne: documentId } },
       fields: ["documentId"],
       limit: 1,
@@ -94,7 +95,7 @@ export async function ensurePostTranslation(
   try {
     const post = (await strapi.documents(UID).findOne({
       documentId,
-      locale: "es",
+      locale: project.defaultLocale,
       status: "published",
       fields: ["title", "excerpt", "content", "publishedAt"],
       populate: ["coverImage", "tags", "generatedByAgent"],
@@ -106,7 +107,7 @@ export async function ensurePostTranslation(
     if (!opts.force) {
       const existingEn = (await strapi.documents(UID).findOne({
         documentId,
-        locale: "en",
+        locale: project.translationLocale,
         status: "published",
         fields: ["documentId"],
       } as never)) as unknown as { documentId: string } | null;
@@ -143,7 +144,7 @@ export async function ensurePostTranslation(
       // schema's non-localized sync behaves for link-table fields.
       await strapi.documents(UID).update({
         documentId,
-        locale: "en",
+        locale: project.translationLocale,
         data: {
           title: translated.title,
           slug,
@@ -156,7 +157,7 @@ export async function ensurePostTranslation(
             : {}),
         } as never,
       });
-      await strapi.documents(UID).publish({ documentId, locale: "en" });
+      await strapi.documents(UID).publish({ documentId, locale: project.translationLocale });
 
       // publish() stamps "now"; mirror the Spanish publishedAt so both locales
       // share the same position in publishedAt-sorted feeds. Re-read it here
@@ -165,13 +166,13 @@ export async function ensurePostTranslation(
       try {
         const esRow = (await strapi.db
           .connection("posts")
-          .where({ document_id: documentId, locale: "es" })
+          .where({ document_id: documentId, locale: project.defaultLocale })
           .whereNotNull("published_at")
           .first("published_at")) as { published_at: Date | string } | undefined;
         if (esRow?.published_at) {
           await strapi.db
             .connection("posts")
-            .where({ document_id: documentId, locale: "en" })
+            .where({ document_id: documentId, locale: project.translationLocale })
             .whereNotNull("published_at")
             .update({ published_at: new Date(esRow.published_at) });
         }

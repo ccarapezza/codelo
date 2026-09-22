@@ -27,6 +27,9 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+      - name: El motor no nombra ningún tema
+        run: ./scripts/check-neutral.sh
+
       - run: pnpm lint
 
       # Los tipos de Strapi están gitignoreados y el typecheck del CMS los

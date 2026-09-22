@@ -2,6 +2,7 @@ import type { Core } from "@strapi/strapi";
 import { runDueAgents } from "../src/lib/agent-runner";
 import { fetchAndSaveNews } from "../src/lib/rss-fetcher";
 import { verticalCronTasks } from "../src/verticals/cron";
+import * as project from "../src/lib/project";
 
 // Los crons del MOTOR van acá; los del vertical viven en src/verticals/cron.ts
 // y entran por el spread de abajo. Así este archivo es idéntico en todos los
@@ -17,7 +18,7 @@ export default {
     },
     options: {
       rule: "* * * * *",
-      tz: "America/Argentina/Buenos_Aires",
+      tz: project.scheduleTz,
     },
   },
 
@@ -34,7 +35,7 @@ export default {
       // distribuye la carga durante el día. Cada fetch es liviano (HTTP GET +
       // parse XML); la dedup por URL evita inserts duplicados.
       rule: "*/30 * * * *",
-      tz: "America/Argentina/Buenos_Aires",
+      tz: project.scheduleTz,
     },
   },
 

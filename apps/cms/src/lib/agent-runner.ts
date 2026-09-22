@@ -27,6 +27,7 @@ import {
   parseSourceContext,
 } from "./source-context";
 import { ensurePostTranslation } from "./translate-post";
+import * as project from "./project";
 import { verticalAgentRoles } from "../verticals/agent-roles";
 import { extraDirectorFilters } from "../verticals/director-filters";
 
@@ -75,7 +76,7 @@ type ImageGeneratorAgentDoc = {
 // Each schedule carries its own IANA zone (the wall-clock zone its time/days
 // were authored in). The container TZ stays UTC; we never rely on it. This
 // env only provides the fallback zone for schedules with no timezone set.
-const DEFAULT_SCHEDULE_TZ = process.env.AGENT_SCHEDULE_TZ || "America/Argentina/Buenos_Aires";
+const DEFAULT_SCHEDULE_TZ = project.scheduleTz;
 
 const ZONED_FORMAT_OPTS: Intl.DateTimeFormatOptions = {
   year: "numeric",
@@ -724,7 +725,7 @@ async function runDirector(
         try {
           await strapi.db
             .connection("posts")
-            .where({ document_id: draft.documentId, locale: "es" })
+            .where({ document_id: draft.documentId, locale: project.defaultLocale })
             .whereNotNull("published_at")
             .update({ published_at: staggered });
         } catch (staggerErr) {

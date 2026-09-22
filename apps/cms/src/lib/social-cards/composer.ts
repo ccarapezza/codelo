@@ -116,7 +116,7 @@ export function sanitizeSlide(raw: unknown): Slide | null {
  * dominio: el motor no sabe de qué habla el sitio que lo usa. Todo eso entra por
  * `ps`. Esta función llegó a tener escrita la voz de marca, las reglas de
  * consumo, la paleta y hasta los hashtags de UN proyecto, y se los aplicaba a
- * todos: el otro portal publicaba sus placas de fútbol con #cannabis.
+ * todos: un portal publicaba sus placas con los hashtags de OTRO tema.
  */
 export function buildCarouselSystemPrompt(ps: PromptSettings, siteUrl: string): string {
   return [
@@ -173,14 +173,14 @@ export function buildCarouselSystemPrompt(ps: PromptSettings, siteUrl: string): 
  *
  * El handle sale de los ajustes y puede estar vacío: una instancia sin redes no
  * tiene que imprimir el `#` de nadie. Antes esto terminaba, fijo, en
- * "#cannabis #canamo" — para cualquier proyecto.
+ * los hashtags de un tema concreto — para cualquier proyecto.
  */
 /**
  * El dominio que se imprime en la placa de cierre.
  *
  * Sale de la URL pública de la instalación y ya no de `${BRAND.handle}.com.ar`,
  * que además de ser de un proyecto le agregaba un `.com.ar` a cualquier handle
- * — el otro portal mostraba "fulbo.studio.com.ar", un dominio que no existe.
+ * — un portal terminaba mostrando un dominio que no existe.
  */
 function siteHost(): string {
   try {

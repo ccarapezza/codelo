@@ -38,6 +38,13 @@ function bottomScrim(width: number, height: number, from = "32%"): SatoriNode {
   });
 }
 
+/**
+ * Mismo criterio que templates.ts: el @handle es un ajuste editable y el render
+ * es sincrónico, así que se guarda por render en vez de enhebrarlo por cada
+ * overlay. Vacío = no se imprime.
+ */
+let handleActual = "";
+
 function footer(width: number): SatoriNode {
   return h(
     "div",
@@ -51,7 +58,7 @@ function footer(width: number): SatoriNode {
     h(
       "div",
       { style: { display: "flex", fontFamily: BRAND.fontBody, fontWeight: 600, fontSize: 36, color: BRAND.white } },
-      "@" + BRAND.handle,
+      handleActual ? "@" + handleActual : "",
     ),
   );
 }
@@ -69,7 +76,7 @@ function root(size: Size, ...layers: unknown[]): SatoriNode {
   );
 }
 
-// Countdown hype: "Faltan / 8 / días / para la Expo Cannabis".
+// Countdown hype: "Faltan / 8 / días / para el evento".
 export function countdownOverlay(o: CountdownOverlayFields, size: Size): SatoriNode {
   const { width, height } = size;
 
@@ -198,7 +205,9 @@ export function renderOverlayNode(
   type: OverlayType,
   fields: Record<string, string>,
   size: Size,
+  handle = "",
 ): SatoriNode {
+  handleActual = handle;
   if (type === "countdown") {
     return countdownOverlay(
       { pre: fields.pre, big: fields.big ?? "?", unit: fields.unit, label: fields.label },

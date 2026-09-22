@@ -200,7 +200,7 @@ export default ({ strapi }: { strapi: any }) => ({
     // scale 0.5 = preview liviano (default); 1 = full-res para descargar.
     const scale = typeof body.scale === "number" ? Math.min(1, Math.max(0.1, body.scale)) : 0.5;
     const bgUri = body.bgFileId ? await bgUriFromFile(strapi, body.bgFileId).catch(() => null) : null;
-    const previews = (await renderDeck(slides, sizeKey, bgUri, scale)).map((b) => dataUriFromBuffer(b, "image/png"));
+    const previews = (await renderDeck(slides, sizeKey, bgUri, scale, (await getPromptSettings(strapi)).socialHandle)).map((b) => dataUriFromBuffer(b, "image/png"));
     ctx.body = { previews };
   },
 
@@ -245,7 +245,7 @@ export default ({ strapi }: { strapi: any }) => ({
         if (!post) return ctx.badRequest("La nota no existe.");
 
         const bgUri = body.bgFileId ? await bgUriFromFile(strapi, body.bgFileId).catch(() => null) : null;
-        const pngs = await renderDeck(slides, "portrait", bgUri, 1);
+        const pngs = await renderDeck(slides, "portrait", bgUri, 1, (await getPromptSettings(strapi)).socialHandle);
         const uploadIds: number[] = [];
         const planSlides: Array<{ index: number; uploadId: number; slide: Slide }> = [];
         for (let i = 0; i < pngs.length; i++) {
@@ -280,7 +280,7 @@ export default ({ strapi }: { strapi: any }) => ({
         const slides = parseSlides(body.slides);
         if (slides.length < 1) return ctx.badRequest("No hay placa válida.");
         const bgUri = body.bgFileId ? await bgUriFromFile(strapi, body.bgFileId).catch(() => null) : null;
-        const [png] = await renderDeck(slides.slice(0, 1), "story", bgUri, 1);
+        const [png] = await renderDeck(slides.slice(0, 1), "story", bgUri, 1, (await getPromptSettings(strapi)).socialHandle);
         const fileId = await uploadImageToStrapi(
           strapi,
           png,

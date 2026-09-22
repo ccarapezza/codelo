@@ -1,6 +1,6 @@
 // Tests del MECANISMO de relevancia editorial, no de las palabras de un
 // vertical: las listas se inyectan mockeando verticals/rss-scope, así que el
-// test sigue valiendo cuando codelo las complete o cuando otro proyecto adopte
+// test sigue valiendo cuando un proyecto las complete o cuando otro adopte
 // el motor con las suyas.
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -26,7 +26,7 @@ function setListas(next: Partial<typeof listas>) {
 beforeEach(() => setListas({}));
 
 describe("isEditoriallyRelevant", () => {
-  it("sin alcance declarado deja pasar todo (el caso de codelo hoy)", () => {
+  it("sin alcance declarado deja pasar todo (el default del motor)", () => {
     expect(isEditoriallyRelevant({ title: "Cualquier cosa", summary: "" })).toBe(true);
     expect(isEditoriallyRelevant({ title: "El dólar hoy", summary: null })).toBe(true);
   });

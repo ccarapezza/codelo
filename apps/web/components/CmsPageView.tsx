@@ -6,7 +6,7 @@ import { PageDecoration } from "@/components/vertical";
 import { cn } from "@/lib/utils";
 
 // Renderer compartido de las páginas estáticas del CMS (quiénes somos,
-// REPROCANN, contacto…). El contenido es markdown escrito en el admin.
+// contacto…). El contenido es markdown escrito en el admin.
 // `decoration` es la portada de la casa cuando la página no tiene coverImage:
 // cada ruta fija la suya para que no cambie con el contenido.
 export async function CmsPageView({

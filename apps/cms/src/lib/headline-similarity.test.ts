@@ -25,8 +25,8 @@ describe("headlineTooSimilar", () => {
   it("caza la frase núcleo compartida (caso precio del gramo)", () => {
     expect(
       headlineTooSimilar(
-        "El precio del gramo de cannabis en Argentina en 2026 oscila entre $6.000 y $20.000",
-        "Cuánto cuesta el gramo de cannabis en Argentina en 2026",
+        "El precio del metro cuadrado en Argentina en 2026 oscila entre $6.000 y $20.000",
+        "Cuánto cuesta el metro cuadrado en Argentina en 2026",
       ),
     ).toBe(true);
   });
@@ -43,8 +43,8 @@ describe("headlineTooSimilar", () => {
   it("deja pasar reencuadre con datos propios (caso LIBBY)", () => {
     expect(
       headlineTooSimilar(
-        "Resultados preliminares del estudio LIBBY sugieren mejoras en la agitación por cannabis medicinal en pacientes con demencia",
-        "El cannabis medicinal podría ayudar con la agitación de la demencia",
+        "Resultados preliminares del estudio LIBBY sugieren mejoras en la agitación en pacientes con demencia",
+        "Un tratamiento nuevo podría ayudar con la agitación de la demencia",
       ),
     ).toBe(false);
   });
@@ -58,7 +58,7 @@ describe("headlineTooSimilar", () => {
     expect(
       headlineTooSimilar(
         "CAÑAMO INDUSTRIAL: REGULACION NUEVA",
-        "Cáñamo industrial: regulación nueva",
+        "Energía industrial: regulación nueva",
       ),
     ).toBe(true);
   });

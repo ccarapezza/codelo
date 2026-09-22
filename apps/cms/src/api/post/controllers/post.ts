@@ -230,10 +230,11 @@ async function buildCarouselFor(
   }
 
   // 3) Render + upload each slide sequentially (keeps the memory pool stable).
+  const ps = await getPromptSettings(strapi);
   const uploadIds: number[] = [];
   const planSlides: Array<{ index: number; uploadId: number; slide: Slide }> = [];
   for (let i = 0; i < slides.length; i++) {
-    const png = await renderToPng(renderSlide(slides[i], SIZES.portrait), SIZES.portrait);
+    const png = await renderToPng(renderSlide(slides[i], SIZES.portrait, ps.socialHandle), SIZES.portrait);
     const n = String(i + 1).padStart(2, "0");
     const filename = `slide-${n}-${documentId}-${Date.now()}.png`;
     const uploadId = await uploadImageToStrapi(
@@ -567,7 +568,7 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
     }
 
     const candidates = (await strapi.documents("api::post.post").findMany({
-      locale: "es",
+      locale: project.defaultLocale,
       status: "published",
       sort: { publishedAt: "desc" },
       fields: ["documentId", "title"],
@@ -980,7 +981,7 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
     const doc = (await strapi.documents("api::post.post").findOne({
       documentId,
       status: "draft",
-      locale: "es",
+      locale: project.defaultLocale,
       populate: {
         coverImage: { fields: ["url", "formats"] },
         tags: { fields: ["name"] },
@@ -1042,14 +1043,14 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
       const existing = (await strapi.documents("api::post.post").findOne({
         documentId,
         status: "draft",
-        locale: "es",
+        locale: project.defaultLocale,
         fields: ["publishedAt"],
       })) as unknown as { publishedAt: string | null } | null;
       const wasPublished = Boolean(existing?.publishedAt);
 
       const updated = (await strapi.documents("api::post.post").update({
         documentId,
-        locale: "es",
+        locale: project.defaultLocale,
         data: {
           title,
           slug: makeSlug(slug?.trim() || title),

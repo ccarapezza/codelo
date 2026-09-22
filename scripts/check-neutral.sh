@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# El motor no nombra un tema, una marca ni un dominio.
+#
+# Es la regla del CLAUDE.md, ejecutable. Corre en CI: un ejemplo de un vertical
+# que se cuela en una pantalla del motor se lo lleva TODA instancia, y así
+# terminó un portal de fútbol publicando placas con #cannabis.
+#
+# La única excepción es apps/cms/test/preservation/, donde el texto real está
+# congelado a propósito para demostrar que el refactor no cambia comportamiento.
+set -euo pipefail
+
+TERMINOS='cannabis|cáñamo|canamo|cannábic|reprocann|ariccame|inase|boletín oficial'
+TERMINOS+='|futbol|fútbol|jugador|arquero|conmebol|cogollos|codelo|fulbo'
+
+hits=$(grep -rniE "$TERMINOS" \
+  apps/cms/src apps/cms/config apps/web/app apps/web/components apps/web/lib \
+  deploy .env.example 2>/dev/null \
+  | grep -vE 'apps/cms/src/verticals/|apps/cms/src/admin/verticals|apps/web/(app/\[lang\]/\(vertical\)|components/vertical|lib/vertical|lib/site\.ts)' \
+  || true)
+
+if [[ -n "$hits" ]]; then
+  echo "✗ El motor nombra un tema o una marca:"
+  echo "$hits"
+  echo
+  echo "Lo específico de un proyecto va en las costuras (src/verticals/, admin/verticals.ts)"
+  echo "o en la configuración editorial, que vive en la base y se edita desde el panel."
+  exit 1
+fi
+echo "✓ el motor no nombra ningún tema"

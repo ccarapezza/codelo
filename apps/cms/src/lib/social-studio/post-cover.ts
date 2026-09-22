@@ -25,6 +25,7 @@ import {
 } from "../openai-config";
 import { getPromptSettings } from "../prompt-settings";
 import { logAgentAction } from "../audit";
+import * as project from "../project";
 
 type ImageGeneratorAgentDoc = {
   documentId: string;
@@ -144,7 +145,7 @@ export async function ensurePostCover(
       try {
         await strapi.db
           .connection("posts")
-          .where({ document_id: documentId, locale: "es" })
+          .where({ document_id: documentId, locale: project.defaultLocale })
           .whereNotNull("published_at")
           .update({ published_at: new Date(post.publishedAt) });
       } catch (restoreErr) {

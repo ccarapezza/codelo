@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# codelo deploy script — invoked over SSH by Jenkins (deployDockerCompose).
-# Lives at /opt/codelo/deploy/deploy.sh on the VPS.
+# Script de deploy — lo invoca Jenkins por SSH (deployDockerCompose).
+# Vive en /opt/<slug>/deploy/deploy.sh en el VPS.
 #
 # Usage: deploy/deploy.sh <branch> [--skip-build]
 #

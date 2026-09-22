@@ -63,7 +63,7 @@ function footer(mode: "full" | "handle" | "none" = "full"): SatoriNode | null {
   const handle = h(
     "div",
     { style: { display: "flex", fontFamily: BRAND.fontBody, fontWeight: 600, fontSize: 30, color: BRAND.muted } },
-    "@" + BRAND.handle,
+    handleActual ? "@" + handleActual : "",
   );
 
   if (mode === "handle") {
@@ -533,8 +533,8 @@ const templates: Record<TemplateName, TemplateFn> = {
             )
           : null,
         fireBar(180),
-        h("div", { style: { display: "flex", marginTop: 44, fontFamily: BRAND.fontDisplay, fontSize: 96, color: BRAND.white } }, "@" + BRAND.handle),
-        h("div", { style: { display: "flex", marginTop: 8, fontSize: 38, fontWeight: 600, color: BRAND.accentLight } }, slide.url || BRAND.handle),
+        h("div", { style: { display: "flex", marginTop: 44, fontFamily: BRAND.fontDisplay, fontSize: 96, color: BRAND.white } }, handleActual ? "@" + handleActual : ""),
+        h("div", { style: { display: "flex", marginTop: 8, fontSize: 38, fontWeight: 600, color: BRAND.accentLight } }, slide.url || handleActual),
       ],
     });
   },
@@ -552,7 +552,20 @@ const TEXT_FIELDS: (keyof Slide)[] = ["kicker", "title", "tagline", "hint", "lab
 
 export const TEMPLATE_NAMES: TemplateName[] = Object.keys(templates) as TemplateName[];
 
-export function renderSlide(slide: Slide, size: Size): SatoriNode {
+/**
+ * El `@handle` que imprimen las placas durante el render en curso.
+ *
+ * Es un ajuste editable (`socialHandle`), no una constante de marca: si el
+ * render leyera uno y el caption otro, la placa y el texto que la acompaña
+ * podrían firmar distinto. Se guarda acá y no se pasa por parámetro porque
+ * habría que enhebrarlo por las diez funciones de plantilla; satori renderiza de
+ * forma SINCRÓNICA, así que no hay dos renders intercalados. Vacío = no se
+ * imprime nada.
+ */
+let handleActual = "";
+
+export function renderSlide(slide: Slide, size: Size, handle = ""): SatoriNode {
+  handleActual = handle;
   const fn = templates[slide.template];
   if (!fn) {
     throw new Error(`Plantilla desconocida: "${slide.template}". Disponibles: ${TEMPLATE_NAMES.join(", ")}`);

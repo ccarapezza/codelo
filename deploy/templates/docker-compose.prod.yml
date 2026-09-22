@@ -2,16 +2,16 @@
 # Todo lo específico viene del .env que Jenkins renderiza: no hay defaults
 # con el nombre de ningún proyecto, a propósito — un default silencioso es
 # cómo un proyecto termina escribiendo sobre los datos de otro.
-# Production stack for Cogollos del Oeste (domain TBD).
+# Stack de producción. Copiar a la raíz del proyecto y completar los valores.
 #
 # Deployed via Jenkins (`westcode-shared` shared library, `deployDockerCompose`).
 # The `.env` file in the repo dir is rendered by Jenkins from Jenkins
 # credentials + non-secret defaults on each pipeline run — do not commit it.
 #
 # Reverse proxy + TLS are handled by the shared Caddy living in `/opt/proxy`
-# on the host (shared with the fulbo/x100 stacks). The `web` and `cms`
+# on the host (shared with the other stacks del VPS). The `web` and `cms`
 # services attach to the external `proxy-edge` network so the shared Caddy
-# can reach them by container name (codelo-web, codelo-cms).
+# can reach them by container name (<slug>-web, <slug>-cms).
 #
 # No Prisma/migrate service here: Strapi manages its own schema on boot.
 #
@@ -69,7 +69,7 @@ services:
       dockerfile: apps/cms/Dockerfile
     container_name: ${PROJECT_SLUG:?required}-cms
     <<: *restart_policy
-    # The VPS (8GB) also hosts fulbo and x100 — keep limits modest.
+    # El VPS aloja varias instalaciones — conviene mantener los límites modestos.
     deploy:
       resources:
         limits:
@@ -92,7 +92,7 @@ services:
       ENCRYPTION_KEY: ${STRAPI_ENCRYPTION_KEY:?required}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:?required}
       # Vista previa de borradores (página Notas → iframe de la web). El mismo
-      # secreto lo comparte codelo-web como CMS_PREVIEW_SECRET. PREVIEW_WEB_URL
+      # secreto lo comparte el web como CMS_PREVIEW_SECRET. PREVIEW_WEB_URL
       # habilita además el frame-src de la CSP del admin (ver middlewares.ts).
       PREVIEW_SECRET: ${PREVIEW_SECRET:?PREVIEW_SECRET required}
       PREVIEW_WEB_URL: ${SITE_PUBLIC_URL:?required}
@@ -109,6 +109,11 @@ services:
       # Identidad de la instalación. PROJECT_SLUG NO tiene default: con ella se
       # arman las claves del core store, y una equivocada haría que una migración
       # de arranque ya cumplida se crea pendiente (ver src/lib/project.ts).
+      # La URL pública del SITIO (no la del CMS). De acá salen el dominio que
+      # imprimen las placas y el User-Agent con el que se piden los feeds.
+      SITE_PUBLIC_URL: ${SITE_PUBLIC_URL:?required}
+      # Zona horaria de los schedules de agentes y de los crons del motor.
+      AGENT_SCHEDULE_TZ: ${AGENT_SCHEDULE_TZ:-America/Argentina/Buenos_Aires}
       PROJECT_SLUG: ${PROJECT_SLUG:?required}
       PROJECT_NAME: ${PROJECT_NAME:?required}
       STRAPI_TELEMETRY_DISABLED: "true"
@@ -120,7 +125,7 @@ services:
         condition: service_healthy
     networks: [internal, proxy-edge]
 
-  # Next.js public site — codelo-web
+  # Next.js public site — <slug>-web
   web:
     build:
       context: .

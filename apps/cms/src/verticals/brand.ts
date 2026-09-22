@@ -15,7 +15,10 @@
 //   accentLight     variante clara, para números y destacados sobre el fondo
 //   accentWarm      acento secundario, para llamados a la acción
 //   fontDisplay / fontBody     titulares y cuerpo
-//   handle          el dominio o usuario que se imprime en la placa de cierre
+//
+// El @usuario de redes NO está acá: es `socialHandle`, un ajuste editable desde
+// el panel. Estaba en los dos lados y podían decir cosas distintas — la placa
+// firmaba de una forma y el caption de otra.
 
 // Los valores son los de Nib: grafito y ámbar, muestreados del logo. Un
 // proyecto que adopta el motor reescribe este archivo entero con los suyos.
@@ -30,7 +33,6 @@ export const BRAND = {
   accentWarm: "#C2661A",
   fontDisplay: "Anton",
   fontBody: "Inter",
-  handle: "nib",
 };
 
 /** Gradiente de marca reutilizable. */

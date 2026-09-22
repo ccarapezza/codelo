@@ -232,7 +232,7 @@ export function resolvePromptConstraints(
 
 // El catálogo de escenas trae cuatro variantes por categoría —(a) a (d)— y hasta
 // ahora elegía el modelo de texto. Los LLM se quedan con la primera de una lista:
-// medido en fulbo sobre 478 prompts de producción, la variante (a) de una misma
+// medido sobre 478 prompts de producción, la variante (a) de una misma
 // categoría salió 122 veces contra 12 de las otras tres juntas. De ahí que todas
 // las tapas de una categoría terminen siendo la misma escena. Así que la variante
 // se sortea con el mismo seed que composición/humor/tratamiento y al modelo le
