@@ -98,7 +98,17 @@ export function PageHeader({
         </Box>
       </Flex>
       {actions ? (
-        <Flex gap={2} wrap="wrap" justifyContent={isMobile ? "flex-start" : "flex-end"}>
+        // `flexShrink: 0` + `nowrap`: con un subtítulo largo, el bloque del
+        // título se comía el ancho de las acciones y la etiqueta de un botón se
+        // partía en dos líneas, dejándolo más alto que sus vecinos. Si de verdad
+        // no entran, el `wrap` los baja de línea enteros en vez de espachurrarlos.
+        <Flex
+          gap={2}
+          wrap="wrap"
+          alignItems="center"
+          justifyContent={isMobile ? "flex-start" : "flex-end"}
+          style={{ flexShrink: 0, whiteSpace: "nowrap" }}
+        >
           {actions}
         </Flex>
       ) : null}
