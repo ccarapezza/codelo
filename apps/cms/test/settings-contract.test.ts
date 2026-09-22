@@ -28,7 +28,14 @@ const atributosDe = (tipo: string): string[] =>
   );
 
 describe("prompt-setting", () => {
-  const schema = atributosDe("prompt-setting");
+  /**
+   * `sourceDrafts` está en el schema pero NO es un campo de prompt: es donde se
+   * guarda lo que el usuario escribió en su idioma antes de traducirlo. No se
+   * manda a ningún modelo, no tiene default y no aparece en la allowlist de
+   * campos — se guarda por su propia rama en el controller.
+   */
+  const NO_ES_PROMPT = new Set(["sourceDrafts"]);
+  const schema = atributosDe("prompt-setting").filter((k) => !NO_ES_PROMPT.has(k));
 
   it("el schema tiene exactamente las claves del motor más las del vertical", () => {
     expect([...schema].sort()).toEqual([...ENGINE_PROMPT_KEYS, ...verticalPromptKeys].sort());

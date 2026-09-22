@@ -81,6 +81,9 @@
     },
     "translationGlossary": {
       "type": "text"
+    },
+    "sourceDrafts": {
+      "type": "json"
     }
   }
 }

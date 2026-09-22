@@ -1,5 +1,8 @@
 import { factories } from "@strapi/strapi";
 import { requireAdminPermission } from "../../../lib/admin-auth";
+import { getOpenAITextKey, getOpenAITextModel } from "../../../lib/openai-config";
+import { getOpenAIClient } from "../../../lib/openai";
+import { translateFieldToEnglish } from "../../../lib/translate-field";
 import { ADMIN_PERMISSIONS } from "../../../lib/admin-permissions";
 import { DEFAULT_PROMPT_SETTINGS, ENGINE_PROMPT_KEYS } from "../../../lib/prompt-defaults";
 import { verticalPromptKeys } from "../../../verticals/prompt-fields";
@@ -24,11 +27,37 @@ export default factories.createCoreController(UID, ({ strapi }) => ({
     ctx.body = { current: current ?? {}, defaults: DEFAULT_PROMPT_SETTINGS };
   },
 
+  /**
+   * Traduce al inglés lo que el usuario escribió en su idioma, para un campo de
+   * instrucción. No guarda nada: devuelve la traducción para que se revise antes
+   * de aceptarla.
+   */
+  async translateField(ctx) {
+    if (!(await requireAdminPermission(ctx, strapi, ADMIN_PERMISSIONS.promptSettings))) return;
+    const { text } = ctx.request.body as { text?: string };
+    if (!text || !text.trim()) return ctx.badRequest("text es obligatorio");
+    try {
+      const client = getOpenAIClient(getOpenAITextKey());
+      const model = await getOpenAITextModel(strapi);
+      ctx.body = { translated: await translateFieldToEnglish(client, model, text) };
+    } catch (err) {
+      strapi.log.error("[prompt-setting] traducción falló:", err);
+      return ctx.badRequest("No se pudo traducir. Revisá que OPENAI_API_KEY esté configurada.");
+    }
+  },
+
   async adminUpdate(ctx) {
     if (!(await requireAdminPermission(ctx, strapi, ADMIN_PERMISSIONS.promptSettings))) return;
     const body = ctx.request.body as Record<string, unknown>;
 
     const data: Record<string, unknown> = {};
+
+    // Los borradores en español. No son un campo de prompt: no se mandan a
+    // ningún modelo, sólo se guardan para poder volver a editarlos. Van en una
+    // columna JSON y no en 20 columnas paralelas.
+    if ("sourceDrafts" in body && body.sourceDrafts && typeof body.sourceDrafts === "object") {
+      data.sourceDrafts = body.sourceDrafts;
+    }
     for (const key of ALLOWED_FIELDS) {
       if (key in body) {
         const value = body[key];

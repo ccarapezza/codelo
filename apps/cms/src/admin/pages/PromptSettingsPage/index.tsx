@@ -8,8 +8,11 @@ import {
   Field,
   Flex,
   Loader,
+  SingleSelect,
+  SingleSelectOption,
+  Typography,
 } from "@strapi/design-system";
-import { ArrowClockwise, Feather } from "@strapi/icons";
+import { ArrowClockwise, Command, Feather } from "@strapi/icons";
 import { Page, useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { ADMIN_PERMISSIONS } from "../../../lib/admin-permissions";
 import {
@@ -24,6 +27,7 @@ import * as verticals from "../../verticals";
 import { ENGINE_PROMPT_CARDS } from "./cards";
 
 const ADMIN_API = "/api/prompt-setting/admin-config";
+const TRADUCIR_API = "/api/prompt-setting/translate-field";
 
 /**
  * Las tarjetas del motor más las del proyecto.
@@ -73,43 +77,80 @@ const INSIGNIA: Record<FieldLang, { texto: string; fondo: string; color: string 
 function CampoPrompt({
   campo,
   valor,
+  borrador,
+  modo,
+  traduciendo,
   onChange,
+  onBorrador,
+  onTraducir,
 }: {
   campo: PromptField;
   valor: string;
+  borrador: string;
+  modo: "final" | "borrador";
+  traduciendo: boolean;
   onChange: (v: string) => void;
+  onBorrador: (v: string) => void;
+  onTraducir: () => void;
 }) {
+  const lang = campo.lang ?? "prompt";
+  // El modo borrador sólo tiene sentido en los campos de instrucción: los de
+  // texto literal ya van en el idioma del sitio, y los fijos no son texto.
+  const enBorrador = modo === "borrador" && lang === "prompt";
+  const mostrado = enBorrador ? borrador : valor;
+
   return (
     <Field.Root hint={campo.hint}>
       <Flex gap={2} alignItems="center" justifyContent="space-between">
         <Field.Label>{campo.label}</Field.Label>
-        <Badge
-          backgroundColor={INSIGNIA[campo.lang ?? "prompt"].fondo}
-          textColor={INSIGNIA[campo.lang ?? "prompt"].color}
-        >
-          {INSIGNIA[campo.lang ?? "prompt"].texto}
+        <Badge backgroundColor={INSIGNIA[lang].fondo} textColor={INSIGNIA[lang].color}>
+          {enBorrador ? "borrador" : INSIGNIA[lang].texto}
         </Badge>
       </Flex>
       {campo.rows ? (
         <Textarea
           rows={campo.rows}
-          value={valor}
-          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value)}
+          value={mostrado}
+          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+            enBorrador ? onBorrador(e.target.value) : onChange(e.target.value)
+          }
         />
       ) : (
         <TextInput
-          value={valor}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
+          value={mostrado}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            enBorrador ? onBorrador(e.target.value) : onChange(e.target.value)
+          }
         />
       )}
       <Field.Hint />
+      {enBorrador ? (
+        <Box paddingTop={2}>
+          <Button
+            size="S"
+            variant="secondary"
+            startIcon={<Command />}
+            loading={traduciendo}
+            disabled={!borrador.trim() || traduciendo}
+            onClick={onTraducir}
+          >
+            Traducir al inglés
+          </Button>
+          <Box paddingTop={2}>
+            <Typography variant="pi" textColor="neutral600">
+              Se traduce y te lo mostramos para que lo revises: lo que se le manda al modelo es
+              el texto final, no este borrador.
+            </Typography>
+          </Box>
+        </Box>
+      ) : null}
       {campo.reference ? <ReferenceNote>{campo.reference}</ReferenceNote> : null}
     </Field.Root>
   );
 }
 
 function PromptSettingsPage() {
-  const { get, put } = useFetchClient();
+  const { get, put, post } = useFetchClient();
   const { toggleNotification } = useNotification();
 
   const [form, setForm] = React.useState<Valores>(VACIO);
@@ -117,20 +158,33 @@ function PromptSettingsPage() {
   const [defaults, setDefaults] = React.useState<Valores>(VACIO);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
+  /**
+   * Modo de escritura. En «español» los campos de instrucción muestran el
+   * BORRADOR en el idioma del usuario y hay un botón para traducirlo; lo que se
+   * envía al modelo sigue siendo el texto final en inglés, que se puede ver y
+   * editar cambiando a «final».
+   */
+  const [modo, setModo] = React.useState<"final" | "borrador">("final");
+  const [borradores, setBorradores] = React.useState<Valores>({});
+  const [borradoresGuardados, setBorradoresGuardados] = React.useState<Valores>({});
+  const [traduciendo, setTraduciendo] = React.useState<string | null>(null);
 
   // Dirty = el form se separó de lo último guardado. Maneja la píldora de
   // cambios sin guardar, los botones y el atajo ⌘/Ctrl+S.
   const dirty = React.useMemo(
-    () => JSON.stringify(form) !== JSON.stringify(saved),
-    [form, saved],
+    () =>
+      JSON.stringify(form) !== JSON.stringify(saved) ||
+      JSON.stringify(borradores) !== JSON.stringify(borradoresGuardados),
+    [form, saved, borradores, borradoresGuardados],
   );
 
   React.useEffect(() => {
     (async () => {
       try {
-        const { data } = await get<{ current: Partial<Valores>; defaults: Partial<Valores> }>(
-          ADMIN_API,
-        );
+        const { data } = await get<{
+          current: Partial<Valores> & { sourceDrafts?: Valores };
+          defaults: Partial<Valores>;
+        }>(ADMIN_API);
         const d = data.defaults ?? {};
         const c = data.current ?? {};
         const next: Valores = { ...VACIO };
@@ -140,6 +194,9 @@ function PromptSettingsPage() {
           const guardado = (c[k] ?? "").trim();
           next[k] = guardado.length > 0 ? (c[k] as string) : base[k];
         }
+        const dr = data.current?.sourceDrafts ?? {};
+        setBorradores(dr);
+        setBorradoresGuardados(dr);
         setDefaults(base);
         setForm(next);
         setSaved(next);
@@ -152,6 +209,32 @@ function PromptSettingsPage() {
   }, [get, toggleNotification]);
 
   const set = (key: string, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
+  const setBorrador = (key: string, value: string) =>
+    setBorradores((prev) => ({ ...prev, [key]: value }));
+
+  /**
+   * Traduce el borrador y deja el resultado en el campo final, SIN guardar.
+   * Cambia a modo final para que se vea qué quedó: el punto de todo esto es que
+   * nadie tenga un prompt activo que nunca leyó.
+   */
+  const traducir = async (key: string) => {
+    const texto = (borradores[key] ?? "").trim();
+    if (!texto) return;
+    setTraduciendo(key);
+    try {
+      const { data } = await post<{ translated: string }>(TRADUCIR_API, { text: texto });
+      set(key, data.translated);
+      setModo("final");
+      toggleNotification({
+        type: "success",
+        message: "Traducido. Revisalo antes de guardar.",
+      });
+    } catch {
+      toggleNotification({ type: "danger", message: "No se pudo traducir." });
+    } finally {
+      setTraduciendo(null);
+    }
+  };
 
   const restore = (keys: string[]) =>
     setForm((prev) => {
@@ -163,15 +246,16 @@ function PromptSettingsPage() {
   const handleSave = React.useCallback(async () => {
     setSaving(true);
     try {
-      await put(ADMIN_API, form);
+      await put(ADMIN_API, { ...form, sourceDrafts: borradores });
       setSaved(form);
+      setBorradoresGuardados(borradores);
       toggleNotification({ type: "success", message: "Configuración guardada." });
     } catch {
       toggleNotification({ type: "danger", message: "Error al guardar la configuración." });
     } finally {
       setSaving(false);
     }
-  }, [form, put, toggleNotification]);
+  }, [form, borradores, put, toggleNotification]);
 
   if (loading) {
     return (
@@ -188,13 +272,25 @@ function PromptSettingsPage() {
         title="Configuración editorial"
         subtitle="De qué habla este sitio, con qué voz escribe y cómo se ven sus portadas y sus placas: es lo que convierte al motor en ESTE portal, y los agentes lo leen en cada corrida. Cada campo dice en qué idioma va — las instrucciones para el modelo se escriben en inglés, y el idioma de lo que se publica lo decide «Idioma de escritura». Un campo vacío usa el valor por defecto del motor, y «Restaurar» vuelve a ese valor neutro, NO al texto con el que arrancó el proyecto."
         actions={
-          <Button
-            variant="tertiary"
-            startIcon={<ArrowClockwise />}
-            onClick={() => restore(FIELD_KEYS)}
-          >
-            Restaurar todo
-          </Button>
+          <Flex gap={2} alignItems="center">
+            <Box style={{ width: "17rem" }}>
+              <SingleSelect
+                aria-label="Modo de escritura"
+                value={modo}
+                onChange={(v: string) => setModo(v === "borrador" ? "borrador" : "final")}
+              >
+                <SingleSelectOption value="final">Ver el texto final</SingleSelectOption>
+                <SingleSelectOption value="borrador">Escribir en mi idioma</SingleSelectOption>
+              </SingleSelect>
+            </Box>
+            <Button
+              variant="tertiary"
+              startIcon={<ArrowClockwise />}
+              onClick={() => restore(FIELD_KEYS)}
+            >
+              Restaurar todo
+            </Button>
+          </Flex>
         }
       />
 
@@ -231,7 +327,12 @@ function PromptSettingsPage() {
                     key={campo.key}
                     campo={campo}
                     valor={form[campo.key] ?? ""}
+                    borrador={borradores[campo.key] ?? ""}
+                    modo={modo}
+                    traduciendo={traduciendo === campo.key}
                     onChange={(v) => set(campo.key, v)}
+                    onBorrador={(v) => setBorrador(campo.key, v)}
+                    onTraducir={() => traducir(campo.key)}
                   />
                 ))}
               </Flex>
@@ -244,7 +345,10 @@ function PromptSettingsPage() {
         dirty={dirty}
         saving={saving}
         onSave={handleSave}
-        onDiscard={() => setForm(saved)}
+        onDiscard={() => {
+          setForm(saved);
+          setBorradores(borradoresGuardados);
+        }}
       />
     </PageContainer>
   );
