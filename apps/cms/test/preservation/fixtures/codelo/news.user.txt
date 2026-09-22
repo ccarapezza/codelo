@@ -1,0 +1,6 @@
+Escribí una nota en Spanish para hoy (2026-09-22) a partir del siguiente pedido del editor:
+"""Contá qué cambia con el nuevo régimen de inscripción y a quién le afecta."""
+
+(Sin investigación web — escribí en clave análisis/preview; no afirmes eventos recientes como hechos.)
+
+Devolvé solo el JSON.

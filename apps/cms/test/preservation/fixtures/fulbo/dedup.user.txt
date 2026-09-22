@@ -1,0 +1,9 @@
+CANDIDATE:
+El organismo publicó el nuevo régimen de inscripción
+
+EXISTING:
+1. Se aprobó el presupuesto anual del área
+2. El organismo unificó el trámite de inscripción
+3. Dos entidades obtuvieron su registro este mes
+
+Return only the JSON.

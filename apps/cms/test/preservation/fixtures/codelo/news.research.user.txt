@@ -1,0 +1,10 @@
+Escribí una nota en Spanish para hoy (2026-09-22) a partir del siguiente pedido del editor:
+"""Contá qué cambia con el nuevo régimen de inscripción y a quién le afecta."""
+
+## INVESTIGACIÓN WEB VERIFICADA (basá CADA hecho concreto SOLO en esto)
+- El organismo publicó el nuevo régimen el 12 de marzo.
+- La renovación pasa a tener un plazo de 30 días.
+
+Recordatorio: NO nombres ni atribuyas a ningún MEDIO de la investigación; reportá el hecho de fondo con voz propia de Cogollos del Oeste. Las fuentes OFICIALES (Boletín Oficial, normas, reguladores, revistas científicas) sí se citan.
+
+Devolvé solo el JSON.

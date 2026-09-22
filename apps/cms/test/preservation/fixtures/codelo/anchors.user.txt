@@ -1,0 +1,4 @@
+Title: El organismo publicó el nuevo régimen de inscripción
+Excerpt: La medida fija plazos y requisitos para quienes ya estaban inscriptos y para los que se sumen este año.
+
+Return only the JSON.
