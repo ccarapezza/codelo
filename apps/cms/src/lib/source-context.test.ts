@@ -7,9 +7,9 @@ import { buildSourceContext, formatSourceContext, parseSourceContext } from "./s
 import type { NewsItem } from "./rss-fetcher";
 
 const item = (over: Partial<NewsItem> = {}): NewsItem => ({
-  title: "Mendoza definió el circuito para investigar cannabis",
-  url: "https://revistathc.com/mendoza-cannabis",
-  source: "[Cannabis] Revista THC",
+  title: "Mendoza definió el circuito para investigar el caso",
+  url: "https://example.com/mendoza-circuito",
+  source: "[Sector] Revista del Sector",
   summary: "La provincia publicó los pasos para evaluar proyectos de investigación.",
   itemPublishedAt: null,
   ...over,
@@ -21,9 +21,9 @@ describe("buildSourceContext", () => {
     // borradores que esperan más que eso en el pool.
     const [snap] = buildSourceContext([item()]);
     expect(snap).toEqual({
-      title: "Mendoza definió el circuito para investigar cannabis",
-      url: "https://revistathc.com/mendoza-cannabis",
-      source: "[Cannabis] Revista THC",
+      title: "Mendoza definió el circuito para investigar el caso",
+      url: "https://example.com/mendoza-circuito",
+      source: "[Sector] Revista del Sector",
       summary: "La provincia publicó los pasos para evaluar proyectos de investigación.",
     });
   });
@@ -106,7 +106,7 @@ describe("parseSourceContext", () => {
 describe("formatSourceContext", () => {
   it("numera desde 1 y corta el resumen", () => {
     const out = formatSourceContext(buildSourceContext([item({ summary: "z".repeat(900) })]));
-    expect(out.startsWith("[1] [Cannabis] Revista THC | Mendoza")).toBe(true);
+    expect(out.startsWith("[1] [Sector] Revista del Sector | Mendoza")).toBe(true);
     expect(out).toContain("z".repeat(600));
     expect(out).not.toContain("z".repeat(601));
   });

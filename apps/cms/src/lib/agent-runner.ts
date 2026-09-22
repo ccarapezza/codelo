@@ -372,7 +372,7 @@ export async function runRedactor(
     // Compuerta anti-calco: la regla del prompt ("original headline") sola no
     // alcanza — las TITLE RULES empujan a títulos literales a la fuente y el
     // modelo resuelve la tensión copiando el titular (pasó con el de Revista
-    // THC sobre REPROCANN, publicado casi idéntico). Se compara contra los
+    // de un medio del sector, publicado casi idéntico). Se compara contra los
     // titulares del contexto y se regenera con feedback explícito; si tras los
     // reintentos sigue calcado, la nota NO se crea (mismo criterio que el gate
     // de duplicados: mejor un slot vacío que un titular ajeno).

@@ -314,7 +314,7 @@ export default function NoteEditorPage() {
       {!isEdit && mode === "ia" && !formReady ? (
         <Box marginBottom={6}>
           <AccentCard title="Pedido a la IA" icon={<Sparkle />} accent="primary">
-            <Field.Root hint="Describí la nota que querés. Ej: 'Novedades sobre REPROCANN y los plazos actuales'.">
+            <Field.Root hint="Describí la nota que querés. Ej: 'Qué cambió esta semana en el sector y a quién afecta'.">
               <Field.Label>Pedido</Field.Label>
               <Textarea
                 rows={4}

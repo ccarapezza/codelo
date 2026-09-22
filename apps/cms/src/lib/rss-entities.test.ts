@@ -3,10 +3,10 @@ import { decodeEntities } from "./rss-fetcher";
 
 describe("decodeEntities", () => {
   it("decodifica las numéricas, que son las que más aparecen en feeds reales", () => {
-    // Los dos casos vistos en vivo el 21/09/2026 en Cannabis Industry Journal
-    // y Le Cannabiste.
+    // Dos casos vistos en vivo el 21/09/2026 sobre feeds reales: el espacio
+    // duro y la comilla tipográfica.
     expect(decodeEntities("Cannabinoid&#160;Supplier")).toBe("Cannabinoid\u00a0Supplier");
-    expect(decodeEntities("le THC varie d&#8217;un facteur")).toBe("le THC varie d\u2019un facteur");
+    expect(decodeEntities("l&#8217;essai varie d&#8217;un facteur")).toBe("l\u2019essai varie d\u2019un facteur");
   });
 
   it("decodifica las hexadecimales", () => {

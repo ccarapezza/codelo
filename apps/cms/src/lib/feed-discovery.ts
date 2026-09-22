@@ -7,11 +7,11 @@
 //
 // Tres fuentes de candidatos, porque ninguna sola alcanza:
 //
-//   1. Feedly, que tiene el catálogo pero busca LITERAL. Medido el 21/09/2026:
-//      "futbol" 20 resultados, "futbol argentino" 1, "cannabis" 20,
-//      "cannabis argentina" 0, "reprocann" 0, "cáñamo" 0. O sea que se cuelga
-//      justo en las consultas de nicho y en español, que son las que le
-//      importan a un vertical.
+//   1. Feedly, que tiene el catálogo pero busca LITERAL. Medido el 21/09/2026
+//      sobre una decena de consultas: un término amplio de una palabra da 20
+//      resultados, y ESE MISMO término con una segunda palabra al lado baja a
+//      1 o a 0 — igual que cualquier término de nicho en castellano. Se cuelga
+//      justo en las consultas específicas, que son las útiles.
 //   2. Autodiscovery sobre un dominio, que cubre el caso "ya sé qué medio
 //      quiero" y no depende de ningún tercero.
 //   3. Los dominios que el usuario escriba dentro de la consulta.
@@ -135,8 +135,9 @@ async function mapLimit<T, R>(items: T[], limit: number, fn: (x: T) => Promise<R
 // ---------------------------------------------------------------------------
 
 /**
- * ⚠️ API no documentada y sin autenticación, igual que las de INASE o el
- * Boletín: puede pedir token o cambiar de forma sin aviso. Por eso devuelve []
+ * ⚠️ API no documentada y sin autenticación, de la misma familia que los
+ * endpoints internos de cualquier organismo: puede pedir token o cambiar de
+ * forma sin aviso. Por eso devuelve []
  * ante cualquier problema en vez de propagar el error — el buscador sigue
  * andando con autodiscovery.
  */
@@ -146,9 +147,9 @@ export async function searchFeedly(
   locale: string | null = null,
 ): Promise<FeedCandidate[]> {
   // `locale` sesga el catálogo hacia un idioma. Ojo: sesga, no filtra, y ayuda
-  // poco — medido el 21/09/2026, "cannabis" con locale=es y count=40 devolvía
-  // UN solo feed en castellano sobre 40. El catálogo de Feedly en español es
-  // flaco de verdad; para temas de nicho en castellano la vía que sirve es
+  // poco — medido el 21/09/2026, un término de nicho con locale=es y count=40
+  // devolvía UN solo feed en castellano sobre 40. El catálogo de Feedly en
+  // español es flaco de verdad; para nicho en castellano la vía que sirve es
   // autodiscovery sobre el medio que uno ya conoce. (El parámetro se llama
   // `locale`: `lang` existe pero se ignora.)
   const url =
@@ -192,16 +193,17 @@ export async function searchFeedly(
  * Feedly con reintento por palabra suelta.
  *
  * Su búsqueda es literal, así que una consulta de dos palabras se cae por un
- * precipicio: medido el 21/09/2026, "futbol" daba 20 resultados y "futbol
- * argentino" UNO; "cannabis" 20 y "cannabis medicinal" CERO. Sin reintento,
- * cuanto más precisa la consulta, más pobre el resultado — al revés de lo que
- * espera quien busca.
+ * precipicio: medido el 21/09/2026, un término amplio de una palabra daba 20
+ * resultados y ese mismo término con una segunda palabra al lado daba UNO, y
+ * en otro caso 20 contra CERO. Sin reintento, cuanto más precisa la consulta,
+ * más pobre el resultado — al revés de lo que espera quien busca.
  *
  * ⚠️ Las listas por palabra se INTERCALAN, no se concatenan. La primera versión
- * las ordenaba por largo y cortaba al llenarse: para "cannabis medicinal"
- * probaba "medicinal" (9 letras), se llenaba de blogs de medicina de urgencias
- * y nunca llegaba a consultar "cannabis". El resultado no traía un solo feed
- * de cannabis. Intercalando, ninguna palabra puede acaparar el cupo.
+ * las ordenaba por largo y cortaba al llenarse, así que en una consulta de dos
+ * palabras la MÁS LARGA se comía todo el cupo con sus propios resultados y la
+ * otra —la que de verdad definía el tema— no llegaba a consultarse nunca. El
+ * listado no traía un solo feed del tema buscado. Intercalando, ninguna palabra
+ * puede acaparar el cupo.
  *
  * Qué tan pertinente es cada candidato no se decide acá: de eso se encarga
  * scoreTopicMatch, que puntúa por fracción de términos de la consulta.
@@ -335,7 +337,7 @@ export async function discoverOnSite(site: string): Promise<FeedCandidate[]> {
 // Puntaje de tema
 // ---------------------------------------------------------------------------
 
-/** Minúsculas y sin diacríticos: "fútbol" y "futbol" tienen que ser lo mismo. */
+/** Minúsculas y sin diacríticos: "energía" y "energia" tienen que ser lo mismo. */
 function fold(s: string): string {
   return s
     .toLowerCase()
@@ -346,10 +348,10 @@ function fold(s: string): string {
 /**
  * Raíz aproximada de una palabra, para tolerar la morfología del español.
  *
- * Sin esto el puntaje miente feo: medido el 21/09/2026, la búsqueda "futbol
- * argentino" daba 0 % sobre un feed llamado *Futbol Argentino* cuyo primer
- * titular era "...la Selección Argentina...". El match por palabra entera veía
- * "argentino" ≠ "Argentina" y descartaba.
+ * Sin esto el puntaje miente feo: medido el 21/09/2026, una consulta daba 0 %
+ * sobre un feed cuyo NOMBRE era exactamente el tema buscado, porque el titular
+ * usaba otra flexión de la misma palabra. El match por palabra entera veía
+ * "receptivo" ≠ "receptores" y descartaba.
  *
  * Se cortan dos letras y nunca se baja de cuatro. Es deliberadamente burdo: el
  * porcentaje ORDENA candidatos, no filtra nada, así que un falso positivo
@@ -386,10 +388,10 @@ export function scoreTopicMatch(
   if (stems.length === 0 || samples.length === 0) return null;
 
   // Cada item puntúa por la FRACCIÓN de términos de la consulta que contiene,
-  // no por si contiene alguno. Con "alguno" basta, "futbol argentino" daba
-  // 100 % a un blog de tango en alemán y a un círculo escéptico —les alcanzaba
-  // con "argentino"— y los ponía arriba del feed que se llama, literalmente,
-  // Futbol Argentino.
+  // no por si contiene alguno. Con "alguno" basta, una consulta de dos palabras
+  // daba 100 % a feeds que sólo tocaban la palabra MÁS GENÉRICA de las dos
+  // —un blog de música, otro de divulgación— y los ponía arriba del feed cuyo
+  // nombre era, literalmente, el tema buscado.
   let acumulado = 0;
   let matched = 0;
   for (const s of samples) {

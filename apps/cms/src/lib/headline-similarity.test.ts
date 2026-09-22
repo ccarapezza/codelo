@@ -4,11 +4,11 @@ import { findEchoedHeadline, headlineTooSimilar } from "./headline-similarity";
 // Los cinco pares son la tanda real del 2026-07-22 que motivó el módulo:
 // tres calcos publicados y dos títulos legítimos sobre la misma noticia.
 describe("headlineTooSimilar", () => {
-  it("caza el calco casi literal (caso REPROCANN)", () => {
+  it("caza el calco casi literal", () => {
     expect(
       headlineTooSimilar(
-        "Cómo renovar el REPROCANN paso a paso para 2026",
-        "Cómo renovar el REPROCANN paso a paso: guía completa para 2026",
+        "Cómo renovar la matrícula paso a paso para 2026",
+        "Cómo renovar la matrícula paso a paso: guía completa para 2026",
       ),
     ).toBe(true);
   });
@@ -16,8 +16,8 @@ describe("headlineTooSimilar", () => {
   it("caza la paráfrasis mínima reordenada (caso Mendoza)", () => {
     expect(
       headlineTooSimilar(
-        "Mendoza aprueba reglamentación para la investigación con cannabis y cáñamo",
-        "Mendoza Reglamenta la Investigación con Cannabis y Cáñamo: Requisitos, Controles y Sanciones",
+        "Mendoza aprueba reglamentación para la investigación sanitaria",
+        "Mendoza Reglamenta la Investigación Sanitaria: Requisitos, Controles y Sanciones",
       ),
     ).toBe(true);
   });
@@ -68,10 +68,10 @@ describe("findEchoedHeadline", () => {
   it("devuelve el titular calcado de la lista", () => {
     const sources = [
       "Ley de Semillas bajo amenaza: el Gobierno a favor de las corporaciones del agronegocio",
-      "Cómo renovar el REPROCANN paso a paso: guía completa para 2026",
+      "Cómo renovar la matrícula paso a paso: guía completa para 2026",
     ];
     expect(
-      findEchoedHeadline("Cómo renovar el REPROCANN paso a paso para 2026", sources),
+      findEchoedHeadline("Cómo renovar la matrícula paso a paso para 2026", sources),
     ).toBe(sources[1]);
     expect(findEchoedHeadline("Un título completamente original y propio", sources)).toBeNull();
   });

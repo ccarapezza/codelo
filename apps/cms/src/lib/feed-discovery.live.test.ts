@@ -1,6 +1,6 @@
 // Prueba EN VIVO del buscador de fuentes. Sólo corre con FEEDS_LIVE=1.
 // Acá viven las aserciones que distinguen "Feedly cambió algo" de "lo rompimos
-// nosotros" — mismo criterio que inase/live.test.ts.
+// nosotros" — mismo criterio que el resto de los tests de red del repo.
 import { describe, expect, it } from "vitest";
 import {
   discoverFeeds,
@@ -18,7 +18,7 @@ const strapiFake = {
 
 describe.runIf(live)("buscador de fuentes (red)", () => {
   it("Feedly devuelve candidatos para un término amplio", async () => {
-    const r = await searchFeedly("cannabis", 10);
+    const r = await searchFeedly("seguros", 10);
     expect(r.length).toBeGreaterThan(0);
     expect(r[0].url).toMatch(/^https?:\/\//);
   }, 30000);
@@ -32,7 +32,7 @@ describe.runIf(live)("buscador de fuentes (red)", () => {
   }, 60000);
 
   it("una búsqueda por tema devuelve feeds validados y puntuados", async () => {
-    const { feeds } = await discoverFeeds(strapiFake, "cannabis", { max: 5 });
+    const { feeds } = await discoverFeeds(strapiFake, "seguros", { max: 5 });
     expect(feeds.length).toBeGreaterThan(0);
     for (const f of feeds) {
       expect(f.valid).toBe(true);
@@ -57,39 +57,44 @@ describe("helpers (sin red)", () => {
   it("looksLikeSite distingue un dominio de un tema", () => {
     expect(looksLikeSite("eldiarioar.com")).toBe(true);
     expect(looksLikeSite("https://ole.com.ar/rss/")).toBe(true);
-    expect(looksLikeSite("futbol argentino")).toBe(false);
-    expect(looksLikeSite("cannabis")).toBe(false);
+    expect(looksLikeSite("turismo receptivo")).toBe(false);
+    expect(looksLikeSite("seguros")).toBe(false);
   });
 });
 
 describe("puntaje de tema", () => {
   const item = (title: string) => ({ title, summary: "" });
 
-  it("tolera acentos y morfología del español", () => {
-    // El caso que lo motivó: un feed llamado "Futbol Argentino" daba 0 %
-    // porque el titular decía "Argentina" y no "argentino".
-    const r = scoreTopicMatch([item("La Selección Argentina y el fútbol de hoy")], "futbol argentino");
+  it("tolera acentos", () => {
+    // Se escribe sin tilde y el titular la lleva: tienen que ser lo mismo.
+    expect(scoreTopicMatch([item("Crece la energía solar")], "energia solar")?.pct).toBe(100);
+  });
+
+  it("tolera la morfología del español", () => {
+    // El caso que lo motivó: un feed cuyo NOMBRE era el tema buscado daba 0 %
+    // porque el titular usaba otra flexión de la misma palabra.
+    const r = scoreTopicMatch([item("El turista receptivo gastó más")], "turismo receptivo");
     expect(r?.pct).toBe(100);
   });
 
   it("puntúa por fracción de términos, no por si matchea alguno", () => {
-    // Un blog de tango argentino matchea "argentino" y nada más: la mitad.
-    const tango = scoreTopicMatch([item("Una charla sobre el Tango Argentino")], "futbol argentino");
-    expect(tango?.pct).toBe(50);
-    const futbol = scoreTopicMatch([item("Futbol argentino: la fecha completa")], "futbol argentino");
-    expect(futbol!.pct).toBeGreaterThan(tango!.pct);
+    // Un texto que sólo toca una de las dos palabras vale la mitad.
+    const flojo = scoreTopicMatch([item("Un balance receptivo de la temporada")], "turismo receptivo");
+    expect(flojo?.pct).toBe(50);
+    const pleno = scoreTopicMatch([item("Turismo receptivo: la temporada completa")], "turismo receptivo");
+    expect(pleno!.pct).toBeGreaterThan(flojo!.pct);
   });
 
   it("promedia sobre todos los items, no sobre el primero", () => {
     const r = scoreTopicMatch(
-      [item("cannabis medicinal"), item("recetas de cocina"), item("cannabis y salud"), item("clima")],
-      "cannabis",
+      [item("seguros de vida"), item("recetas de cocina"), item("seguros y salud"), item("clima")],
+      "seguros",
     );
     expect(r).toEqual({ matched: 2, total: 4, pct: 50 });
   });
 
   it("no inventa número cuando la consulta no deja keywords", () => {
     expect(scoreTopicMatch([item("lo que sea")], "de la")).toBeNull();
-    expect(scoreTopicMatch([], "cannabis")).toBeNull();
+    expect(scoreTopicMatch([], "seguros")).toBeNull();
   });
 });

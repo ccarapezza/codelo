@@ -15,11 +15,11 @@ import { extractKeywords } from "./rss-fetcher";
 describe("extractKeywords", () => {
   it("saca las stopwords del título de un borrador real", () => {
     // El borrador que disparó la investigación.
-    const kw = extractKeywords("Mendoza define protocolos para la evaluación de iniciativas en cannabis y cáñamo");
+    const kw = extractKeywords("Mendoza define protocolos para la evaluación de iniciativas en energía y logística");
     expect(kw).not.toContain("para");
     expect(kw).toContain("mendoza");
-    expect(kw).toContain("cannabis");
-    expect(kw).toContain("cáñamo");
+    expect(kw).toContain("energía");
+    expect(kw).toContain("logística");
   });
 
   it("saca las stopwords más dañinas", () => {
@@ -35,17 +35,17 @@ describe("extractKeywords", () => {
   });
 
   it("conserva los términos temáticos aunque sean frecuentes", () => {
-    const kw = extractKeywords("cannabis medicinal, REPROCANN y autocultivo");
-    expect(kw).toEqual(["cannabis", "medicinal", "reprocann", "autocultivo"]);
+    const kw = extractKeywords("energía renovable, EOLICA y almacenamiento");
+    expect(kw).toEqual(["energía", "renovable", "eolica", "almacenamiento"]);
   });
 
   it("parte por signos de puntuación, comillas y guiones largos", () => {
     // Los titulares vienen con comillas tipográficas y rayas; sin partirlas,
-    // «cannabis» quedaba pegado a la comilla y no matcheaba nunca.
-    expect(extractKeywords('Fallo: «cannabis» —autocultivo, legal')).toEqual([
+    // «turbina» quedaba pegado a la comilla y no matcheaba nunca.
+    expect(extractKeywords('Fallo: «turbina» —mantenimiento, legal')).toEqual([
       "fallo",
-      "cannabis",
-      "autocultivo",
+      "turbina",
+      "mantenimiento",
       "legal",
     ]);
   });
@@ -57,12 +57,12 @@ describe("extractKeywords", () => {
   it("deja el topic curado de un agente intacto", () => {
     // Los topics ya funcionaban: son palabras significativas. El arreglo no
     // debe recortarlos.
-    const kw = extractKeywords("legales, regulación, normativa, REPROCANN, fallos judiciales");
+    const kw = extractKeywords("legales, regulación, normativa, ANSES, fallos judiciales");
     expect(kw).toEqual([
       "legales",
       "regulación",
       "normativa",
-      "reprocann",
+      "anses",
       "fallos",
       "judiciales",
     ]);

@@ -1,13 +1,13 @@
 // Detección de títulos calcados de un titular fuente. El prompt del redactor
 // pide títulos "literales a la fuente" como defensa anti-alucinación, y en
 // modo asignado eso degenera en reproducir el titular del medio original —
-// inadmisible editorialmente (pasó con "Cómo renovar el REPROCANN paso a
-// paso…", idéntico al de Revista THC). La regla del prompt sola no alcanza:
+// inadmisible editorialmente (pasó en producción: un título salió idéntico al
+// del medio del que venía la noticia). La regla del prompt sola no alcanza:
 // esta compuerta determinística es la garantía.
 //
 // La comparación es por solapamiento de tokens significativos, no por
-// distancia de edición: "Mendoza Reglamenta la Investigación con Cannabis" y
-// "Mendoza aprueba reglamentación para la investigación con cannabis" casi no
+// distancia de edición: "Mendoza Reglamenta la Investigación Sanitaria" y
+// "Mendoza aprueba reglamentación para la investigación sanitaria" casi no
 // comparten prefijos pero son el mismo titular reordenado. Stemming crudo por
 // prefijo (6 chars) para que "reglamenta"/"reglamentación" cuenten como el
 // mismo token.

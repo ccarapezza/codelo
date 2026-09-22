@@ -157,10 +157,10 @@ export default function DiscoverModal({
   const { post } = useFetchClient();
   const { toggleNotification } = useNotification();
   const [query, setQuery] = React.useState("");
-  // Los directorios son abrumadoramente anglosajones: buscar "cannabis" sin
-  // filtrar devuelve seis feeds en inglés y ninguno en castellano. Para un
-  // vertical en español el filtro no es una comodidad, es la diferencia entre
-  // que la herramienta sirva o no.
+  // Los directorios son abrumadoramente anglosajones: un término de nicho sin
+  // filtrar devuelve media docena de feeds en inglés y ninguno en castellano.
+  // Para un sitio en español el filtro no es una comodidad, es la diferencia
+  // entre que la herramienta sirva o no.
   const [lang, setLang] = React.useState<string>("");
   const [buscando, setBuscando] = React.useState(false);
   const [resultado, setResultado] = React.useState<{ feeds: Discovered[]; query: string } | null>(
@@ -202,12 +202,12 @@ export default function DiscoverModal({
         </Modal.Header>
         <Modal.Body>
           <Flex direction="column" alignItems="stretch" gap={4}>
-            <Field.Root hint="Un tema (“cannabis medicinal”) o un sitio (“ole.com.ar”). Cada resultado se baja y se parsea antes de mostrarse, así que tarda unos segundos.">
+            <Field.Root hint="Un tema en una o dos palabras, o el dominio de un medio que ya conocés. Cada resultado se baja y se parsea antes de mostrarse, así que tarda unos segundos.">
               <Field.Label>Qué buscás</Field.Label>
               <Flex gap={2} alignItems="flex-start">
                 <Box style={{ flex: 1 }}>
                   <TextInput
-                    placeholder="cannabis medicinal"
+                    placeholder="seguros"
                     value={query}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
                     onKeyDown={(e: React.KeyboardEvent) => {

@@ -656,7 +656,7 @@ function AgentFormModal({
                   <Field.Label>Tema del redactor</Field.Label>
                   <Textarea
                     rows={4}
-                    placeholder="Palabras clave del beat, separadas por espacios. Ej: cannabis cannábico cáñamo REPROCANN ARICCAME autocultivo"
+                    placeholder="Palabras clave del beat, separadas por espacios. Ej: logística transporte flota aduana depósito"
                     value={form.topic}
                     onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                       set("topic", e.target.value)
@@ -828,7 +828,7 @@ function AgentFormModal({
                       placeholder={
                         form.role === "director"
                           ? "Ej: Asegurate de que los títulos sean atractivos, el contenido sea preciso y la redacción sea en español rioplatense..."
-                          : "Ej: Escribí en primera persona, con un tono apasionado y experto en fútbol argentino..."
+                          : "Ej: Escribí en primera persona, con un tono cercano y didáctico, para lectores del sector..."
                       }
                       value={form.instructions}
                       onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>

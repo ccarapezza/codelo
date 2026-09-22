@@ -32,41 +32,41 @@ describe("isEditoriallyRelevant", () => {
   });
 
   it("acepta por un término inequívoco del alcance", () => {
-    setListas({ scope: ["reprocann"] });
-    expect(isEditoriallyRelevant({ title: "Cómo renovar el REPROCANN", summary: "" })).toBe(true);
+    setListas({ scope: ["matrícula"] });
+    expect(isEditoriallyRelevant({ title: "Cómo renovar la MATRÍCULA", summary: "" })).toBe(true);
   });
 
   it("descarta lo que no matchea ningún término", () => {
-    setListas({ scope: ["reprocann"] });
+    setListas({ scope: ["matrícula"] });
     expect(isEditoriallyRelevant({ title: "Messi ganó otro premio", summary: "" })).toBe(false);
   });
 
   it("no matchea un término dentro de otra palabra", () => {
-    setListas({ scope: ["cáñamo"] });
+    setListas({ scope: ["energía"] });
     expect(isEditoriallyRelevant({ title: "Cañamoquis, banda de rock", summary: "" })).toBe(false);
   });
 
   it("matchea respetando acentos", () => {
-    setListas({ scope: ["cáñamo"] });
-    expect(isEditoriallyRelevant({ title: "Industria del cáñamo", summary: "" })).toBe(true);
+    setListas({ scope: ["energía"] });
+    expect(isEditoriallyRelevant({ title: "Industria de la energía", summary: "" })).toBe(true);
   });
 
   it("un término ambiguo NO alcanza solo", () => {
-    setListas({ ambiguous: ["planta"], contextCues: ["cannabis"] });
+    setListas({ ambiguous: ["planta"], contextCues: ["vivero"] });
     expect(isEditoriallyRelevant({ title: "Cerró la planta automotriz", summary: "" })).toBe(false);
   });
 
   it("un término ambiguo cuenta si hay pista de contexto", () => {
-    setListas({ ambiguous: ["planta"], contextCues: ["cannabis"] });
+    setListas({ ambiguous: ["planta"], contextCues: ["vivero"] });
     expect(
-      isEditoriallyRelevant({ title: "Cuidados de la planta", summary: "cultivo de cannabis" }),
+      isEditoriallyRelevant({ title: "Cuidados de la planta", summary: "cultivo en vivero" }),
     ).toBe(true);
   });
 
   it("la denylist gana aunque el término del alcance esté presente", () => {
-    setListas({ scope: ["cannabis"], denylist: ["publinota"] });
+    setListas({ scope: ["energía"], denylist: ["publinota"] });
     expect(
-      isEditoriallyRelevant({ title: "Cannabis y salud", summary: "publinota de la marca" }),
+      isEditoriallyRelevant({ title: "Energía y salud", summary: "publinota de la marca" }),
     ).toBe(false);
   });
 

@@ -144,7 +144,7 @@ export default function NewsGeneratorPage() {
       {/* 1 — Prompt */}
       <Box marginBottom={6}>
         <AccentCard title="1 · Prompt" icon={<Feather />} accent="primary">
-          <Field.Root hint="Describí la nota que querés. Ej: 'Resumen del triunfo de Argentina y las claves del partido'.">
+          <Field.Root hint="Describí la nota que querés. Ej: 'Resumen de las novedades de la semana y por qué importan'.">
             <Field.Label>Pedido</Field.Label>
             <Textarea
               rows={4}
@@ -259,7 +259,7 @@ export default function NewsGeneratorPage() {
               icon={<ArrowClockwise />}
               accent="warning"
             >
-              <Field.Root hint="Pedí un cambio. Ej: 'Hacela más corta', 'Agregá una cita', 'Cambiá el enfoque al arquero'.">
+              <Field.Root hint="Pedí un cambio. Ej: 'Hacela más corta', 'Agregá una cita', 'Cambiá el enfoque al impacto para el lector'.">
                 <Field.Label>Instrucción de modificación</Field.Label>
                 <Textarea
                   rows={2}

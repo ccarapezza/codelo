@@ -37,7 +37,6 @@ export interface PromptSettings {
   imageThemeGuide: string;
   /** Per-field extraction rules for the visual anchors. */
   imageAnchorTaxonomy: string;
-  /** Triage scale + extraction rules for the Boletín Oficial norm analysis. */
 }
 
 export const DEFAULT_PROMPT_SETTINGS: PromptSettings = {

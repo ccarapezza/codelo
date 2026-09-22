@@ -126,12 +126,11 @@ async function fetchFeed(feedUrl: string, source: string, timeoutMs = 8000): Pro
 /**
  * Ventana de INGESTA: 7 días, no 24 h.
  *
- * Un medio cannábico especializado publica cada dos o tres días. Con 24 h sus
- * notas se descartaban acá mismo, antes de llegar a la base: medido, El Planteo
- * tenía 50 notas en su feed y 0 dentro de las 24 h; Cáñamo, 100 y 0; Filter,
- * 10 y 0. El pool quedaba con el flujo de los generalistas (~89 %) y lo único
- * cannábico eran las normas del Boletín, así que todas las notas salían
- * regulatorias. Ampliar solo la ventana de consumo no alcanza: si el ítem no
+ * Un medio especializado de nicho publica cada dos o tres días. Con 24 h sus
+ * notas se descartaban acá mismo, antes de llegar a la base: medido sobre tres
+ * feeds de nicho reales, tenían 50, 100 y 10 notas en el feed y CERO dentro de
+ * las 24 h. El pool quedaba con el flujo de los generalistas (~89 %) y lo único
+ * del tema eran fuentes oficiales, así que todas las notas salían regulatorias. Ampliar solo la ventana de consumo no alcanza: si el ítem no
  * se guarda, no existe.
  */
 const INGEST_WINDOW_DAYS = 7;
@@ -454,10 +453,10 @@ export async function getRecentNewsForTopic(
   topic: string,
   limit = 10,
 ): Promise<NewsItem[]> {
-  // Ventana de 7 días, no de 24 h. Un medio cannábico especializado publica
-  // cada dos o tres días: con 24 h sus notas quedaban afuera antes de que un
-  // redactor las viera y el pool se llenaba solo de normativa. Medido: El
-  // Planteo tenía 50 notas y 0 dentro de las últimas 24 h; Cáñamo, 100 y 0.
+  // Ventana de 7 días, no de 24 h. Un medio especializado de nicho publica cada
+  // dos o tres días: con 24 h sus notas quedaban afuera antes de que un redactor
+  // las viera y el pool se llenaba solo de normativa. Medido sobre feeds reales:
+  // 50 notas y 0 dentro de las últimas 24 h; otro, 100 y 0.
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   const keywords = extractKeywords(topic);
