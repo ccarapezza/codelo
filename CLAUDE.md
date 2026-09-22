@@ -29,10 +29,25 @@ Lo específico vive en las costuras (`src/verticals/`, `admin/verticals.ts`,
 
 ## Cómo se separa el trabajo
 
-**Prompts.** `lib/prompt-defaults.ts` define la ESTRUCTURA y unos valores
-neutros que sólo sirven para probar el circuito. El tema real lo pone el
-proyecto en `verticals/prompt-defaults.ts`, y el admin lo pisa desde la
-pantalla de Prompts IA sin tocar código.
+**Prompts.** El texto editorial de un proyecto vive en la BASE, en el single
+type `prompt-setting`, y se edita desde Configuración editorial. El motor sólo
+trae los valores neutros de `lib/prompt-defaults.ts` (`ENGINE_PROMPT_KEYS` es la
+fuente de verdad: de ahí salen la allowlist del controller y el loader). Un
+proyecto carga los suyos una vez con `verticals/seed.ts`, que rellena únicamente
+lo que está vacío.
+
+⚠️ No agregues texto editorial a un archivo. Si un prompt necesita algo que el
+dominio decide, es un campo nuevo — no una constante. Y si un campo tiene que ser
+editable, va en los tres lugares a la vez: `ENGINE_PROMPT_KEYS`, el `schema.json`
+y una tarjeta en la pantalla. `test/settings-contract.test.ts` lo verifica: cuando
+esos tres se desincronizaron, el panel mintió en las dos direcciones sin un solo
+error en el log.
+
+**Los prompts están congelados.** `test/preservation/` guarda el texto que arman
+hoy con los ajustes reales de los proyectos que adoptan el motor. Si tocás un
+prompt, el test dice exactamente cuál cambió; si el cambio es deliberado se
+recaptura con `CAPTURE=1` y el diff de los fixtures es lo que se revisa. Nunca
+recapturar para que un test deje de molestar.
 
 **Agentes.** Tres roles en el motor: redactor, director, image-generator. El
 runner despacha por nombre y busca en `verticals/agent-roles.ts` lo que no

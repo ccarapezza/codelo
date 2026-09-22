@@ -40,8 +40,13 @@ pnpm dev:cms    # Strapi en http://localhost:1340 (el primer arranque compila el
 pnpm dev:web    # Next en http://localhost:3400
 ```
 
-Primer arranque: crear el usuario admin en `/admin`, y desde ahí configurar las
-fuentes RSS y los agentes. Necesitan `OPENAI_API_KEY` en el env del CMS.
+Primer arranque: crear el usuario admin en `/admin`. Desde ahí, el widget
+**Puesta en marcha** de la home dice qué falta y enlaza a cada pantalla.
+
+El camino completo está en [`docs/nueva-instancia.md`](docs/nueva-instancia.md):
+no hace falta escribir código, toda la configuración editorial vive en la base y
+se edita desde el panel. Lo único que va sí o sí en el entorno es
+`OPENAI_API_KEY`.
 
 ## Verificación
 

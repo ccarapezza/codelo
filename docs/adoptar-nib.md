@@ -35,18 +35,23 @@ Raíz: `Jenkinsfile`, `docker-compose*.yml`, `docs/**`, `README.md`, `CLAUDE.md`
 
 ## Las costuras
 
+⚠️ **La línea editorial ya NO es una costura de código.** Vive en la base y se
+edita desde Configuración editorial. `verticals/seed.ts` sólo la carga la primera
+vez; después de eso manda la base y editar el archivo no cambia nada.
+
 Lo que el motor le pide al proyecto, todo con default vacío:
 
 | Costura | Qué define |
 | --- | --- |
-| `verticals/prompt-defaults.ts` | El tema: voz, reglas del dominio, catálogo de escenas de portada |
 | `verticals/cron.ts` | Tareas programadas propias |
 | `verticals/agent-roles.ts` | Roles de agente además de los tres del motor |
 | `verticals/director-filters.ts` | Borradores que el Director no debe revisar |
-| `verticals/prompt-fields.ts` | Campos de prompt propios |
+| `verticals/seed.ts` | La configuración editorial inicial, para cargarla una vez en la base |
+| `verticals/prompt-fields.ts` | Campos de prompt propios de un módulo del proyecto |
+| `verticals/setting-fields.ts` | Ajustes del sitio propios (claves que el controller acepta) |
 | `verticals/rss-scope.ts` | Qué ítems del pool RSS son del tema |
 | `verticals/brand.ts` | Colores, tipografías y logo de las placas de redes |
-| `admin/verticals.ts` | Widgets, menú, rutas y la identidad visual del panel (pisa la de Nib) |
+| `admin/verticals.ts` | Widgets, menú, rutas, identidad visual del panel (pisa la de Nib) y las tarjetas propias de las dos pantallas de configuración (`promptCards`, `settingCards`) |
 | `lib/site.ts` | Nombre, dominio, idiomas y navegación del sitio |
 | `app/[lang]/theme.css` | Los colores del sitio |
 | `components/vertical/index.ts` | Cuatro ranuras opcionales de la web |
