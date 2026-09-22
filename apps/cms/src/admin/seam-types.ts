@@ -39,6 +39,13 @@ export interface PromptField {
   /** Alto del textarea. Sin esto, se renderiza como input de una línea. */
   rows?: number;
   /**
+   * Si está, el campo se renderiza como select en vez de texto libre.
+   *
+   * Para valores que el prompt interpola literalmente y donde un typo degrada la
+   * salida sin dar ningún error: el idioma de escritura es el caso claro.
+   */
+  options?: Array<{ value: string; label: string }>;
+  /**
    * El andamiaje fijo que rodea a este campo, en gris y sin editar. Sirve para
    * que quien escribe el prompt vea dónde cae su texto.
    */

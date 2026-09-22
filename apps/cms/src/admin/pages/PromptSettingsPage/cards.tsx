@@ -13,6 +13,24 @@ import * as React from "react";
 import { Command, Eye, Feather, Images, Pencil } from "@strapi/icons";
 import type { PromptCard } from "../../seam-types";
 
+/**
+ * Los idiomas que ofrecen «Idioma de escritura» y «Idioma de destino».
+ *
+ * El VALOR es el nombre en inglés porque es lo que se interpola en los prompts
+ * («You are a journalist writing in Spanish…»); la etiqueta va en castellano
+ * para quien configura. Es un select y no texto libre porque un typo acá
+ * degrada la salida de todos los agentes sin dar un solo error.
+ */
+const IDIOMAS = [
+  { value: "Spanish", label: "Español" },
+  { value: "English", label: "Inglés" },
+  { value: "Portuguese", label: "Portugués" },
+  { value: "French", label: "Francés" },
+  { value: "Italian", label: "Italiano" },
+  { value: "German", label: "Alemán" },
+  { value: "Catalan", label: "Catalán" },
+];
+
 export const ENGINE_PROMPT_CARDS: PromptCard[] = [
   {
     id: "identidad",
@@ -39,7 +57,8 @@ export const ENGINE_PROMPT_CARDS: PromptCard[] = [
         key: "writingLanguage",
         lang: "fijo",
         label: "Idioma de escritura",
-        hint: "En inglés y con mayúscula: Spanish, English, Português.",
+        hint: "En qué idioma escriben los agentes las notas, los captions y las placas.",
+        options: IDIOMAS,
       },
       {
         key: "socialHandle",
@@ -185,7 +204,8 @@ export const ENGINE_PROMPT_CARDS: PromptCard[] = [
         key: "translationLanguage",
         lang: "fijo",
         label: "Idioma de destino",
-        hint: "Ej: English. El idioma de origen es el de escritura.",
+        hint: "A qué idioma se traduce cada nota. El de origen es el de escritura.",
+        options: IDIOMAS,
       },
       {
         key: "translationGlossary",

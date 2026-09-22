@@ -100,6 +100,17 @@ function CampoPrompt({
   const enBorrador = modo === "borrador" && lang === "prompt";
   const mostrado = enBorrador ? borrador : valor;
 
+  // Si lo guardado no está en la lista —un proyecto que puso un idioma a mano
+  // antes de que esto fuera un select—, se agrega como opción en vez de
+  // mostrarse vacío y perderse en el primer guardado.
+  const opciones = React.useMemo(() => {
+    if (!campo.options) return [];
+    const v = (valor ?? "").trim();
+    return v && !campo.options.some((o) => o.value === v)
+      ? [...campo.options, { value: v, label: `${v} (configurado a mano)` }]
+      : campo.options;
+  }, [campo.options, valor]);
+
   return (
     <Field.Root hint={campo.hint}>
       <Flex gap={2} alignItems="center" justifyContent="space-between">
@@ -108,7 +119,18 @@ function CampoPrompt({
           {enBorrador ? "borrador" : INSIGNIA[lang].texto}
         </Badge>
       </Flex>
-      {campo.rows ? (
+      {campo.options ? (
+        <SingleSelect
+          value={mostrado}
+          onChange={(v: string | number) => onChange(String(v))}
+        >
+          {opciones.map((o) => (
+            <SingleSelectOption key={o.value} value={o.value}>
+              {o.label}
+            </SingleSelectOption>
+          ))}
+        </SingleSelect>
+      ) : campo.rows ? (
         <Textarea
           rows={campo.rows}
           value={mostrado}
