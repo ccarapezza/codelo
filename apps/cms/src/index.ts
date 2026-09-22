@@ -3,6 +3,8 @@ import type { Core } from "@strapi/strapi";
 import { registerAdminPermissionActions } from "./lib/admin-permissions";
 import { ensurePostCover } from "./lib/social-studio/post-cover";
 import { ensurePostTranslation } from "./lib/translate-post";
+import { applyProjectSeeds } from "./lib/seed-runner";
+import { seeds } from "./verticals/seed";
 
 export default {
   /**
@@ -128,6 +130,10 @@ export default {
 
     try {
       await migrarI18n();
+
+      // La configuración editorial del proyecto, una sola vez. Rellena lo que
+      // esté vacío; lo editado desde el panel gana.
+      await applyProjectSeeds(strapi, seeds);
     } catch (err) {
       // Never block boot on the migration — but make the failure loud so it
       // isn't silently skipped (the flag is only set on success, so it retries
