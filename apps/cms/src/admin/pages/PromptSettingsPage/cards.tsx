@@ -36,7 +36,7 @@ export const ENGINE_PROMPT_CARDS: PromptCard[] = [
     id: "identidad",
     title: "1 · Identidad",
     description:
-      "Quién escribe y de qué habla el sitio. Es lo primero que leen todos los agentes, y de acá sale también con qué nombre se firman las placas de redes.",
+      "Quién escribe y de qué habla el sitio. Es lo primero que leen todos los agentes: el redactor, el Director, el deduplicador y el traductor.",
     accent: "primary",
     icon: <Feather />,
     fields: [
@@ -59,12 +59,6 @@ export const ENGINE_PROMPT_CARDS: PromptCard[] = [
         label: "Idioma de escritura",
         hint: "En qué idioma escriben los agentes las notas, los captions y las placas.",
         options: IDIOMAS,
-      },
-      {
-        key: "socialHandle",
-        lang: "fijo",
-        label: "Usuario de redes",
-        hint: "Sin @. Se imprime en las placas y cierra el caption. Vacío = no se imprime.",
       },
     ],
   },
@@ -143,10 +137,16 @@ export const ENGINE_PROMPT_CARDS: PromptCard[] = [
     id: "redes",
     title: "4 · Redes y video",
     description:
-      "La voz y el aspecto de las piezas de Social Studio: carruseles, historias y clips.",
+      "Con qué usuario se firman, cómo suenan y qué aspecto tienen las piezas de Social Studio: carruseles, historias y clips.",
     accent: "secondary",
     icon: <Images />,
     fields: [
+      {
+        key: "socialHandle",
+        lang: "fijo",
+        label: "Usuario de redes",
+        hint: "Sin el @. Se imprime al pie de cada placa, grande en la placa de cierre y sobre los videos, y cierra el caption como último hashtag. Vacío = no se imprime en ningún lado.",
+      },
       {
         key: "socialVoice",
         label: "Voz en redes y reglas duras",
