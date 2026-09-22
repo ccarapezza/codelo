@@ -20,14 +20,34 @@ type FeedSource = {
 // XML helpers — no external dependencies, pure regex on Node 22 native fetch
 // ---------------------------------------------------------------------------
 
-function decodeEntities(str: string): string {
+// Las entidades NUMÉRICAS van primero y de forma general: los feeds están
+// llenas de ellas (&#160; por el espacio duro, &#8217; por la comilla tipográfica)
+// y la lista fija de nombres no las cubría. Se veían crudas en el panel —
+// "Cannabinoid&#160;Supplier"— pero el daño real es que ese título es el que le
+// llega al redactor como contexto.
+const ENTIDADES: Record<string, string> = {
+  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ",
+  laquo: "«", raquo: "»", ldquo: "\u201c", rdquo: "\u201d",
+  lsquo: "\u2018", rsquo: "\u2019", hellip: "…", mdash: "—", ndash: "–",
+};
+
+/** Exportada para poder testearla sin red ni base de datos. */
+export function decodeEntities(str: string): string {
   return str
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#039;/g, "'")
-    .replace(/&apos;/g, "'");
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => safeFromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => safeFromCodePoint(parseInt(dec, 10)))
+    .replace(/&([a-z]+);/gi, (m, name) => ENTIDADES[name.toLowerCase()] ?? m);
+}
+
+function safeFromCodePoint(cp: number): string {
+  // Un código inválido en un feed ajeno no debe tirar una excepción y cortar la
+  // ingesta entera: se deja el texto como vino.
+  if (!Number.isFinite(cp) || cp < 0 || cp > 0x10ffff) return "";
+  try {
+    return String.fromCodePoint(cp);
+  } catch {
+    return "";
+  }
 }
 
 function extractCdata(raw: string): string {
@@ -146,12 +166,19 @@ export type FeedValidationResult =
       language: string | null;
       totalItems: number;
       freshItems: number;
-      samples: Array<{ title: string; url: string; pubDate: string | null }>;
+      samples: Array<{ title: string; url: string; pubDate: string | null; summary: string }>;
     };
 
+/**
+ * @param sampleSize cuántos items devolver. El default de 5 es el que muestra
+ * el botón "validar" de la pantalla de fuentes. El buscador de fuentes pide
+ * más: con 5 titulares el porcentaje de match con el tema salta de 0 a 20 % de
+ * a un item y no distingue un medio de nicho de uno generalista.
+ */
 export async function validateFeed(
   feedUrl: string,
   timeoutMs = 8000,
+  sampleSize = 5,
 ): Promise<FeedValidationResult> {
   if (!feedUrl || !/^https?:\/\//i.test(feedUrl)) {
     return { valid: false, error: "URL inválida (debe empezar con http:// o https://)" };
@@ -206,10 +233,11 @@ export async function validateFeed(
   const language = extractField(channelXml, "language") || null;
 
   const freshItems = items.filter(isRecentEnough).length;
-  const samples = items.slice(0, 5).map((i) => ({
+  const samples = items.slice(0, sampleSize).map((i) => ({
     title: i.title,
     url: i.url,
     pubDate: i.itemPublishedAt ? i.itemPublishedAt.toISOString() : null,
+    summary: i.summary,
   }));
 
   return {

@@ -1,6 +1,7 @@
 import { factories } from "@strapi/strapi";
 import { requireAdmin } from "../../../lib/admin-auth";
 import { fetchAndSaveNews, getRssLastRun, validateFeed } from "../../../lib/rss-fetcher";
+import { discoverFeeds } from "../../../lib/feed-discovery";
 
 // Traduce las reglas de cron que usamos a algo legible. Sólo cubre los patrones
 // que existen en config/cron-tasks.ts; cualquier otra cosa se muestra cruda en
@@ -96,6 +97,24 @@ export default factories.createCoreController(UID, ({ strapi }) => ({
 
   // Validate a feed URL without persisting anything. Used by the admin UI
   // "Verificar" button so the user can sanity-check a feed before saving it.
+  /**
+   * Buscador de fuentes: de un tema o un dominio a una lista de feeds que ya
+   * fueron bajados y parseados. Puede tardar: valida cada candidato en vivo.
+   */
+  async discover(ctx) {
+    if (!(await requireAdmin(ctx, strapi))) return;
+    const { query, max, lang } = ctx.request.body as {
+      query?: string;
+      max?: number;
+      lang?: string | null;
+    };
+    if (!query || !query.trim()) return ctx.badRequest("query es obligatorio");
+    ctx.body = await discoverFeeds(strapi, query, {
+      max: Math.min(Math.max(Number(max) || 12, 1), 25),
+      lang: typeof lang === "string" ? lang : null,
+    });
+  },
+
   async validate(ctx) {
     if (!(await requireAdmin(ctx, strapi))) return;
     const { url } = ctx.request.body as { url?: string };

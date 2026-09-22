@@ -44,6 +44,12 @@ export default {
     },
     {
       method: "POST",
+      path: "/rss-feed/discover",
+      handler: "api::rss-feed.rss-feed.discover",
+      config: ADMIN_ROUTE,
+    },
+    {
+      method: "POST",
       path: "/rss-feed/validate",
       handler: "api::rss-feed.rss-feed.validate",
       config: ADMIN_ROUTE,

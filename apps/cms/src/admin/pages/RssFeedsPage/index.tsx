@@ -19,13 +19,14 @@ import {
   Th,
   Td,
 } from "@strapi/design-system";
-import { Plus, Pencil, Trash, Play, Globe } from "@strapi/icons";
+import { Plus, Pencil, Trash, Play, Globe, Search } from "@strapi/icons";
 import {
   useFetchClient,
   useNotification,
 } from "@strapi/strapi/admin";
 import { PageContainer, PageHeader, EmptyState } from "../../components/ui";
 import { useIsMobile } from "../../hooks/useIsMobile";
+import DiscoverModal from "./DiscoverModal";
 
 // CRUD por la API propia y no por la del Content Manager: el content-type está
 // oculto ahí a propósito (editarlo a mano rompe cosas), y esa marca hace que
@@ -561,6 +562,7 @@ export default function RssFeedsPage() {
   const [feeds, setFeeds] = React.useState<RssFeed[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [modalOpen, setModalOpen] = React.useState(false);
+  const [discoverOpen, setDiscoverOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<RssFeed | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<RssFeed | null>(null);
   const [fetchingId, setFetchingId] = React.useState<string | null>(null);
@@ -623,12 +625,23 @@ export default function RssFeedsPage() {
         title="Fuentes RSS"
         subtitle="Gestioná las fuentes de noticias que alimentan la base de conocimiento diaria de los agentes."
         actions={
-          <Button
-            startIcon={<Plus />}
-            onClick={() => { setEditing(null); setModalOpen(true); }}
-          >
-            Agregar feed
-          </Button>
+          <Flex gap={2}>
+            {/* Buscar va primero: agregar a mano exige saber de antemano la URL
+                del feed, que es justamente lo que casi nunca se sabe. */}
+            <Button
+              variant="secondary"
+              startIcon={<Search />}
+              onClick={() => setDiscoverOpen(true)}
+            >
+              Buscar fuentes
+            </Button>
+            <Button
+              startIcon={<Plus />}
+              onClick={() => { setEditing(null); setModalOpen(true); }}
+            >
+              Agregar feed
+            </Button>
+          </Flex>
         }
       />
 
@@ -640,15 +653,23 @@ export default function RssFeedsPage() {
       ) : feeds.length === 0 ? (
         <EmptyState
           icon={<Globe />}
-          title="No hay feeds configurados. Agregá una fuente RSS para empezar."
+          title="No hay feeds configurados. Buscá fuentes por tema para empezar."
           action={
-            <Button
-              variant="secondary"
-              startIcon={<Plus />}
-              onClick={() => { setEditing(null); setModalOpen(true); }}
-            >
-              Agregar primer feed
-            </Button>
+            <Flex gap={2}>
+              <Button
+                startIcon={<Search />}
+                onClick={() => setDiscoverOpen(true)}
+              >
+                Buscar fuentes
+              </Button>
+              <Button
+                variant="secondary"
+                startIcon={<Plus />}
+                onClick={() => { setEditing(null); setModalOpen(true); }}
+              >
+                Pegar una URL
+              </Button>
+            </Flex>
           }
         />
       ) : (
@@ -732,6 +753,13 @@ export default function RssFeedsPage() {
           )}
         </>
       )}
+
+      {/* Buscador de fuentes */}
+      <DiscoverModal
+        open={discoverOpen}
+        onClose={() => setDiscoverOpen(false)}
+        onAdded={loadFeeds}
+      />
 
       {/* Form modal */}
       <FeedFormModal
