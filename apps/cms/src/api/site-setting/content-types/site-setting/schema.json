@@ -29,6 +29,10 @@
       "default": "gpt-image-1-mini",
       "private": true
     },
+    "autoTranslate": {
+      "type": "boolean",
+      "default": true
+    },
     "adsensePublisherId": {
       "type": "string"
     },
