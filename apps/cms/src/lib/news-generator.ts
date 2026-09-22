@@ -106,7 +106,7 @@ export function buildGenerateUserPrompt(
     ? [
         "\n## INVESTIGACIÓN WEB VERIFICADA (basá CADA hecho concreto SOLO en esto)",
         research.context,
-        `\nRecordatorio: NO nombres ni atribuyas a ningún MEDIO de la investigación; reportá el hecho de fondo con voz propia de ${s.brandName}. Las fuentes OFICIALES (Boletín Oficial, normas, reguladores, revistas científicas) sí se citan.`,
+        `\nRecordatorio: NO nombres ni atribuyas a ningún MEDIO de la investigación; reportá el hecho de fondo con voz propia de ${s.brandName}. Las fuentes OFICIALES (${s.officialSources}) sí se citan.`,
       ].join("\n")
     : "\n(Sin investigación web — escribí en clave análisis/preview; no afirmes eventos recientes como hechos.)";
   return [

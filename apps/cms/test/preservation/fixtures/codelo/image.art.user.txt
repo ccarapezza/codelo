@@ -9,7 +9,7 @@ HARD CONSTRAINTS for this specific cover (these override theme defaults if they 
 - Composition: close third-person over-the-shoulder view
 - Ink and palette: pale washes with a single accent colour
 
-Because this cover is illustrated, your description MUST name the medium explicitly in its FIRST clause (e.g. "A linocut print of…", "A botanical plate showing…"). Then describe it as artwork: name the marks, ink, texture and paper. Do NOT use photographic vocabulary (lens, depth of field, bokeh, exposure, shot on...). The scene cues below are WHAT to depict; the treatment above is HOW to render it.
+Because this cover is illustrated, your description MUST name the medium explicitly in its FIRST clause (e.g. "A linocut print of…", "A naturalist plate showing…"). Then describe it as artwork: name the marks, ink, texture and paper. Do NOT use photographic vocabulary (lens, depth of field, bokeh, exposure, shot on...). The scene cues below are WHAT to depict; the treatment above is HOW to render it.
 
 RECENTLY USED scenes (the last 2 covers — DO NOT replicate any of these; pick a clearly different visual angle):
   1. A wide desk with stacked folders under warm window light.

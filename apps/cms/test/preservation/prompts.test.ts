@@ -16,6 +16,7 @@ import { SETTINGS_CODELO } from "./settings.codelo";
 import { SETTINGS_FULBO } from "./settings.fulbo";
 import { construirPrompts } from "./build";
 import { resolvePromptConstraints, type ArticleAnchors } from "../../src/lib/openai";
+import { NEUTRAL_PROMPT_SETTINGS } from "../../src/lib/prompt-defaults";
 import * as I from "./inputs";
 import type { Grabado } from "./recorder";
 
@@ -76,22 +77,57 @@ describe("las semillas siguen cubriendo los dos caminos de portada", () => {
   });
 });
 
-describe("lo que los fixtures dejan documentado", () => {
-  it("hoy el deduplicador y el traductor le mandan a fulbo el dominio de codelo", () => {
-    // Este test NO es una aserción de que esté bien: congela el defecto que el
-    // refactor viene a arreglar, para que el día que se arregle falle acá y haya
-    // que borrarlo a conciencia. Ver §1 del plan (`domainDescription` pasa a
-    // alimentar ambos prompts).
+describe("cada proyecto habla de lo suyo", () => {
+  // Hasta este cambio, el deduplicador y el traductor no recibían ajustes y
+  // llevaban el dominio escrito adentro: fulbo corría en producción, palabra por
+  // palabra, el prompt de cannabis de codelo — y el traductor es→en es el que
+  // más usa, porque es el sitio bilingüe. Esto es lo que lo cierra.
+  const DE_OTRO_DOMINIO = /cannabis|cáñamo|reprocann|ariccame|etnobotan|ethnobotany/i;
+
+  it("el deduplicador y el traductor ya no son iguales entre proyectos", () => {
     for (const archivo of ["dedup.system.txt", "translate.system.txt"]) {
-      expect(leer("fulbo", archivo)).toBe(leer("codelo", archivo));
-      expect(leer("fulbo", archivo)).toMatch(/cannabis/i);
+      expect(leer("fulbo", archivo)).not.toBe(leer("codelo", archivo));
     }
   });
 
-  it("el redactor y el Director llevan ejemplos de dos dominios a la vez", () => {
-    // Reglas de fútbol y de autocultivo conviviendo en el mismo bloque.
-    const director = leer("codelo", "director.system.txt");
-    expect(director).toMatch(/ARICCAME|ANMAT/);
-    expect(director).toMatch(/Infobae|Perfil/);
+  it("los prompts de fulbo no hablan del dominio de codelo", () => {
+    for (const archivo of fs.readdirSync(path.join(DIR, "fulbo"))) {
+      expect(leer("fulbo", archivo), `${archivo} arrastra dominio ajeno`).not.toMatch(
+        DE_OTRO_DOMINIO,
+      );
+    }
   });
+
+  it("el Director ya no da por oficiales los organismos de otro dominio", () => {
+    const director = leer("fulbo", "director.system.txt");
+    expect(director).not.toMatch(/ARICCAME|ANMAT/);
+    expect(director).toMatch(/AFA, CONMEBOL, FIFA/);
+    // Y tampoco nombra medios reales como ejemplo.
+    expect(leer("codelo", "director.system.txt")).not.toMatch(/Infobae|Perfil/);
+  });
+});
+
+describe("con los valores neutros, el motor no habla de ningún tema", () => {
+  // La contracara del test de preservación: aquello se asegura de que un
+  // proyecto no pierda su voz; esto, de que el motor no traiga una puesta.
+  // Es lo que hace que una instancia nueva arranque sobre un tema en blanco.
+  const DOMINIO = new RegExp(
+    [
+      "cannabis", "cáñamo", "canamo", "reprocann", "ariccame", "anmat", "boletín",
+      "botanical", "ethnobotany", "self-cultivation", "asociación civil", "non-profit",
+      "futbol", "fútbol", "player", "jersey", "soccer", "conmebol",
+      "infobae", "perfil", "rioplatense", "amber", "codelo", "cogollos", "fulbo",
+    ].join("|"),
+    "i",
+  );
+
+  it("ningún prompt nombra un tema, una marca ni un medio", async () => {
+    const prompts = await construirPrompts(NEUTRAL_PROMPT_SETTINGS);
+    for (const [nombre, g] of Object.entries(prompts)) {
+      for (const parte of ["system", "user"] as const) {
+        const m = g[parte].match(DOMINIO);
+        expect(m?.[0], `${nombre}.${parte} nombra "${m?.[0]}"`).toBeUndefined();
+      }
+    }
+  }, 60000);
 });

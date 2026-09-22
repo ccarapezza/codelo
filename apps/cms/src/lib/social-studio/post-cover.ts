@@ -113,6 +113,7 @@ export async function ensurePostCover(
       systemInstructions: imgAgent?.imagePromptTemplate?.trim() || promptSettings.imageSystemInstructions,
       themeGuide: promptSettings.imageThemeGuide,
       anchorTaxonomy: promptSettings.imageAnchorTaxonomy,
+        brandPalette: promptSettings.brandPalette,
     });
 
     const imageBuffer = await generateCoverImage(

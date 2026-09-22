@@ -241,13 +241,13 @@ export async function runRedactor(
         "",
         "## TITLE RULES (CRITICAL — most hallucinations come from bad titles)",
         "- The title MUST describe ONE single concrete fact that appears in ONE single source above.",
-        "- NEVER combine two unrelated facts into one title (e.g. if source A says 'X is sad' and source B says 'Y is injured', DO NOT write 'X and Y are injured').",
-        "- The title MUST NOT contradict the body of the article. If the body says 'X wants to play', the title cannot say 'X will not play'.",
-        "- The title MUST NOT contradict the source. If the source headline says 'the ruling recognises the right to self-cultivation', the title cannot imply it was denied.",
+        "- NEVER combine two unrelated facts into one title (e.g. if source A says 'X resigned' and source B says 'Y was appointed', DO NOT write 'X and Y were appointed').",
+        "- The title MUST NOT contradict the body of the article. If the body says 'X wants to continue', the title cannot say 'X will step down'.",
+        "- The title MUST NOT contradict the source. If the source headline says 'the ruling recognises the right', the title cannot imply it was denied.",
         "- Prefer factual, neutral titles over sensationalist clickbait.",
         "- The title must be an ORIGINAL headline written in your own words. NEVER copy or closely paraphrase a source's headline: cover the same fact with different wording AND different structure. Reproducing another outlet's headline is plagiarism and grounds for rejection.",
         "- The excerpt must also be written fresh in your own words — never lifted from the source's headline or lede.",
-        "- If the title mentions a player, the named action (injury, transfer, statement) must be literally about THAT player in the source.",
+        "- If the title names a person or organisation, the named action (decision, statement, appointment) must be literally about THAT subject in the source.",
         "",
         "## SELF-CHECK before returning",
         "Before returning your JSON, mentally verify:",
@@ -355,7 +355,7 @@ export async function runRedactor(
     if (!isAssignedMode && recentTitles.length > 0) {
       dedupBlock = [
         "\n## ALREADY-COVERED SUBJECTS — DO NOT REPEAT",
-        "These titles already exist as drafts. Write about a DIFFERENT subject from the news context above (a different player, team, event, or angle).",
+        "These titles already exist as drafts. Write about a DIFFERENT subject from the news context above (a different person, organisation, event, or angle).",
         "If the same person/event is the only candidate, find a DIFFERENT angle (a different fact, a different framing) — never duplicate the same headline subject.",
         ...recentTitles.map((t) => `  - "${t}"`),
       ].join("\n");
@@ -413,7 +413,13 @@ export async function runRedactor(
     // check (vs lexical similarity) catches "same event, different title" without
     // flagging a bill's introduction vs its sanction, or two organisations each
     // obtaining their own licence.
-    const duplicateOf = await findDuplicateSubject(client, model, generated.title, recentTitles);
+    const duplicateOf = await findDuplicateSubject(
+      client,
+      model,
+      generated.title,
+      recentTitles,
+      promptSettings.domainDescription,
+    );
     if (duplicateOf) {
       strapi.log.warn(
         `[agent] "${agent.name}": skipped duplicate post "${generated.title}" ` +
@@ -589,20 +595,16 @@ async function runDirector(
         );
       }
 
-      const result = await reviewPost(
-        client,
-        textModel,
-        agent.instructions,
-        {
+      const result = await reviewPost(client, textModel, promptSettings, {
+        directorInstructions: agent.instructions,
+        draft: {
           title: draft.title,
           excerpt: draft.excerpt ?? "",
           content: draft.content ?? "",
         },
-        newsContextForReview,
-        promptSettings.fabricationProneFacts,
-        promptSettings.brandName,
-        formatSourceContext(writerSources),
-      );
+        newsContext: newsContextForReview,
+        writerSources: formatSourceContext(writerSources),
+      });
 
       if (result.rejected) {
         strapi.log.warn(
@@ -655,6 +657,7 @@ async function runDirector(
             systemInstructions: imgAgent.imagePromptTemplate?.trim() || promptSettings.imageSystemInstructions,
             themeGuide: promptSettings.imageThemeGuide,
             anchorTaxonomy: promptSettings.imageAnchorTaxonomy,
+        brandPalette: promptSettings.brandPalette,
           });
           const imageBuffer = await generateCoverImage(
             { openaiImageKey: imageKey, openrouterKey },

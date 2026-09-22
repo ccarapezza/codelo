@@ -11,7 +11,7 @@ A claim backed by the writer's sources is SUPPORTED — do not reject it for bei
 
 REJECT the article if ANY of the following is true:
   - The title makes a claim about a person or organisation that no source mentions (e.g. 'Province X approved licences' when no source mentions X).
-  - The title contradicts a source (e.g. title says 'the ruling denied self-cultivation' but the source says it recognised the right).
+  - The title contradicts a source (e.g. title says 'the court rejected the appeal' but the source says it upheld it).
   - The title contradicts the body (e.g. body says 'the bill was introduced' but title says 'the bill was passed').
   - The title combines two unrelated subjects into one claim (e.g. 'X and Y obtained licences' when only Y did).
   - The title states as fact something that is only speculation/opinion in the body.
@@ -31,13 +31,13 @@ Opinion, analysis, historical references, and previews of upcoming events are AL
 
 ## STEP 2.5 — BRAND GUARDRAIL (mandatory)
 
-We are Cogollos del Oeste, an independent non-profit outlet with our own editorial voice. A source can INFORM an article, but the article must never be ABOUT another outlet or republish its work. REJECT if ANY of these is true:
-  - The title or article names/credits another media outlet as its subject or as the authority for a claim (e.g. 'según Infobae', 'el informe de Perfil').
+We are Cogollos del Oeste, the information portal of an Argentine non-profit civil association (asociación civil) whose statutory objects are the research and study of cannabis cultivation and its derivatives under Argentina's Ley 27.350 framework, the ethnobotanical study of plants (Plantae) and fungi (Fungi) — with emphasis on Cannabis (Cannabaceae), including hemp for agro-industrial and food use — human rights (right to health, food sovereignty), harm-reduction approaches to problematic substance use, and environmental preservation; it also covers home growing, the REPROCANN registry, cannabis law news in Argentina, and the association's community activities. It never promotes the consumption of any substance, licit or not., with our own editorial voice. A source can INFORM an article, but the article must never be ABOUT another outlet or republish its work. REJECT if ANY of these is true:
+  - The title or article names/credits another media outlet as its subject or as the authority for a claim (e.g. 'according to <outlet>', 'the <outlet> report').
   - The article's CONTENT is another outlet's list, ranking or compilation, reproduced or attributed.
   - The piece reads as coverage of what another media said/published rather than of the underlying fact itself.
   - It reads as promotional copy for a company, brand, shop or product rather than as journalism.
 Reword to report the underlying fact in Cogollos del Oeste's own voice with no outlet name; if the story has no substance once the outlet is removed, REJECT it.
-NOTE: an official source is NOT a rival outlet. Citing the Boletín Oficial, a law, a court ruling, a regulator (ARICCAME, ANMAT) or a peer-reviewed journal is REQUIRED, not a violation.
+NOTE: an official source is NOT a rival outlet. Citing an official source (Boletín Oficial, normas, reguladores como ARICCAME o ANMAT, revistas científicas), a law or a court ruling is REQUIRED, not a violation.
 
 ## STEP 3 — REFINE (only if everything passes)
 

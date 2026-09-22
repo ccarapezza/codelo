@@ -4,8 +4,8 @@
 
 import type OpenAI from "openai";
 import { TEMPLATE_NAMES, type Slide, type TemplateName } from "./templates";
-import { BRAND } from "./brand";
 import type { PromptSettings } from "../prompt-defaults";
+import * as project from "../project";
 
 export interface ComposeCarouselInput {
   title: string;
@@ -109,15 +109,20 @@ export function sanitizeSlide(raw: unknown): Slide | null {
   return s;
 }
 
-function buildSystemPrompt(ps: PromptSettings): string {
+/**
+ * Exportado para poder compararlo sin red (test/preservation).
+ *
+ * ⚠️ Nada de acá puede describir un tema, una regla editorial, una paleta ni un
+ * dominio: el motor no sabe de qué habla el sitio que lo usa. Todo eso entra por
+ * `ps`. Esta función llegó a tener escrita la voz de marca, las reglas de
+ * consumo, la paleta y hasta los hashtags de UN proyecto, y se los aplicaba a
+ * todos: el otro portal publicaba sus placas de fútbol con #cannabis.
+ */
+export function buildCarouselSystemPrompt(ps: PromptSettings, siteUrl: string): string {
   return [
-    `Sos el editor de redes sociales de ${ps.brandName}, asociación civil sin fines de lucro.`,
+    `Sos el editor de redes sociales de ${ps.brandName}.`,
     "Generás un carrusel de Instagram (5 a 7 placas) a partir de un artículo ya publicado.",
-    "Voz de marca: divulgación seria y cercana sobre cannabis, cáñamo, salud, derechos y",
-    "ambiente. Tono rioplatense, claro, sin solemnidad y sin apología.",
-    "",
-    "REGLAS DURAS: nunca fomentes el consumo de sustancia alguna, lícita o no; no des",
-    "consejo médico ni dosis; no publicites productos, marcas ni comercios.",
+    ps.socialVoice,
     "",
     "REGLA INVIOLABLE (credibilidad): usá ÚNICAMENTE información presente en el artículo.",
     "NO inventes datos, cifras, fechas, resultados ni declaraciones. Está prohibido fabricar:",
@@ -128,12 +133,10 @@ function buildSystemPrompt(ps: PromptSettings): string {
     "ESTRUCTURA del deck:",
     '- Placa 1 = portada con template "cover": kicker corto, title gancho en una línea, hint "deslizá".',
     '  Incluí en la portada "bg": { "ai": "<prompt EN INGLÉS para una imagen editorial (foto o ilustración)',
-    '  que refleje el TEMA de la nota —botánica, cultivo de cannabis/cáñamo, ciencia, comunidad, ambiente—,',
-    '  en tonos azul-negro profundo con acentos ámbar, sin texto, sin logos, sin caras reconocibles y sin',
-    '  imágenes de consumo>" }.',
+    `  ${ps.socialCoverStyle}>" }.`,
     "- Placas intermedias: elegí entre stat (un dato/número fuerte del texto), bullets (2 a 4 puntos),",
     "  quote (una frase textual + autor si aparece).",
-    `- Última placa = "cta": title corto, subtitle, url "${BRAND.handle}.com.ar".`,
+    `- Última placa = "cta": title corto, subtitle, url "${siteUrl}".`,
     "",
     `TEMPLATES VÁLIDOS (no inventes otros): ${TEMPLATE_NAMES.join(", ")}.`,
     "",
@@ -146,19 +149,57 @@ function buildSystemPrompt(ps: PromptSettings): string {
     "  template=cta    → title, subtitle, url",
     "Textos cortos: title <= 60, label <= 90, items <= 70 c/u. Sin emojis ni flechas en las placas.",
     "",
-    'CAPTION (campo "caption"): texto para el feed de Instagram en rioplatense, con un hook en la',
+    // El dialecto y el tono los pone `socialVoice`, arriba: acá iba "en
+    // rioplatense" fijo, que es una suposición sobre el país del lector.
+    'CAPTION (campo "caption"): texto para el feed de Instagram, con un hook en la',
     'primera línea, 2 a 4 líneas de desarrollo basadas en el artículo, cierre "Link en la bio 👇"',
-    "y 8 a 12 hashtags relevantes al tema (cannabis, cáñamo, salud, derechos, ambiente,",
-    "según corresponda). Los emojis van solo acá, no en las placas.",
+    ps.socialHashtags
+      ? `y 8 a 12 hashtags relevantes al tema (${ps.socialHashtags}, según corresponda).`
+      : "y 8 a 12 hashtags relevantes al tema de la nota.",
+    "Los emojis van solo acá, no en las placas.",
     "",
     "Devolvé EXCLUSIVAMENTE este JSON (placas PLANAS, fijate el ejemplo):",
     '{ "slides": [',
     '  { "template": "cover", "kicker": "...", "title": "...", "hint": "deslizá", "bg": { "ai": "<prompt en inglés>" } },',
     '  { "template": "stat", "kicker": "...", "big": "27%", "label": "..." },',
     '  { "template": "bullets", "kicker": "...", "title": "...", "items": ["...", "..."] },',
-    `  { "template": "cta", "title": "...", "subtitle": "...", "url": "${BRAND.handle}.com.ar" }`,
+    `  { "template": "cta", "title": "...", "subtitle": "...", "url": "${siteUrl}" }`,
     '], "caption": "..." }',
   ].join("\n");
+}
+
+/**
+ * El caption que se usa si el modelo no devuelve uno.
+ *
+ * El handle sale de los ajustes y puede estar vacío: una instancia sin redes no
+ * tiene que imprimir el `#` de nadie. Antes esto terminaba, fijo, en
+ * "#cannabis #canamo" — para cualquier proyecto.
+ */
+/**
+ * El dominio que se imprime en la placa de cierre.
+ *
+ * Sale de la URL pública de la instalación y ya no de `${BRAND.handle}.com.ar`,
+ * que además de ser de un proyecto le agregaba un `.com.ar` a cualquier handle
+ * — el otro portal mostraba "fulbo.studio.com.ar", un dominio que no existe.
+ */
+function siteHost(): string {
+  try {
+    return new URL(project.siteUrl).host.replace(/^www\./, "");
+  } catch {
+    return project.siteUrl;
+  }
+}
+
+export function fallbackCaption(ps: PromptSettings, title: string): string {
+  const tags = ps.socialHashtags
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .slice(0, 3)
+    .map((t) => `#${t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "")}`);
+  if (ps.socialHandle) tags.push(`#${ps.socialHandle.replace(/[^a-zA-Z0-9]/g, "")}`);
+  const cierre = tags.length > 0 ? `\n\n${tags.join(" ")}` : "";
+  return `${title}\n\nLink en la bio 👇${cierre}`;
 }
 
 export async function composeCarousel(
@@ -179,7 +220,7 @@ export async function composeCarousel(
     temperature: 0.7,
     response_format: { type: "json_object" },
     messages: [
-      { role: "system", content: buildSystemPrompt(input.promptSettings) },
+      { role: "system", content: buildCarouselSystemPrompt(input.promptSettings, siteHost()) },
       { role: "user", content: userPrompt },
     ],
   });
@@ -235,8 +276,7 @@ export async function composeCarousel(
     return rest as Slide;
   });
 
-  const caption =
-    cut(parsed.caption, 2200) ?? `${input.title}\n\nLink en la bio 👇\n\n#cannabis #canamo #${BRAND.handle.replace(".", "")}`;
+  const caption = cut(parsed.caption, 2200) ?? fallbackCaption(input.promptSettings, input.title);
 
   return { slides, caption, coverPrompt };
 }

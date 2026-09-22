@@ -121,6 +121,7 @@ async function regenerateCoverFor(
         imgAgent.imagePromptTemplate?.trim() || promptSettings.imageSystemInstructions,
       themeGuide: promptSettings.imageThemeGuide,
       anchorTaxonomy: promptSettings.imageAnchorTaxonomy,
+        brandPalette: promptSettings.brandPalette,
     });
     try {
       imageBuffer = await generateCoverImage(
@@ -847,6 +848,7 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
                 imgAgent.imagePromptTemplate?.trim() || settings.imageSystemInstructions,
               themeGuide: settings.imageThemeGuide,
               anchorTaxonomy: settings.imageAnchorTaxonomy,
+        brandPalette: settings.brandPalette,
             });
         try {
           imageBuffer = await generateCoverImage(

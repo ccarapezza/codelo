@@ -12,6 +12,7 @@ import type { Core } from "@strapi/strapi";
 import { getOpenAIClient, translatePost } from "./openai";
 import { getOpenAITextKey, getOpenAITextModel } from "./openai-config";
 import { logAgentAction } from "./audit";
+import { getPromptSettings } from "./prompt-settings";
 
 const UID = "api::post.post";
 
@@ -67,11 +68,27 @@ async function uniqueEnSlug(
  * No-op when one already exists (unless `force`), when the post isn't
  * published, or when a translation for this documentId is already in flight.
  */
+/** El ajuste vive en `site-setting`; ante cualquier duda, se traduce (que es lo que hacía antes). */
+async function isAutoTranslateEnabled(strapi: Core.Strapi): Promise<boolean> {
+  try {
+    const row = (await strapi.db
+      .query("api::site-setting.site-setting")
+      .findOne({})) as { autoTranslate?: boolean } | null;
+    return row?.autoTranslate !== false;
+  } catch {
+    return true;
+  }
+}
+
 export async function ensurePostTranslation(
   strapi: Core.Strapi,
   documentId: string,
   opts: { force?: boolean; trigger?: string } = {},
 ): Promise<"skipped" | "translated"> {
+  // Una instancia monolingüe no tiene por qué pagar una traducción por nota. El
+  // disparo automático (publicar, Director) respeta el ajuste; los endpoints
+  // manuales pasan `force` porque ahí la traducción es lo que el usuario pidió.
+  if (!opts.force && !(await isAutoTranslateEnabled(strapi))) return "skipped";
   if (inFlight.has(documentId)) return "skipped";
   inFlight.add(documentId);
   try {
@@ -98,13 +115,21 @@ export async function ensurePostTranslation(
 
     const client = getOpenAIClient(getOpenAITextKey());
     const model = await getOpenAITextModel(strapi);
+    // El traductor tiene que saber de qué habla el sitio y qué no se traduce:
+    // hasta ahora lo llevaba escrito adentro, con el dominio de OTRO proyecto.
+    const promptSettings = await getPromptSettings(strapi);
 
     try {
-      const translated = await translatePost(client, model, {
-        title: post.title,
-        excerpt: post.excerpt ?? "",
-        content: post.content ?? "",
-      });
+      const translated = await translatePost(
+        client,
+        model,
+        {
+          title: post.title,
+          excerpt: post.excerpt ?? "",
+          content: post.content ?? "",
+        },
+        promptSettings,
+      );
 
       const slug = await uniqueEnSlug(
         strapi,

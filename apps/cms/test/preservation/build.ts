@@ -19,11 +19,12 @@ import {
   buildNewsSystemPrompt,
   refinePost,
 } from "../../src/lib/news-generator";
-import { composeCarousel } from "../../src/lib/social-cards/composer";
+import { buildCarouselSystemPrompt, composeCarousel } from "../../src/lib/social-cards/composer";
 import { composeSingleSlide } from "../../src/lib/social-studio/compose-single";
 import {
-  DEFAULT_VIDEO_PROMPT,
-  VIDEO_BG_STYLE,
+  buildClipPrompt,
+  buildCoverFallbackPrompt,
+  buildOverlaySystemPrompt,
 } from "../../src/lib/social-studio/pipeline";
 import type { PromptSettings } from "../../src/lib/prompt-defaults";
 
@@ -57,21 +58,19 @@ export async function construirPrompts(
     );
 
   return {
-    dedup: await capture((c) => findDuplicateSubject(c, "m", I.TITLE, I.RECENT_TITLES)),
+    dedup: await capture((c) =>
+      findDuplicateSubject(c, "m", I.TITLE, I.RECENT_TITLES, s.domainDescription),
+    ),
 
-    translate: await capture((c) => translatePost(c, "m", I.DRAFT)),
+    translate: await capture((c) => translatePost(c, "m", I.DRAFT, s)),
 
     director: await capture((c) =>
-      reviewPost(
-        c,
-        "m",
-        I.DIRECTOR_INSTRUCTIONS,
-        I.DRAFT,
-        I.NEWS_CONTEXT,
-        s.fabricationProneFacts,
-        s.brandName,
-        I.WRITER_SOURCES,
-      ),
+      reviewPost(c, "m", s, {
+        directorInstructions: I.DIRECTOR_INSTRUCTIONS,
+        draft: I.DRAFT,
+        newsContext: I.NEWS_CONTEXT,
+        writerSources: I.WRITER_SOURCES,
+      }),
     ),
 
     anchors: await capture((c) =>
@@ -83,14 +82,22 @@ export async function construirPrompts(
     "image.photo": await portada(I.SEED_PHOTO),
     "image.art": await portada(I.SEED_ART),
 
-    carousel: await capture((c) =>
-      composeCarousel(c, "m", {
-        title: I.TITLE,
-        excerpt: I.EXCERPT,
-        content: I.CONTENT,
-        promptSettings: s,
-      }),
-    ),
+    // El `system` se arma con el builder y un host fijo: el de verdad sale de
+    // SITE_PUBLIC_URL y haría que el fixture dependa del env con el que se corre
+    // el test. El `user` sí sale de la llamada real.
+    carousel: {
+      system: buildCarouselSystemPrompt(s, I.SITE_HOST),
+      user: (
+        await capture((c) =>
+          composeCarousel(c, "m", {
+            title: I.TITLE,
+            excerpt: I.EXCERPT,
+            content: I.CONTENT,
+            promptSettings: s,
+          }),
+        )
+      ).user,
+    },
 
     story: await capture((c) =>
       composeSingleSlide(c, "m", {
@@ -116,8 +123,9 @@ export async function construirPrompts(
       user: buildGenerateUserPrompt(s, I.ADMIN_PROMPT, I.RESEARCH),
     },
 
-    // Constantes que hoy no dependen de los ajustes y en A2 sí van a depender.
-    "video.style": soloSystem(VIDEO_BG_STYLE),
-    "video.default": soloSystem(DEFAULT_VIDEO_PROMPT),
+    // Piezas de Social Studio que no pasan por un cliente: se arman directo.
+    "video.clip": soloSystem(buildClipPrompt(s)),
+    "cover.fallback": soloSystem(buildCoverFallbackPrompt(s, I.TITLE)),
+    "overlay": soloSystem(buildOverlaySystemPrompt(s, I.OVERLAY_ASK)),
   };
 }
