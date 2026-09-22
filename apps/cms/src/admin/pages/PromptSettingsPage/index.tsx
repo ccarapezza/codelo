@@ -168,8 +168,9 @@ function PromptSettingsPage() {
   const [modo, setModo] = React.useState<"final" | "borrador">("final");
   const [borradores, setBorradores] = React.useState<Valores>({});
   const [borradoresGuardados, setBorradoresGuardados] = React.useState<Valores>({});
+  /** La versión en castellano de los valores neutros, que sirve el motor. */
+  const [borradoresBase, setBorradoresBase] = React.useState<Valores>({});
   const [traduciendo, setTraduciendo] = React.useState<string | null>(null);
-  const [preparando, setPreparando] = React.useState(false);
 
   // Dirty = el form se separó de lo último guardado. Maneja la píldora de
   // cambios sin guardar, los botones y el atajo ⌘/Ctrl+S.
@@ -186,6 +187,7 @@ function PromptSettingsPage() {
         const { data } = await get<{
           current: Partial<Valores> & { sourceDrafts?: Valores };
           defaults: Partial<Valores>;
+          drafts?: Valores;
         }>(ADMIN_API);
         const d = data.defaults ?? {};
         const c = data.current ?? {};
@@ -199,6 +201,7 @@ function PromptSettingsPage() {
         const dr = data.current?.sourceDrafts ?? {};
         setBorradores(dr);
         setBorradoresGuardados(dr);
+        setBorradoresBase(data.drafts ?? {});
         setDefaults(base);
         setForm(next);
         setSaved(next);
@@ -213,42 +216,6 @@ function PromptSettingsPage() {
   const set = (key: string, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
   const setBorrador = (key: string, value: string) =>
     setBorradores((prev) => ({ ...prev, [key]: value }));
-
-  /**
-   * Al pasar a "escribir en mi idioma", llena los borradores que falten
-   * traduciendo el texto final.
-   *
-   * Sin esto el modo no sirve para nada en una instancia ya configurada: los
-   * borradores sólo existen si alguien ya escribió en su idioma, así que al
-   * cambiar de modo se veían campos VACÍOS. Se traduce sólo lo que falta y en
-   * una sola llamada; lo que el usuario ya escribió no se toca.
-   */
-  const irAModoBorrador = React.useCallback(async () => {
-    setModo("borrador");
-    const faltan: Valores = {};
-    for (const campo of FIELDS) {
-      if ((campo.lang ?? "prompt") !== "prompt") continue;
-      const final = (form[campo.key] ?? "").trim();
-      if (final && !(borradores[campo.key] ?? "").trim()) faltan[campo.key] = final;
-    }
-    if (Object.keys(faltan).length === 0) return;
-
-    setPreparando(true);
-    try {
-      const { data } = await post<{ translated: Valores }>(TRADUCIR_INVERSA_API, {
-        fields: faltan,
-        language: form.writingLanguage || "Spanish",
-      });
-      setBorradores((prev) => ({ ...data.translated, ...prev }));
-    } catch {
-      toggleNotification({
-        type: "warning",
-        message: "No se pudieron traducir los textos actuales. Podés escribirlos a mano.",
-      });
-    } finally {
-      setPreparando(false);
-    }
-  }, [form, borradores, post, toggleNotification]);
 
   /**
    * Traduce el borrador y deja el resultado en el campo final, SIN guardar.
@@ -315,15 +282,10 @@ function PromptSettingsPage() {
               <SingleSelect
                 aria-label="Modo de escritura"
                 value={modo}
-                onChange={(v: string) => {
-                  if (v === "borrador") void irAModoBorrador();
-                  else setModo("final");
-                }}
+                onChange={(v: string) => setModo(v === "borrador" ? "borrador" : "final")}
               >
                 <SingleSelectOption value="final">Ver el texto final</SingleSelectOption>
-                <SingleSelectOption value="borrador">
-                  {preparando ? "Traduciendo…" : "Escribir en mi idioma"}
-                </SingleSelectOption>
+                <SingleSelectOption value="borrador">Escribir en mi idioma</SingleSelectOption>
               </SingleSelect>
             </Box>
             <Button
@@ -338,16 +300,11 @@ function PromptSettingsPage() {
       />
 
       {modo === "borrador" ? (
-        <Box
-          marginBottom={4}
-          padding={4}
-          background={preparando ? "primary100" : "neutral100"}
-          hasRadius
-        >
+        <Box marginBottom={4} padding={4} background="neutral100" hasRadius>
           <Typography variant="pi" textColor="neutral700">
-            {preparando
-              ? "Traduciendo la configuración actual a tu idioma para que puedas leerla y editarla…"
-              : "Estás viendo un borrador en tu idioma. Lo que se le manda al modelo es el texto final, en inglés: traducí un campo para actualizarlo, o cambiá a «Ver el texto final» para revisarlo."}
+            Estás viendo un borrador en tu idioma, para leer y editar. Lo que se le manda al
+            modelo es el texto final, en inglés: traducí un campo para actualizarlo, o cambiá a
+            «Ver el texto final» para revisarlo.
           </Typography>
         </Box>
       ) : null}
@@ -385,7 +342,7 @@ function PromptSettingsPage() {
                     key={campo.key}
                     campo={campo}
                     valor={form[campo.key] ?? ""}
-                    borrador={borradores[campo.key] ?? ""}
+                    borrador={borradores[campo.key] ?? borradoresBase[campo.key] ?? ""}
                     modo={modo}
                     traduciendo={traduciendo === campo.key}
                     onChange={(v) => set(campo.key, v)}

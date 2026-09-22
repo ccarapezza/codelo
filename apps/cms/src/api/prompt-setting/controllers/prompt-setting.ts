@@ -8,6 +8,7 @@ import {
 } from "../../../lib/translate-field";
 import { ADMIN_PERMISSIONS } from "../../../lib/admin-permissions";
 import { DEFAULT_PROMPT_SETTINGS, ENGINE_PROMPT_KEYS } from "../../../lib/prompt-defaults";
+import { NEUTRAL_PROMPT_DRAFTS } from "../../../lib/prompt-drafts";
 import { verticalPromptKeys } from "../../../verticals/prompt-fields";
 
 const UID = "api::prompt-setting.prompt-setting";
@@ -27,7 +28,13 @@ export default factories.createCoreController(UID, ({ strapi }) => ({
   async adminFind(ctx) {
     if (!(await requireAdminPermission(ctx, strapi, ADMIN_PERMISSIONS.promptSettings))) return;
     const current = await strapi.db.query(UID).findOne({});
-    ctx.body = { current: current ?? {}, defaults: DEFAULT_PROMPT_SETTINGS };
+    // `drafts` es la versión legible en castellano de los valores neutros. La
+    // pantalla la usa cuando todavía no hay un borrador propio guardado.
+    ctx.body = {
+      current: current ?? {},
+      defaults: DEFAULT_PROMPT_SETTINGS,
+      drafts: NEUTRAL_PROMPT_DRAFTS,
+    };
   },
 
   /**
