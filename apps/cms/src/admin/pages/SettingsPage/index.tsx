@@ -10,12 +10,14 @@ import {
   Toggle,
   Typography,
 } from "@strapi/design-system";
-import { Key, Magic, ChartPie, Eye, Cog } from "@strapi/icons";
+import { ChartPie, Cog, Command, Eye, Key, Magic } from "@strapi/icons";
 import { createGlobalStyle } from "styled-components";
 import { PageContainer, PageHeader, AccentCard, Hairline, GroupLabel, SaveBar } from "../../components/ui";
 
 import { Page, useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { ADMIN_PERMISSIONS } from "../../../lib/admin-permissions";
+import type { SettingCard, SettingField } from "../../seam-types";
+import * as verticals from "../../verticals";
 
 // Strapi's <SingleSelect> caps its dropdown at max-height: 15.6rem (~6 options),
 // which forces scrolling. Mounted only while this page is open, this lets the Radix
@@ -29,9 +31,16 @@ const SelectDropdownHeightFix = createGlobalStyle`
 
 const ADMIN_API = "/api/site-setting/admin-config";
 
+/**
+ * Tarjetas que agrega el proyecto (admin/verticals.ts). Se lee a la defensiva:
+ * un proyecto que todavía no actualizó su costura tras el merge no las exporta.
+ */
+const VERTICAL_CARDS: SettingCard[] = (verticals as Partial<typeof verticals>).settingCards ?? [];
+const VERTICAL_KEYS: string[] = VERTICAL_CARDS.flatMap((c) => c.fields.map((f) => f.key));
+
 type Settings = {
+  [extra: string]: string | boolean;
   openaiTextModel: string;
-  openaiNormaModel: string;
   openaiImageModel: string;
   adsensePublisherId: string;
   adsenseSidebarLeftSlot: string;
@@ -42,12 +51,12 @@ type Settings = {
   googleAnalyticsId: string;
   googleSiteVerification: string;
   clarityProjectId: string;
+  autoTranslate: boolean;
   houseAdsEnabled: boolean;
 };
 
 const EMPTY: Settings = {
   openaiTextModel: "gpt-4o-mini",
-  openaiNormaModel: "",
   openaiImageModel: "gpt-image-1-mini",
   adsensePublisherId: "",
   adsenseSidebarLeftSlot: "",
@@ -58,7 +67,10 @@ const EMPTY: Settings = {
   googleAnalyticsId: "",
   googleSiteVerification: "",
   clarityProjectId: "",
+  autoTranslate: true,
   houseAdsEnabled: false,
+  // Las del proyecto arrancan vacías; el toggle se resuelve al cargar.
+  ...Object.fromEntries(VERTICAL_KEYS.map((k) => [k, ""])),
 };
 
 // Prices: input / output per 1M tokens (standard tier)
@@ -94,6 +106,49 @@ const IMAGE_MODELS = [
 // siendo navegable escribiéndola. Page.Protect es lo que corta ese acceso y
 // muestra el cartel de "sin permisos" en vez de un formulario que falla al
 // guardar. La API igual valida por su cuenta (requireAdminPermission).
+/** Un campo aportado por el proyecto. Los selects de modelo reusan los catálogos del motor. */
+function CampoVertical({
+  campo,
+  valor,
+  onChange,
+}: {
+  campo: SettingField;
+  valor: string | boolean;
+  onChange: (v: string | boolean) => void;
+}) {
+  const modelos =
+    campo.kind === "text-model" ? TEXT_MODELS : campo.kind === "image-model" ? IMAGE_MODELS : null;
+  return (
+    <Field.Root hint={campo.hint}>
+      <Field.Label>{campo.label}</Field.Label>
+      {campo.kind === "toggle" ? (
+        <Toggle
+          onLabel="Sí"
+          offLabel="No"
+          checked={Boolean(valor)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.checked)}
+        />
+      ) : modelos ? (
+        <SingleSelect value={String(valor ?? "")} onChange={(v: string | number) => onChange(String(v))}>
+          <SingleSelectOption value="">(usar el modelo por defecto)</SingleSelectOption>
+          {modelos.map((m) => (
+            <SingleSelectOption key={m.value} value={m.value}>
+              {m.label}
+            </SingleSelectOption>
+          ))}
+        </SingleSelect>
+      ) : (
+        <TextInput
+          placeholder={campo.placeholder}
+          value={String(valor ?? "")}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
+        />
+      )}
+      <Field.Hint />
+    </Field.Root>
+  );
+}
+
 export default function ProtectedSettingsPage() {
   return (
     <Page.Protect permissions={[{ action: ADMIN_PERMISSIONS.siteSettings, subject: null }]}>
@@ -124,7 +179,6 @@ function SettingsPage() {
         const { data } = await get<Settings>(ADMIN_API);
         const next: Settings = {
           openaiTextModel: data.openaiTextModel ?? "gpt-4o-mini",
-          openaiNormaModel: data.openaiNormaModel ?? "",
           openaiImageModel: data.openaiImageModel ?? "gpt-image-1-mini",
           adsensePublisherId: data.adsensePublisherId ?? "",
           adsenseSidebarLeftSlot: data.adsenseSidebarLeftSlot ?? "",
@@ -135,7 +189,17 @@ function SettingsPage() {
           googleAnalyticsId: data.googleAnalyticsId ?? "",
           googleSiteVerification: data.googleSiteVerification ?? "",
           clarityProjectId: data.clarityProjectId ?? "",
+          // Sin fila guardada el default es traducir, que es lo que hacía siempre.
+          autoTranslate: data.autoTranslate !== false,
           houseAdsEnabled: Boolean(data.houseAdsEnabled),
+          ...Object.fromEntries(
+            VERTICAL_CARDS.flatMap((c) =>
+              c.fields.map((f) => [
+                f.key,
+                f.kind === "toggle" ? Boolean(data[f.key]) : ((data[f.key] as string) ?? ""),
+              ]),
+            ),
+          ),
         };
         setForm(next);
         setSaved(next);
@@ -216,24 +280,6 @@ function SettingsPage() {
               <Field.Hint />
             </Field.Root>
 
-            <Field.Root hint="Modelo para leer las normas del Boletín Oficial (triage + ficha). Vacío usa el modelo de texto. Conviene separarlo: son resoluciones largas y se corren pocas veces por día, así que se puede subir de modelo sin encarecer los artículos.">
-              <Field.Label>Modelo de análisis normativo</Field.Label>
-              <SingleSelect
-                value={form.openaiNormaModel}
-                onChange={(val: string | number) => set("openaiNormaModel", String(val))}
-              >
-                <SingleSelectOption value="">
-                  (usar el modelo de texto)
-                </SingleSelectOption>
-                {TEXT_MODELS.map((m) => (
-                  <SingleSelectOption key={m.value} value={m.value}>
-                    {m.label}
-                  </SingleSelectOption>
-                ))}
-              </SingleSelect>
-              <Field.Hint />
-            </Field.Root>
-
             <Field.Root hint="Modelo para covers. gpt-image-* / dall-e-3 usan OpenAI; google/gemini-* usan Nano Banana (Gemini) vía OpenRouter y requieren OPENROUTER_API_KEY.">
               <Field.Label>Modelo de imagen</Field.Label>
               <SingleSelect
@@ -250,6 +296,28 @@ function SettingsPage() {
             </Field.Root>
           </Flex>
         </AccentCard>
+
+          <AccentCard
+            icon={<Command />}
+            title="Publicación"
+            accent="secondary"
+            description="Qué pasa automáticamente cuando se publica una nota."
+          >
+            <Flex direction="column" alignItems="stretch" gap={4}>
+              <Field.Root hint="Traduce cada nota al publicarla, al idioma configurado en Configuración editorial. En un sitio monolingüe conviene apagarlo: es una llamada al modelo por nota que no se usa.">
+                <Field.Label>Traducir automáticamente</Field.Label>
+                <Toggle
+                  onLabel="Sí"
+                  offLabel="No"
+                  checked={form.autoTranslate}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    set("autoTranslate", e.target.checked)
+                  }
+                />
+                <Field.Hint />
+              </Field.Root>
+            </Flex>
+          </AccentCard>
 
         <AccentCard
           icon={<Key />}
@@ -409,6 +477,30 @@ function SettingsPage() {
             <Field.Hint />
           </Field.Root>
         </AccentCard>
+
+        {/* Las tarjetas del proyecto, al final: los ajustes propios de un módulo
+            que sólo existe en esta instalación. */}
+        {VERTICAL_CARDS.map((card) => (
+          <div key={card.id} id={card.id}>
+            <AccentCard
+              icon={card.icon}
+              title={card.title}
+              accent={card.accent}
+              description={card.description}
+            >
+              <Flex direction="column" alignItems="stretch" gap={4}>
+                {card.fields.map((campo) => (
+                  <CampoVertical
+                    key={campo.key}
+                    campo={campo}
+                    valor={form[campo.key]}
+                    onChange={(v) => set(campo.key, v)}
+                  />
+                ))}
+              </Flex>
+            </AccentCard>
+          </div>
+        ))}
       </Box>
 
       <SaveBar dirty={dirty} saving={saving} onSave={handleSave} onDiscard={handleDiscard} />

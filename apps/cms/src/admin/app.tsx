@@ -29,7 +29,10 @@ let appRef: StrapiApp | null = null;
 // la fuente de verdad para el filtro del bootstrap, en vez de un prefijo en el
 // id que hay que acordarse de mantener sincronizado en dos lados (ya se
 // desincronizó una vez y la home quedó vacía).
-const IDS_PROPIOS = new Set(verticals.widgets.map(w => w.id));
+/** El widget de puesta en marcha del motor: está en toda instancia. */
+const WIDGET_SETUP = "nib-setup";
+
+const IDS_PROPIOS = new Set([WIDGET_SETUP, ...verticals.widgets.map(w => w.id)]);
 
 // ── Orden del menú ───────────────────────────────────────────────────────────
 //
@@ -213,6 +216,16 @@ export default {
     // Widgets informativos (sólo lectura) para que TODO usuario del panel
     // —admin, editor o author— entienda de dónde y cuándo sale la información.
     // No llevan `permissions`/`roles`, así que son visibles para todos.
+    // El checklist va primero: en una instancia nueva es lo único que importa,
+    // y dice qué falta antes de que los agentes puedan escribir.
+    app.widgets.register([
+      {
+        id: WIDGET_SETUP,
+        icon: Command,
+        title: { id: "nib.widget.setup", defaultMessage: "Puesta en marcha" },
+        component: async () => (await import("./components/SetupChecklistWidget")).default,
+      },
+    ]);
     app.widgets.register(verticals.widgets);
   },
 
@@ -226,12 +239,10 @@ export default {
     // `widgets`. Para dejar además un widget nativo de Strapi, se agrega su id a
     // la allowlist.
     //
-    // Si el proyecto no declara widgets no se filtra nada: filtrar con la lista
-    // vacía dejaba la home del panel en blanco, que es peor que mostrar las
-    // tarjetas nativas de Strapi.
-    if (IDS_PROPIOS.size > 0) {
-      appRef?.widgets.register(prev => prev.filter(w => IDS_PROPIOS.has(String(w.id ?? ""))));
-    }
+    // El filtro corre siempre. Antes se salteaba cuando el proyecto no declaraba
+    // widgets, porque filtrar con la lista vacía dejaba la home en blanco; ahora
+    // el motor aporta el checklist, así que esa home nunca queda vacía.
+    appRef?.widgets.register(prev => prev.filter(w => IDS_PROPIOS.has(String(w.id ?? ""))));
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (app.getPlugin("content-manager") as any).apis.addEditViewSidePanel([SocialStudioPanel]);

@@ -107,6 +107,37 @@ export function PageHeader({
 }
 
 /** Hairline divider that respects the theme (token, not hardcoded hex). */
+/**
+ * Referencia gris de un texto FIJO que rodea a un campo editable.
+ *
+ * Sirve para que quien escribe un prompt vea dónde cae lo suyo dentro del
+ * andamiaje que no se puede tocar. Vivía dentro de PromptSettingsPage, así que
+ * una tarjeta aportada por un proyecto no podía usarlo.
+ */
+export function ReferenceNote({ children }: { children: React.ReactNode }) {
+  return (
+    <Box
+      marginTop={2}
+      padding={3}
+      background="neutral100"
+      borderColor="neutral200"
+      borderWidth="1px"
+      borderStyle="solid"
+      borderRadius="4px"
+      hasRadius
+    >
+      <Typography variant="pi" textColor="neutral500" fontWeight="bold">
+        Texto fijo (no editable)
+      </Typography>
+      <Box marginTop={1}>
+        <Typography variant="pi" textColor="neutral500" style={{ whiteSpace: "pre-wrap" }}>
+          {children}
+        </Typography>
+      </Box>
+    </Box>
+  );
+}
+
 export function Hairline({ marginY }: { marginY?: number }) {
   return <Box background="neutral150" marginTop={marginY} marginBottom={marginY} style={{ height: 1 }} />;
 }

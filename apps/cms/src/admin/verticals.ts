@@ -9,6 +9,7 @@
 // específica por definición: logo, paleta y los textos de marca del login.
 
 import type { StrapiApp } from "@strapi/strapi/admin";
+import type { PromptCard, SettingCard } from "./seam-types";
 
 /**
  * Se mergea con la identidad por defecto del motor (src/admin/default-brand.ts):
@@ -58,3 +59,22 @@ export const agentRoles: Array<{
   badgeVariant: string;
   description?: string;
 }> = [];
+
+/**
+ * Tarjetas propias en Configuración editorial (/admin/prompt-settings).
+ *
+ * Para los prompts que sólo tienen sentido en este proyecto: el de un módulo
+ * propio, no la línea editorial del sitio (esa son campos del motor y ya tienen
+ * su tarjeta). Cada campo necesita además su clave en
+ * `src/verticals/prompt-fields.ts` y su atributo en el schema.json de
+ * `prompt-setting`, o el controller lo descarta.
+ */
+export const promptCards: PromptCard[] = [];
+
+/**
+ * Tarjetas propias en Sitio e integraciones (/admin/site-settings).
+ *
+ * Mismo trato: la clave va además en `src/verticals/setting-fields.ts` y el
+ * atributo en el schema.json de `site-setting`.
+ */
+export const settingCards: SettingCard[] = [];

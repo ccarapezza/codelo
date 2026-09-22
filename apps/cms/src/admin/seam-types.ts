@@ -1,0 +1,60 @@
+// Los tipos de las tarjetas que un proyecto puede sumar a las pantallas de
+// configuración (admin/verticals.ts → `promptCards` y `settingCards`).
+//
+// Existen porque las pantallas del motor pasaron a ser declarativas: en vez de
+// tener las tarjetas escritas en el JSX, las recorren. Así un proyecto puede
+// agregar las suyas —el prompt de su lector de normas, el modelo con el que lo
+// lee— sin editar un archivo del motor, que es lo que hasta ahora obligaba a
+// meter una tarjeta de un vertical dentro del panel de todos.
+//
+// Una tarjeta nueva necesita además el atributo en el schema.json del single
+// type y la clave en la costura del servidor (`verticals/prompt-fields.ts` o
+// `verticals/setting-fields.ts`). Sin eso el controller la descarta.
+
+import type * as React from "react";
+
+/** Los mismos acentos que usa el kit del panel (components/ui). */
+export type Accent = "primary" | "warning" | "success" | "danger" | "secondary";
+
+export interface PromptField {
+  /** La clave en `prompt-setting`. */
+  key: string;
+  label: string;
+  hint?: string;
+  /** Alto del textarea. Sin esto, se renderiza como input de una línea. */
+  rows?: number;
+  /**
+   * El andamiaje fijo que rodea a este campo, en gris y sin editar. Sirve para
+   * que quien escribe el prompt vea dónde cae su texto.
+   */
+  reference?: string;
+}
+
+export interface PromptCard {
+  /** También es el ancla de la URL: /admin/prompt-settings#<id>. */
+  id: string;
+  title: string;
+  description: string;
+  accent: Accent;
+  icon?: React.ReactNode;
+  fields: PromptField[];
+}
+
+export interface SettingField {
+  /** La clave en `site-setting`. */
+  key: string;
+  label: string;
+  hint?: string;
+  /** `text-model` y `image-model` reusan los catálogos de modelos del motor. */
+  kind: "text" | "toggle" | "text-model" | "image-model";
+  placeholder?: string;
+}
+
+export interface SettingCard {
+  id: string;
+  title: string;
+  description: string;
+  accent: Accent;
+  icon?: React.ReactNode;
+  fields: SettingField[];
+}
