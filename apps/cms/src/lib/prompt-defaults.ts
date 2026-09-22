@@ -62,6 +62,11 @@ export interface PromptSettings {
   socialCoverStyle: string;
   /** Temas de los hashtags del caption, separados por coma. */
   socialHashtags: string;
+  /**
+   * Cierre del caption. Es TEXTO LITERAL que se pega en la salida, no una
+   * instrucción para el modelo: va en el idioma del sitio.
+   */
+  socialCta: string;
   /** Prompt de imagen que se usa cuando el modelo no devuelve uno para la portada. */
   coverFallbackPrompt: string;
   /** Estilo que se le agrega a todo prompt de video. */
@@ -147,6 +152,7 @@ export const ENGINE_PROMPT_KEYS = [
   "socialVoice",
   "socialCoverStyle",
   "socialHashtags",
+  "socialCta",
   "coverFallbackPrompt",
   "videoStyle",
   "videoDefaultPrompt",
@@ -177,6 +183,7 @@ export const NEUTRAL_PROMPT_SETTINGS: PromptSettings = {
   socialCoverStyle:
     "que refleje el TEMA de la nota, sin texto, sin logos y sin caras reconocibles",
   socialHashtags: "",
+  socialCta: "Link en la bio 👇",
   coverFallbackPrompt: "Editorial image, cinematic, no text, no logos, no faces.",
   videoStyle:
     "Estilo: video editorial y documental, atmosfera cinematografica, luz natural suave, " +

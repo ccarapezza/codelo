@@ -1,6 +1,6 @@
-Escribí una nota en Spanish para hoy (2026-09-22) a partir del siguiente pedido del editor:
+Write an article in Spanish for today (2026-09-22) from the following editor request:
 """Contá qué cambia con el nuevo régimen de inscripción y a quién le afecta."""
 
-(Sin investigación web — escribí en clave análisis/preview; no afirmes eventos recientes como hechos.)
+(No web research — write as analysis/preview; do not state recent events as fact.)
 
-Devolvé solo el JSON.
+Return only the JSON.

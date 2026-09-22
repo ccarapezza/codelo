@@ -69,7 +69,7 @@ export const REFINE_INSTRUCTION = "Hacela más corta y sacá la repetición del 
 export const SITE_HOST = "example.com";
 
 export const OVERLAY_ASK =
-  'Devolvé JSON { "kicker": "<etiqueta corta, <=22 chars, MAYÚSCULAS implícitas>", "title": "<gancho de la nota, <=55 chars>" }';
+  'Return JSON { "kicker": "<short label, <=22 chars>", "title": "<hook from the article, <=55 chars>" }';
 
 export const RECENT_DESCRIPTIONS = [
   "A wide desk with stacked folders under warm window light.",

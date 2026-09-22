@@ -64,6 +64,9 @@
     "socialHashtags": {
       "type": "text"
     },
+    "socialCta": {
+      "type": "string"
+    },
     "coverFallbackPrompt": {
       "type": "text"
     },

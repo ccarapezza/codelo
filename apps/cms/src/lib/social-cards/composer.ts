@@ -120,47 +120,46 @@ export function sanitizeSlide(raw: unknown): Slide | null {
  */
 export function buildCarouselSystemPrompt(ps: PromptSettings, siteUrl: string): string {
   return [
-    `Sos el editor de redes sociales de ${ps.brandName}.`,
-    "Generás un carrusel de Instagram (5 a 7 placas) a partir de un artículo ya publicado.",
+    `You are the social-media editor for ${ps.brandName}.`,
+    "You produce an Instagram carousel (5 to 7 cards) from an already-published article.",
     ps.socialVoice,
     "",
-    "REGLA INVIOLABLE (credibilidad): usá ÚNICAMENTE información presente en el artículo.",
-    "NO inventes datos, cifras, fechas, resultados ni declaraciones. Está prohibido fabricar:",
-    `${ps.fabricationProneFacts}. Si un dato no está en el texto, NO lo incluyas. Es preferible`,
-    "una placa menos a una placa con un dato inventado. En 'quote', el texto debe ser textual",
-    "del artículo.",
+    "UNBREAKABLE RULE (credibility): use ONLY information present in the article.",
+    "Do NOT invent data, figures, dates, results or statements. It is forbidden to fabricate:",
+    `${ps.fabricationProneFacts}. If a fact is not in the text, do NOT include it. One card fewer`,
+    "is better than one card with an invented fact. In 'quote', the text must be verbatim",
+    "from the article.",
     "",
-    "ESTRUCTURA del deck:",
-    '- Placa 1 = portada con template "cover": kicker corto, title gancho en una línea, hint "deslizá".',
-    '  Incluí en la portada "bg": { "ai": "<prompt EN INGLÉS para una imagen editorial (foto o ilustración)',
+    "DECK STRUCTURE:",
+    '- Card 1 = cover, template "cover": short kicker, one-line hook title, hint.',
+    '  Include in the cover "bg": { "ai": "<prompt IN ENGLISH for an editorial image (photo or illustration)',
     `  ${ps.socialCoverStyle}>" }.`,
-    "- Placas intermedias: elegí entre stat (un dato/número fuerte del texto), bullets (2 a 4 puntos),",
-    "  quote (una frase textual + autor si aparece).",
-    `- Última placa = "cta": title corto, subtitle, url "${siteUrl}".`,
+    "- Middle cards: choose between stat (one strong figure from the text), bullets (2 to 4 points),",
+    "  quote (one verbatim sentence + author if present).",
+    `- Last card = "cta": short title, subtitle, url "${siteUrl}".`,
     "",
-    `TEMPLATES VÁLIDOS (no inventes otros): ${TEMPLATE_NAMES.join(", ")}.`,
+    `VALID TEMPLATES (do not invent others): ${TEMPLATE_NAMES.join(", ")}.`,
     "",
-    'FORMA DE CADA SLIDE — objeto PLANO con un campo "template" y los campos de ese template.',
-    'NO anides los campos bajo el nombre del template. Campos por template:',
+    'SHAPE OF EACH SLIDE — a FLAT object with a "template" field and that template\'s fields.',
+    "Do NOT nest the fields under the template name. Fields per template:",
     "  template=cover  → kicker, title, hint, bg",
     "  template=stat   → kicker, big, label",
     "  template=bullets→ kicker, title, items (array)",
     "  template=quote  → text, by",
     "  template=cta    → title, subtitle, url",
-    "Textos cortos: title <= 60, label <= 90, items <= 70 c/u. Sin emojis ni flechas en las placas.",
+    "Short texts: title <= 60, label <= 90, items <= 70 each. No emojis or arrows on the cards.",
     "",
-    // El dialecto y el tono los pone `socialVoice`, arriba: acá iba "en
-    // rioplatense" fijo, que es una suposición sobre el país del lector.
-    'CAPTION (campo "caption"): texto para el feed de Instagram, con un hook en la',
-    'primera línea, 2 a 4 líneas de desarrollo basadas en el artículo, cierre "Link en la bio 👇"',
+    `ALL card text and the caption must be written in ${ps.writingLanguage}.`,
+    'CAPTION (field "caption"): text for the Instagram feed, with a hook on the first line,',
+    "2 to 4 lines of development based on the article, and a closing call to action.",
     ps.socialHashtags
-      ? `y 8 a 12 hashtags relevantes al tema (${ps.socialHashtags}, según corresponda).`
-      : "y 8 a 12 hashtags relevantes al tema de la nota.",
-    "Los emojis van solo acá, no en las placas.",
+      ? `Then 8 to 12 hashtags relevant to the topic (${ps.socialHashtags}, as appropriate).`
+      : "Then 8 to 12 hashtags relevant to the article's topic.",
+    "Emojis go only here, never on the cards.",
     "",
-    "Devolvé EXCLUSIVAMENTE este JSON (placas PLANAS, fijate el ejemplo):",
+    "Return EXCLUSIVELY this JSON (FLAT cards, see the example):",
     '{ "slides": [',
-    '  { "template": "cover", "kicker": "...", "title": "...", "hint": "deslizá", "bg": { "ai": "<prompt en inglés>" } },',
+    '  { "template": "cover", "kicker": "...", "title": "...", "hint": "...", "bg": { "ai": "<prompt in English>" } },',
     '  { "template": "stat", "kicker": "...", "big": "27%", "label": "..." },',
     '  { "template": "bullets", "kicker": "...", "title": "...", "items": ["...", "..."] },',
     `  { "template": "cta", "title": "...", "subtitle": "...", "url": "${siteUrl}" }`,
@@ -198,8 +197,7 @@ export function fallbackCaption(ps: PromptSettings, title: string): string {
     .slice(0, 3)
     .map((t) => `#${t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "")}`);
   if (ps.socialHandle) tags.push(`#${ps.socialHandle.replace(/[^a-zA-Z0-9]/g, "")}`);
-  const cierre = tags.length > 0 ? `\n\n${tags.join(" ")}` : "";
-  return `${title}\n\nLink en la bio 👇${cierre}`;
+  return [title, ps.socialCta, tags.join(" ")].filter(Boolean).join("\n\n");
 }
 
 export async function composeCarousel(

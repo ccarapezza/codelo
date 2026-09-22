@@ -1,10 +1,10 @@
-Escribí una nota en Spanish para hoy (2026-09-22) a partir del siguiente pedido del editor:
+Write an article in Spanish for today (2026-09-22) from the following editor request:
 """Contá qué cambia con el nuevo régimen de inscripción y a quién le afecta."""
 
-## INVESTIGACIÓN WEB VERIFICADA (basá CADA hecho concreto SOLO en esto)
+## VERIFIED WEB RESEARCH (base EVERY concrete fact ONLY on this)
 - El organismo publicó el nuevo régimen el 12 de marzo.
 - La renovación pasa a tener un plazo de 30 días.
 
-Recordatorio: NO nombres ni atribuyas a ningún MEDIO de la investigación; reportá el hecho de fondo con voz propia de Fulbo. Las fuentes OFICIALES (AFA, CONMEBOL, FIFA, Liga Profesional, comunicados oficiales de los clubes, fallos judiciales y organismos reguladores) sí se citan.
+Reminder: do NOT name or credit any OUTLET from the research; report the underlying fact in Fulbo's own voice. Official sources (AFA, CONMEBOL, FIFA, Liga Profesional, comunicados oficiales de los clubes, fallos judiciales y organismos reguladores) ARE cited.
 
-Devolvé solo el JSON.
+Return only the JSON.

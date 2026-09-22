@@ -38,29 +38,30 @@ const FIELDS_BY_TEMPLATE: Record<ComposeSingleInput["template"], string> = {
 // se las aplicaba a todos. Además la extracción había cortado la primera frase
 // al medio y dejaba colgado un "de lucro." suelto, que viajaba al modelo en
 // cada llamada.
-function buildSystemPrompt(input: ComposeSingleInput): string {
+export function buildSystemPrompt(input: ComposeSingleInput): string {
   const ps = input.promptSettings;
   return [
-    `Sos el editor de redes sociales de ${ps.brandName || project.name}, con la voz`,
-    `editorial del sitio, que cubre: ${ps.domainDescription}.`,
-    "Generás UNA placa vertical de Instagram (historia, 1080x1920) a partir del",
-    "material que te dan. Tono claro y cercano, sin solemnidad. No publicites marcas.",
+    `You are the social-media editor for ${ps.brandName || project.name}, a site covering:`,
+    `${ps.domainDescription}.`,
+    ps.socialVoice,
+    "You produce ONE vertical Instagram card (story, 1080x1920) from the material given to you.",
     "",
-    "REGLA INVIOLABLE: usá ÚNICAMENTE información presente en el material. NO inventes",
-    `datos, cifras, fechas ni declaraciones. Está prohibido fabricar: ${ps.fabricationProneFacts}.`,
+    "UNBREAKABLE RULE: use ONLY information present in the material. Do NOT invent",
+    `data, figures, dates or statements. It is forbidden to fabricate: ${ps.fabricationProneFacts}.`,
     "",
-    `La placa usa el template "${input.template}" con SOLO estos campos: ${FIELDS_BY_TEMPLATE[input.template]}.`,
-    "Textos cortos: title <= 60, label <= 90, text <= 150. Sin emojis ni flechas en la placa.",
+    `The card uses the "${input.template}" template with ONLY these fields: ${FIELDS_BY_TEMPLATE[input.template]}.`,
+    "Short texts: title <= 60, label <= 90, text <= 150. No emojis or arrows on the card.",
     "",
-    'Además devolvé "bg": un prompt EN INGLÉS para el fondo — una imagen editorial (foto o',
-    "ilustración) que refleje el TEMA de la nota, vertical 9:16, sin texto, sin logos y sin",
-    "caras reconocibles, coherente con el contenido.",
+    `All card text and the caption must be written in ${ps.writingLanguage}.`,
+    'Also return "bg": a prompt IN ENGLISH for the background — an editorial image (photo or',
+    "illustration) reflecting the TOPIC of the article, vertical 9:16, no text, no logos and no",
+    "recognisable faces, coherent with the content.",
     // Las reglas de imagen del dominio —qué se muestra, con qué paleta, qué
     // está prohibido— son justamente lo que este campo declara.
-    ps.imageSystemInstructions ? `Reglas de imagen del sitio: ${ps.imageSystemInstructions}` : "",
-    'Y "caption": un caption corto para la historia (opcional, 1-2 líneas, acá sí pueden ir emojis).',
+    ps.imageSystemInstructions ? `Site image rules: ${ps.imageSystemInstructions}` : "",
+    'And "caption": a short caption for the story (optional, 1-2 lines; emojis are allowed here).',
     "",
-    'Devolvé EXCLUSIVAMENTE un objeto JSON: { "slide": {...}, "bg": "...", "caption": "..." }.',
+    'Return EXCLUSIVELY a JSON object: { "slide": {...}, "bg": "...", "caption": "..." }.',
   ]
     .filter(Boolean)
     .join("\n");

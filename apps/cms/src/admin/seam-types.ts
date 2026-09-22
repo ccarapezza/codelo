@@ -16,10 +16,25 @@ import type * as React from "react";
 /** Los mismos acentos que usa el kit del panel (components/ui). */
 export type Accent = "primary" | "warning" | "success" | "danger" | "secondary";
 
+/**
+ * En qué idioma se escribe un campo. Es lo que la pantalla tiene que decir sin
+ * ambigüedad: mezclar idiomas sin avisar era el motivo principal de confusión.
+ *
+ *   `prompt` — es una INSTRUCCIÓN para el modelo. Va en inglés: todo el
+ *              andamiaje del motor está en inglés y los LLM rinden mejor y
+ *              gastan menos ahí. El idioma de SALIDA lo decide `writingLanguage`.
+ *   `salida` — es TEXTO LITERAL que se pega en el resultado (un cierre de
+ *              caption, los temas de los hashtags). Va en el idioma del sitio.
+ *   `fijo`   — ni una cosa ni la otra: un nombre, un handle, dos colores.
+ */
+export type FieldLang = "prompt" | "salida" | "fijo";
+
 export interface PromptField {
   /** La clave en `prompt-setting`. */
   key: string;
   label: string;
+  /** Default: `prompt`, que es el caso de la gran mayoría. */
+  lang?: FieldLang;
   hint?: string;
   /** Alto del textarea. Sin esto, se renderiza como input de una línea. */
   rows?: number;

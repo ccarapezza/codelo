@@ -1,5 +1,6 @@
 import * as React from "react";
 import {
+  Badge,
   Box,
   Button,
   TextInput,
@@ -18,7 +19,7 @@ import {
   ReferenceNote,
   SaveBar,
 } from "../../components/ui";
-import type { PromptCard, PromptField } from "../../seam-types";
+import type { FieldLang, PromptCard, PromptField } from "../../seam-types";
 import * as verticals from "../../verticals";
 import { ENGINE_PROMPT_CARDS } from "./cards";
 
@@ -57,6 +58,18 @@ export default function ProtectedPromptSettingsPage() {
   );
 }
 
+/**
+ * La insignia de idioma. Es la respuesta a la pregunta que antes no tenía
+ * ninguna: "¿esto lo escribo en inglés o en español?". Los campos de instrucción
+ * van en inglés porque todo el andamiaje del motor lo está y los modelos rinden
+ * mejor ahí; el idioma de lo que se PUBLICA lo decide «Idioma de escritura».
+ */
+const INSIGNIA: Record<FieldLang, { texto: string; fondo: string; color: string }> = {
+  prompt: { texto: "en inglés", fondo: "primary100", color: "primary700" },
+  salida: { texto: "idioma del sitio", fondo: "success100", color: "success700" },
+  fijo: { texto: "valor fijo", fondo: "neutral150", color: "neutral700" },
+};
+
 function CampoPrompt({
   campo,
   valor,
@@ -68,7 +81,15 @@ function CampoPrompt({
 }) {
   return (
     <Field.Root hint={campo.hint}>
-      <Field.Label>{campo.label}</Field.Label>
+      <Flex gap={2} alignItems="center" justifyContent="space-between">
+        <Field.Label>{campo.label}</Field.Label>
+        <Badge
+          backgroundColor={INSIGNIA[campo.lang ?? "prompt"].fondo}
+          textColor={INSIGNIA[campo.lang ?? "prompt"].color}
+        >
+          {INSIGNIA[campo.lang ?? "prompt"].texto}
+        </Badge>
+      </Flex>
       {campo.rows ? (
         <Textarea
           rows={campo.rows}
@@ -165,7 +186,7 @@ function PromptSettingsPage() {
       <PageHeader
         icon={<Feather width="1.4rem" height="1.4rem" />}
         title="Configuración editorial"
-        subtitle="De qué habla este sitio, con qué voz escribe y cómo se ven sus portadas y sus placas: es lo que convierte al motor en ESTE portal, y los agentes lo leen en cada corrida. Un campo vacío usa el valor por defecto del motor. «Restaurar» vuelve a ese valor neutro, NO al texto con el que arrancó el proyecto."
+        subtitle="De qué habla este sitio, con qué voz escribe y cómo se ven sus portadas y sus placas: es lo que convierte al motor en ESTE portal, y los agentes lo leen en cada corrida. Cada campo dice en qué idioma va — las instrucciones para el modelo se escriben en inglés, y el idioma de lo que se publica lo decide «Idioma de escritura». Un campo vacío usa el valor por defecto del motor, y «Restaurar» vuelve a ese valor neutro, NO al texto con el que arrancó el proyecto."
         actions={
           <Button
             variant="tertiary"

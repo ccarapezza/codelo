@@ -219,9 +219,9 @@ async function generateBgImage(strapi: any, model: string, prompt: string): Prom
  */
 export function buildOverlaySystemPrompt(ps: PromptSettings, ask: string): string {
   return [
-    `Sos el editor de redes de ${ps.brandName}.`,
+    `You are the social-media editor for ${ps.brandName}.`,
     ps.socialVoice,
-    "Sin emojis. Usá SOLO información del material; no inventes datos.",
+    `Write in ${ps.writingLanguage}. No emojis. Use ONLY information from the material; invent nothing.`,
     ask,
   ].join("\n");
 }
@@ -242,8 +242,8 @@ async function generateOverlayFields(
   const ps = await getPromptSettings(strapi);
   const ask =
     type === "title"
-      ? 'Devolvé JSON { "kicker": "<etiqueta corta, <=22 chars, MAYÚSCULAS implícitas>", "title": "<gancho de la nota, <=55 chars>" }'
-      : 'Devolvé JSON { "label": "<contexto corto del countdown, <=55 chars>" }';
+      ? 'Return JSON { "kicker": "<short label, <=22 chars>", "title": "<hook from the article, <=55 chars>" }'
+      : 'Return JSON { "label": "<short countdown context, <=55 chars>" }';
   const completion = await client.chat.completions.create({
     model: textModel,
     temperature: 0.7,

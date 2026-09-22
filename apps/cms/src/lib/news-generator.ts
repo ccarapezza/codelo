@@ -35,12 +35,12 @@ export async function researchWithWebSearch(
         {
           role: "system",
           content:
-            "Sos un investigador de noticias. Buscá en la web los hechos más " +
-            "recientes y verificables sobre el pedido del usuario. Respondé SOLO con un " +
-            "briefing breve en texto plano de los hechos concretos (qué pasó, quién, " +
-            "cuándo, resultado, declaraciones textuales si las hay), con su contexto. " +
-            "NO escribas un artículo: solo los hechos. No menciones ni atribuyas a ningún " +
-            "medio; reportá el hecho de fondo.",
+            "You are a news researcher. Search the web for the most recent and " +
+            "verifiable facts about the user's request. Reply ONLY with a short " +
+            "plain-text briefing of the concrete facts (what happened, who, when, " +
+            "outcome, verbatim quotes if any), with their context. Do NOT write an " +
+            "article: only the facts. Do not name or credit any media outlet; report " +
+            "the underlying fact.",
         },
         { role: "user", content: prompt },
       ],
@@ -78,20 +78,21 @@ export async function researchWithWebSearch(
  */
 export function buildNewsSystemPrompt(s: PromptSettings): string {
   return [
-    `Sos un periodista que escribe en ${s.writingLanguage} para ${s.domainDescription}.`,
-    "La nota se genera a partir del prompt manual de un editor (y opcionalmente de una investigación web).",
-    `Voz: editorial propia de ${s.brandName}, independiente y con criterio, sin grandilocuencia.`,
+    `You are a journalist writing in ${s.writingLanguage} for ${s.domainDescription}.`,
+    "The article is generated from an editor's manual prompt (and optionally from web research).",
+    `Voice: ${s.brandName}'s own editorial voice — independent and considered, without grandiloquence.`,
     "",
-    "## REGLAS FACTUALES (duras)",
-    `- NUNCA inventes ${s.fabricationProneFacts}. Si un dato no está en el bloque de investigación ni en el pedido del editor, no lo afirmes como hecho.`,
-    "- Si no hay bloque de investigación, escribí en clave de análisis/preview, sin afirmar eventos recientes como hechos.",
+    "## STRICT FACTUAL RULES",
+    `- NEVER invent ${s.fabricationProneFacts}. If a fact is not in the research block or in the editor's request, do not state it as fact.`,
+    "- With no research block, write as analysis/preview; do not state recent events as fact.",
     "",
-    "## REGLAS DE TÍTULO",
-    "- Un solo hecho concreto, literal, sin clickbait. No debe contradecir el cuerpo.",
+    "## TITLE RULES",
+    "- One single concrete, literal fact. No clickbait. It must not contradict the body.",
     "",
     s.bodyStructureGuide,
     "",
-    `Devolvé STRICT JSON: { "title": string, "excerpt": string (1-2 oraciones), "content": string (Markdown GitHub-Flavored, ~500-650 palabras) }`,
+    `Write the article in ${s.writingLanguage}.`,
+    `Return STRICT JSON: { "title": string, "excerpt": string (1-2 sentences), "content": string (GitHub-Flavored Markdown, ~500-650 words) }`,
   ].join("\n");
 }
 
@@ -104,16 +105,16 @@ export function buildGenerateUserPrompt(
   const today = new Date().toISOString().slice(0, 10);
   const block = research?.context
     ? [
-        "\n## INVESTIGACIÓN WEB VERIFICADA (basá CADA hecho concreto SOLO en esto)",
+        "\n## VERIFIED WEB RESEARCH (base EVERY concrete fact ONLY on this)",
         research.context,
-        `\nRecordatorio: NO nombres ni atribuyas a ningún MEDIO de la investigación; reportá el hecho de fondo con voz propia de ${s.brandName}. Las fuentes OFICIALES (${s.officialSources}) sí se citan.`,
+        `\nReminder: do NOT name or credit any OUTLET from the research; report the underlying fact in ${s.brandName}'s own voice. Official sources (${s.officialSources}) ARE cited.`,
       ].join("\n")
-    : "\n(Sin investigación web — escribí en clave análisis/preview; no afirmes eventos recientes como hechos.)";
+    : "\n(No web research — write as analysis/preview; do not state recent events as fact.)";
   return [
-    `Escribí una nota en ${s.writingLanguage} para hoy (${today}) a partir del siguiente pedido del editor:`,
+    `Write an article in ${s.writingLanguage} for today (${today}) from the following editor request:`,
     `"""${adminPrompt}"""`,
     block,
-    "\nDevolvé solo el JSON.",
+    "\nReturn only the JSON.",
   ].join("\n");
 }
 
@@ -131,27 +132,28 @@ export async function refinePost(
   context?: ResearchResult | null,
 ): Promise<GeneratedPost> {
   const system = [
-    `Sos un editor que revisa una nota existente en ${s.writingLanguage} para ${s.domainDescription}.`,
-    "Aplicá la instrucción de modificación del editor a la nota. Mantené intacto todo lo demás.",
-    "Conservá los hechos correctos; no inventes datos nuevos más allá de la instrucción o del bloque de investigación.",
+    `You are an editor revising an existing article written in ${s.writingLanguage} for ${s.domainDescription}.`,
+    "Apply the editor's modification instruction to the article. Leave everything else intact.",
+    "Keep the correct facts; do not invent new data beyond the instruction or the research block.",
     "",
     s.bodyStructureGuide,
     "",
-    `Devolvé STRICT JSON: { "title": string, "excerpt": string, "content": string (Markdown GitHub-Flavored) }`,
+    `Keep the article in ${s.writingLanguage}.`,
+    `Return STRICT JSON: { "title": string, "excerpt": string, "content": string (GitHub-Flavored Markdown) }`,
   ].join("\n");
 
   const research = context?.context
-    ? `\n## NUEVA INVESTIGACIÓN WEB (usar solo si la instrucción pide hechos nuevos)\n${context.context}\n`
+    ? `\n## NEW WEB RESEARCH (use only if the instruction asks for new facts)\n${context.context}\n`
     : "";
 
   const user = [
-    "## NOTA ACTUAL",
+    "## CURRENT ARTICLE",
     JSON.stringify(current, null, 2),
     "",
-    "## INSTRUCCIÓN DE MODIFICACIÓN",
+    "## MODIFICATION INSTRUCTION",
     instruction,
     research,
-    "Devolvé solo el JSON revisado.",
+    "Return only the revised JSON.",
   ].join("\n");
 
   const res = await client.chat.completions.create({

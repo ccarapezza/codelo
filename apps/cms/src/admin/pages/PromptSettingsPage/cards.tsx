@@ -24,23 +24,26 @@ export const ENGINE_PROMPT_CARDS: PromptCard[] = [
     fields: [
       {
         key: "brandName",
+        lang: "fijo",
         label: "Nombre de la marca",
         hint: "Con este nombre escriben los agentes y se firman las placas.",
       },
       {
         key: "domainDescription",
-        label: "De qué habla el sitio (en inglés)",
+        label: "De qué habla el sitio",
         hint: "Completa la frase «You are a journalist writing … for {esto}». Lo usan el redactor, el Director, el deduplicador y el traductor: si dice de más o de menos, todos se desvían igual.",
         rows: 4,
         reference: "You are a journalist writing in {idioma} for {esto}.",
       },
       {
         key: "writingLanguage",
+        lang: "fijo",
         label: "Idioma de escritura",
         hint: "En inglés y con mayúscula: Spanish, English, Português.",
       },
       {
         key: "socialHandle",
+        lang: "fijo",
         label: "Usuario de redes",
         hint: "Sin @. Se imprime en las placas y cierra el caption. Vacío = no se imprime.",
       },
@@ -56,7 +59,7 @@ export const ENGINE_PROMPT_CARDS: PromptCard[] = [
     fields: [
       {
         key: "fabricationProneFacts",
-        label: "Hechos que no se pueden inventar (en inglés)",
+        label: "Hechos que no se pueden inventar",
         hint: "Lista separada por comas de los datos que este tema suele alucinar: fechas, cifras, resoluciones, resultados.",
         rows: 3,
         reference: "NEVER invent {esto}.",
@@ -76,7 +79,7 @@ export const ENGINE_PROMPT_CARDS: PromptCard[] = [
       {
         key: "officialSources",
         label: "Fuentes oficiales citables",
-        hint: "Organismos y publicaciones que SÍ se pueden nombrar sin que cuente como reproducir a un medio rival. En el idioma de escritura.",
+        hint: "Organismos y publicaciones que SÍ se pueden nombrar sin que cuente como reproducir a un medio rival. Los nombres propios van como se escriben.",
         rows: 2,
         reference:
           "NOTE: an official source is NOT a rival outlet. Citing an official source ({esto}), a law or a court ruling is REQUIRED, not a violation.",
@@ -93,25 +96,26 @@ export const ENGINE_PROMPT_CARDS: PromptCard[] = [
     fields: [
       {
         key: "imageSystemInstructions",
-        label: "Reglas de imagen (en inglés)",
+        label: "Reglas de imagen",
         hint: "Qué se muestra, qué está prohibido, cómo se evitan las caras. El sufijo de seguridad se agrega siempre, aunque se borre todo esto.",
         rows: 12,
       },
       {
         key: "imageThemeGuide",
-        label: "Catálogo de escenas (en inglés)",
+        label: "Catálogo de escenas",
         hint: "TEMA → ESCENAS. Cada categoría ofrece cuatro variantes para que dos notas parecidas no salgan con la misma portada.",
         rows: 12,
       },
       {
         key: "imageAnchorTaxonomy",
-        label: "Anclas a extraer (en inglés)",
+        label: "Anclas a extraer",
         hint: "⚠️ Cada línea «- clave: regla» declara una clave que se le pide al modelo. Agregar o quitar una línea cambia lo que se extrae: el motor lee las claves de acá, no las tiene escritas.",
         rows: 8,
       },
       {
         key: "brandPalette",
-        label: "Paleta de la casa (en inglés)",
+        lang: "fijo",
+        label: "Paleta de la casa",
         hint: "Dos colores, para el acabado duotono del sorteo de ilustraciones. Ej: «amber and deep-blue».",
       },
     ],
@@ -127,7 +131,7 @@ export const ENGINE_PROMPT_CARDS: PromptCard[] = [
       {
         key: "socialVoice",
         label: "Voz en redes y reglas duras",
-        hint: "Qué tipo de organización es, cómo suena y qué NO se hace nunca. Va en el idioma de escritura.",
+        hint: "Qué tipo de organización es, cómo suena y qué NO se hace nunca. Es una instrucción, así que va en inglés; el texto que se publica sale en el idioma del sitio.",
         rows: 8,
       },
       {
@@ -138,9 +142,16 @@ export const ENGINE_PROMPT_CARDS: PromptCard[] = [
       },
       {
         key: "socialHashtags",
+        lang: "salida",
         label: "Temas de los hashtags",
         hint: "Separados por coma. Vacío = el modelo elige según la nota.",
         rows: 2,
+      },
+      {
+        key: "socialCta",
+        lang: "salida",
+        label: "Cierre del caption",
+        hint: "Se pega tal cual al final del caption. Vacío = no se agrega nada.",
       },
       {
         key: "coverFallbackPrompt",
@@ -172,12 +183,13 @@ export const ENGINE_PROMPT_CARDS: PromptCard[] = [
     fields: [
       {
         key: "translationLanguage",
-        label: "Idioma de destino (en inglés)",
+        lang: "fijo",
+        label: "Idioma de destino",
         hint: "Ej: English. El idioma de origen es el de escritura.",
       },
       {
         key: "translationGlossary",
-        label: "Qué NO se traduce (en inglés)",
+        label: "Qué NO se traduce",
         hint: "Línea completa del prompt. Acá van los nombres propios del tema: organismos, programas, competencias, términos sin equivalente.",
         rows: 5,
       },
