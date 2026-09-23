@@ -315,7 +315,7 @@ function SettingsPage() {
       <PageHeader
         icon={<Cog width="1.4rem" height="1.4rem" />}
         title="Site Settings"
-        subtitle="Integraciones externas del sitio. Las claves de OpenAI se leen desde las env vars OPENAI_API_KEY / OPENAI_IMAGE_API_KEY."
+        subtitle="Integraciones externas del sitio, la identidad visual de las placas y el consumo de las APIs. Las claves viven en el entorno del CMS, nunca en la base."
       />
 
       <Box marginBottom={6}>
@@ -334,7 +334,7 @@ function SettingsPage() {
           icon={<Magic />}
           title="Modelos de IA"
           accent="primary"
-          description="API keys por env var: OPENAI_API_KEY (texto e imágenes), OPENAI_IMAGE_API_KEY (override opcional) y OPENROUTER_API_KEY (para imágenes con Nano Banana / Gemini vía OpenRouter)."
+          description="API keys por env var: OPENAI_API_KEY (texto e imágenes), OPENAI_IMAGE_API_KEY (override opcional), OPENROUTER_API_KEY (para imágenes con Nano Banana / Gemini) y OPENAI_ADMIN_KEY (opcional, sólo para ver el consumo acá arriba)."
         >
           <Flex direction="column" alignItems="stretch" gap={4}>
             <Field.Root hint="Modelo de lenguaje para generación y revisión de artículos.">
@@ -615,10 +615,35 @@ type AiUsage = {
     remaining?: number | null;
     keyUsage?: { total: number | null; daily: number | null; weekly: number | null; monthly: number | null };
   };
-  openai: { ok: boolean; configured: boolean; reason?: string; dashboardUrl?: string; monthlyCost?: number };
+  openai: {
+    ok: boolean;
+    configured: boolean;
+    hasAdminKey?: boolean;
+    reason?: string;
+    dashboardUrl?: string;
+    monthlyCost?: number;
+    /** Desglose del mes por modelo. Los de texto traen tokens; los de imagen, imágenes. */
+    models?: Array<{
+      model: string;
+      tokensIn?: number;
+      tokensCached?: number;
+      tokensOut?: number;
+      images?: number;
+      requests?: number;
+    }>;
+  };
 };
 
 const usd = (n: number | null | undefined) => (typeof n === "number" ? `$${n.toFixed(2)}` : "—");
+
+/** 1.243.117 → «1,2 M». Los tokens se cuentan en millones y el número entero no se lee. */
+const compacto = (n: number | undefined): string => {
+  if (typeof n !== "number" || !Number.isFinite(n)) return "—";
+  if (n >= 1e9) return `${(n / 1e9).toFixed(1).replace(".", ",")} MM`;
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1).replace(".", ",")} M`;
+  if (n >= 1e3) return `${Math.round(n / 1e3)} k`;
+  return String(n);
+};
 
 function UsageBar({ used, total }: { used: number; total: number }) {
   const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
@@ -645,7 +670,7 @@ function AiUsageCard() {
   const oa = data?.openai;
 
   return (
-    <AccentCard icon={<Magic />} title="Uso de IA · Créditos" description="Datos en vivo de las APIs. OpenAI no expone saldo vía API." accent="success">
+    <AccentCard icon={<Magic />} title="Uso y costo de IA" description="Datos en vivo de las APIs. OpenRouter es prepago y muestra saldo; OpenAI es pospago y sólo publica consumo." accent="success">
       {!data && !error ? (
         <Flex justifyContent="center" padding={3}><Loader small>Consultando…</Loader></Flex>
       ) : error ? (
@@ -690,9 +715,28 @@ function AiUsageCard() {
                   {usd(oa.monthlyCost)} este mes
                 </Typography>
               ) : (
-                <Typography variant="pi" textColor="neutral500">{oa?.configured ? "saldo no disponible" : "no configurada"}</Typography>
+                <Typography variant="pi" textColor="neutral500">{!oa?.configured ? "sin clave" : "sin Admin key"}</Typography>
               )}
             </Flex>
+            {oa?.models && oa.models.length > 0 ? (
+              <Box paddingTop={1} paddingBottom={2}>
+                {oa.models.map((m) => (
+                  <Flex key={m.model} justifyContent="space-between" alignItems="baseline" paddingTop={1} gap={3}>
+                    <Typography variant="pi" textColor="neutral700" style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {m.model}
+                    </Typography>
+                    <Typography variant="pi" textColor="neutral500" style={{ flexShrink: 0 }}>
+                      {typeof m.images === "number"
+                        ? `${compacto(m.images)} imágenes`
+                        : `${compacto(m.tokensIn)} ent · ${compacto(m.tokensOut)} sal`}
+                      {typeof m.requests === "number" ? ` · ${compacto(m.requests)} req` : ""}
+                    </Typography>
+                  </Flex>
+                ))}
+              </Box>
+            ) : oa?.ok ? (
+              <Typography variant="pi" textColor="neutral500">Sin consumo este mes.</Typography>
+            ) : null}
             <Typography variant="pi" textColor="neutral600">
               {oa?.reason ?? "—"}{" "}
               {oa?.dashboardUrl ? (

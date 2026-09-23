@@ -32,6 +32,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
     echo "# Opcionales: sin ellas el panel funciona igual, pero los agentes no"
     echo "# pueden escribir ni generar portadas."
     echo "OPENAI_API_KEY="
+    echo "OPENAI_ADMIN_KEY="
     echo "OPENROUTER_API_KEY="
   } > "$ENV_FILE"
 fi

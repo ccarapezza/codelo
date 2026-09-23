@@ -76,6 +76,7 @@ services:
       # Sin clave de OpenAI el panel entero funciona; lo único que no corre es
       # la generación de notas y portadas.
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_ADMIN_KEY: ${OPENAI_ADMIN_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       REDIS_URL: redis://redis:6379
       CORS_ALLOWED_ORIGINS: http://localhost:3400

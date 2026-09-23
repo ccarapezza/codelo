@@ -26,6 +26,7 @@ a la raíz de tu repo y completá los `<slug>`. Las variables que no son obvias:
 | `PROJECT_NAME` | El nombre de la instalación. Distinto de la marca editorial, que se edita en el panel. |
 | `SITE_PUBLIC_URL` | La URL del **sitio**, no la del CMS. De acá salen el dominio que imprimen las placas y el User-Agent con el que se piden los feeds. |
 | `OPENAI_API_KEY` | Sin esto no se genera nada. |
+| `OPENAI_ADMIN_KEY` | Opcional, sólo para ver consumo y costo en el panel. Es una clave de **organización** (`sk-admin-…`), distinta de la anterior: se crea en Settings → Organization → Admin keys. Sin ella todo funciona igual y la tarjeta de uso lo dice. |
 | `OPENROUTER_API_KEY` | Sólo si vas a usar modelos de imagen o video de OpenRouter. |
 | `DEFAULT_LOCALE` / `TRANSLATION_LOCALE` | Códigos de locale (`es`, `en`, `pt-BR`). Van por env y no por panel porque Strapi los usa para crear localizaciones: cambiarlos con contenido cargado exige una migración, no un click. |
 | `AGENT_SCHEDULE_TZ` | Zona horaria de los schedules y los crons. |
