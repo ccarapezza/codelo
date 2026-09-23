@@ -16,6 +16,9 @@
 
 import Mark from "./brand/mark.png";
 import Favicon from "./brand/favicon.png";
+import { catalogoConPrefijo } from "./i18n";
+import mensajesEs from "./translations/es.json";
+import mensajesEn from "./translations/en.json";
 
 // La escala NEUTRA: el gris con el que se pinta todo lo que no es acento —el
 // fondo de la página, las tarjetas, los bordes, el texto—. Es la que define de
@@ -137,14 +140,21 @@ export const DEFAULT_ADMIN_CONFIG = {
     light: { colors: COLORS_LIGHT },
     dark: { colors: COLORS_DARK },
   },
-  // Se ponen en en+es para que el login diga lo mismo sea cual sea el idioma
-  // del panel.
+  // Los textos del panel, más los del login.
+  //
+  // El nombre de la marca es el mismo en los dos idiomas —es un nombre propio—
+  // pero el subtítulo no: se traduce como cualquier otra cadena. Van acá y no
+  // en los catálogos porque son identidad, y un proyecto los pisa desde su
+  // costura sin tocar el resto de los mensajes (mergeAdminConfig mergea por
+  // locale y clave por clave).
   translations: {
     en: {
+      ...catalogoConPrefijo(mensajesEn),
       "Auth.form.welcome.title": "Nib",
-      "Auth.form.welcome.subtitle": "Redacción con agentes · construido sobre Strapi",
+      "Auth.form.welcome.subtitle": "Agent-run newsroom · built on Strapi",
     },
     es: {
+      ...catalogoConPrefijo(mensajesEs),
       "Auth.form.welcome.title": "Nib",
       "Auth.form.welcome.subtitle": "Redacción con agentes · construido sobre Strapi",
     },

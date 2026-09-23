@@ -29,6 +29,7 @@ import { useNavigate } from "react-router-dom";
 import * as verticals from "../../verticals";
 import { PageContainer, PageHeader, EmptyState } from "../../components/ui";
 import { useIsMobile } from "../../hooks/useIsMobile";
+import { useT } from "../../i18n";
 
 const ADMIN_API = "/api/agent-action/admin-list";
 
@@ -140,6 +141,7 @@ function visiblePages(current: number, total: number): (number | "dots")[] {
 }
 
 function DetailModal({ item, onClose }: { item: AuditItem | null; onClose: () => void }) {
+  const t = useT();
   const open = item !== null;
   const hasMetadata = item?.metadata && Object.keys(item.metadata).length > 0;
 
@@ -237,7 +239,7 @@ function DetailModal({ item, onClose }: { item: AuditItem | null; onClose: () =>
         </Modal.Body>
         <Modal.Footer>
           <Modal.Close>
-            <Button variant="tertiary">Cerrar</Button>
+            <Button variant="tertiary">{t("comun.cerrar")}</Button>
           </Modal.Close>
         </Modal.Footer>
       </Modal.Content>
@@ -293,6 +295,7 @@ function AuditCard({ item, onDetail }: { item: AuditItem; onDetail: () => void }
 }
 
 export default function AuditPage() {
+  const t = useT();
   const isMobile = useIsMobile();
   const { get } = useFetchClient();
   const { toggleNotification } = useNotification();
@@ -384,7 +387,7 @@ export default function AuditPage() {
         </Box>
         <Box minWidth={220}>
           <Field.Root>
-            <Field.Label>Acción</Field.Label>
+            <Field.Label>{t("comun.accion")}</Field.Label>
             <SingleSelect
               value={actionFilter}
               onChange={(v: string | number) => setActionFilter(String(v))}
@@ -436,7 +439,7 @@ export default function AuditPage() {
                     <Typography variant="sigma">Rol</Typography>
                   </Th>
                   <Th>
-                    <Typography variant="sigma">Acción</Typography>
+                    <Typography variant="sigma">{t("comun.accion")}</Typography>
                   </Th>
                   <Th>
                     <Typography variant="sigma">Agente</Typography>

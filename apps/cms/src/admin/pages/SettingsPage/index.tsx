@@ -19,6 +19,7 @@ import { ADMIN_PERMISSIONS } from "../../../lib/admin-permissions";
 import type { SettingCard, SettingField } from "../../seam-types";
 import { BRAND_FIELDS, BRAND_KEYS, BrandFields } from "./brand-card";
 import * as verticals from "../../verticals";
+import { useT } from "../../i18n";
 
 // Strapi's <SingleSelect> caps its dropdown at max-height: 15.6rem (~6 options),
 // which forces scrolling. Mounted only while this page is open, this lets the Radix
@@ -93,31 +94,31 @@ const EMPTY: Settings = {
 
 // Prices: input / output per 1M tokens (standard tier)
 const TEXT_MODELS = [
-  { value: "gpt-5.5-pro",   label: "gpt-5.5-pro — $30.00 / $180.00 por 1M tkn" },
-  { value: "gpt-5.4-pro",   label: "gpt-5.4-pro — $30.00 / $180.00 por 1M tkn" },
-  { value: "o3",             label: "o3 — $10.00 / $40.00 por 1M tkn (razonamiento)" },
-  { value: "gpt-5.5",       label: "gpt-5.5 — $5.00 / $30.00 por 1M tkn" },
-  { value: "gpt-5.4",       label: "gpt-5.4 — $2.50 / $15.00 por 1M tkn" },
-  { value: "gpt-4o",        label: "gpt-4o — $2.50 / $10.00 por 1M tkn" },
-  { value: "gpt-4.1",       label: "gpt-4.1 — $2.00 / $8.00 por 1M tkn" },
-  { value: "o4-mini",       label: "o4-mini — $1.10 / $4.40 por 1M tkn (razonamiento)" },
-  { value: "gpt-5.4-mini",  label: "gpt-5.4-mini — $0.75 / $4.50 por 1M tkn" },
-  { value: "gpt-4.1-mini",  label: "gpt-4.1-mini — $0.40 / $1.60 por 1M tkn" },
-  { value: "gpt-5.4-nano",  label: "gpt-5.4-nano — $0.20 / $1.25 por 1M tkn" },
-  { value: "gpt-4o-mini",   label: "gpt-4o-mini — $0.15 / $0.60 por 1M tkn (recomendado)" },
-  { value: "gpt-4.1-nano",  label: "gpt-4.1-nano — $0.10 / $0.40 por 1M tkn" },
+  { value: "gpt-5.5-pro",   label: "gpt-5.5-pro — $30.00 / $180.00 {tkn}" },
+  { value: "gpt-5.4-pro",   label: "gpt-5.4-pro — $30.00 / $180.00 {tkn}" },
+  { value: "o3",             label: "o3 — $10.00 / $40.00 {tkn} ({razonamiento})" },
+  { value: "gpt-5.5",       label: "gpt-5.5 — $5.00 / $30.00 {tkn}" },
+  { value: "gpt-5.4",       label: "gpt-5.4 — $2.50 / $15.00 {tkn}" },
+  { value: "gpt-4o",        label: "gpt-4o — $2.50 / $10.00 {tkn}" },
+  { value: "gpt-4.1",       label: "gpt-4.1 — $2.00 / $8.00 {tkn}" },
+  { value: "o4-mini",       label: "o4-mini — $1.10 / $4.40 {tkn} ({razonamiento})" },
+  { value: "gpt-5.4-mini",  label: "gpt-5.4-mini — $0.75 / $4.50 {tkn}" },
+  { value: "gpt-4.1-mini",  label: "gpt-4.1-mini — $0.40 / $1.60 {tkn}" },
+  { value: "gpt-5.4-nano",  label: "gpt-5.4-nano — $0.20 / $1.25 {tkn}" },
+  { value: "gpt-4o-mini",   label: "gpt-4o-mini — $0.15 / $0.60 {tkn} ({recomendado})" },
+  { value: "gpt-4.1-nano",  label: "gpt-4.1-nano — $0.10 / $0.40 {tkn}" },
 ];
 
 const IMAGE_MODELS = [
-  { value: "gpt-image-2",          label: "gpt-image-2 — $8.00 / $30.00 por 1M tkn" },
-  { value: "gpt-image-1.5",        label: "gpt-image-1.5 — $8.00 / $32.00 por 1M tkn" },
-  { value: "chatgpt-image-latest", label: "chatgpt-image-latest — alias al modelo más reciente" },
-  { value: "gpt-image-1",          label: "gpt-image-1 — ~$5.00 / $15.00 por 1M tkn (recomendado)" },
-  { value: "gpt-image-1-mini",     label: "gpt-image-1-mini — $2.50 / $8.00 por 1M tkn" },
+  { value: "gpt-image-2",          label: "gpt-image-2 — $8.00 / $30.00 {tkn}" },
+  { value: "gpt-image-1.5",        label: "gpt-image-1.5 — $8.00 / $32.00 {tkn}" },
+  { value: "chatgpt-image-latest", label: "chatgpt-image-latest — {alias}" },
+  { value: "gpt-image-1",          label: "gpt-image-1 — ~$5.00 / $15.00 {tkn} ({recomendado})" },
+  { value: "gpt-image-1-mini",     label: "gpt-image-1-mini — $2.50 / $8.00 {tkn}" },
   // Google Gemini ("Nano Banana") vía OpenRouter — requiere OPENROUTER_API_KEY. Precio por imagen.
-  { value: "google/gemini-3-pro-image-preview",     label: "Nano Banana Pro (gemini-3-pro) — ~$0.134 / imagen" },
-  { value: "google/gemini-3.1-flash-image-preview", label: "Nano Banana 2 (gemini-3.1-flash) — ~$0.06–0.15 / imagen" },
-  { value: "google/gemini-2.5-flash-image",         label: "Nano Banana (gemini-2.5-flash) — ~$0.039 / imagen" },
+  { value: "google/gemini-3-pro-image-preview",     label: "Nano Banana Pro (gemini-3-pro) — ~$0.134 / {imagen}" },
+  { value: "google/gemini-3.1-flash-image-preview", label: "Nano Banana 2 (gemini-3.1-flash) — ~$0.06–0.15 / {imagen}" },
+  { value: "google/gemini-2.5-flash-image",         label: "Nano Banana (gemini-2.5-flash) — ~$0.039 / {imagen}" },
 ];
 
 // Ocultar el link del menú no cierra la puerta: /admin/site-settings sigue
@@ -134,6 +135,7 @@ function CampoVertical({
   valor: string | boolean;
   onChange: (v: string | boolean) => void;
 }) {
+  const t = useT();
   const modelos =
     campo.kind === "text-model" ? TEXT_MODELS : campo.kind === "image-model" ? IMAGE_MODELS : null;
   return (
@@ -148,10 +150,10 @@ function CampoVertical({
         />
       ) : modelos ? (
         <SingleSelect value={String(valor ?? "")} onChange={(v: string | number) => onChange(String(v))}>
-          <SingleSelectOption value="">(usar el modelo por defecto)</SingleSelectOption>
+          <SingleSelectOption value="">{t("ajustes.modeloDefecto")}</SingleSelectOption>
           {modelos.map((m) => (
             <SingleSelectOption key={m.value} value={m.value}>
-              {m.label}
+              {etiquetaModelo(m.label, t)}
             </SingleSelectOption>
           ))}
         </SingleSelect>
@@ -176,6 +178,7 @@ export default function ProtectedSettingsPage() {
 }
 
 function SettingsPage() {
+  const t = useT();
   const { get, post, put } = useFetchClient();
   const { toggleNotification } = useNotification();
 
@@ -236,7 +239,7 @@ function SettingsPage() {
         setLogo(cargado);
         setLogoGuardado(cargado);
       } catch {
-        toggleNotification({ type: "danger", message: "No se pudieron cargar las configuraciones." });
+        toggleNotification({ type: "danger", message: t("ajustes.err.cargar") });
       } finally {
         setLoading(false);
       }
@@ -252,9 +255,9 @@ function SettingsPage() {
       await put(ADMIN_API, { ...form, brandLogo: logo.id });
       setSaved(form);
       setLogoGuardado(logo);
-      toggleNotification({ type: "success", message: "Configuración guardada." });
+      toggleNotification({ type: "success", message: t("ajustes.ok.guardada") });
     } catch {
-      toggleNotification({ type: "danger", message: "Error al guardar la configuración." });
+      toggleNotification({ type: "danger", message: t("ajustes.err.guardar") });
     } finally {
       setSaving(false);
     }
@@ -291,9 +294,9 @@ function SettingsPage() {
         body.append("file", file);
         const { data } = await post<{ mediaId: number; url: string }>("/api/site-setting/admin-logo", body);
         setLogo({ id: data.mediaId, url: data.url });
-        toggleNotification({ type: "success", message: "Logo subido. Guardá para aplicarlo." });
+        toggleNotification({ type: "success", message: t("ajustes.ok.logo") });
       } catch {
-        toggleNotification({ type: "danger", message: "No se pudo subir el logo." });
+        toggleNotification({ type: "danger", message: t("ajustes.err.logo") });
       } finally {
         setSubiendoLogo(false);
       }
@@ -304,7 +307,7 @@ function SettingsPage() {
   if (loading) {
     return (
       <Flex justifyContent="center" alignItems="center" minHeight="50vh">
-        <Loader>Cargando configuración...</Loader>
+        <Loader>{t("ajustes.cargando")}</Loader>
       </Flex>
     );
   }
@@ -315,7 +318,7 @@ function SettingsPage() {
       <PageHeader
         icon={<Cog width="1.4rem" height="1.4rem" />}
         title="Site Settings"
-        subtitle="Integraciones externas del sitio, la identidad visual de las placas y el consumo de las APIs. Las claves viven en el entorno del CMS, nunca en la base."
+        subtitle={t("ajustes.subtitulo")}
       />
 
       <Box marginBottom={6}>
@@ -332,35 +335,35 @@ function SettingsPage() {
       >
         <AccentCard
           icon={<Magic />}
-          title="Modelos de IA"
+          title={t("ajustes.modelos.titulo")}
           accent="primary"
-          description="API keys por env var: OPENAI_API_KEY (texto e imágenes), OPENAI_IMAGE_API_KEY (override opcional), OPENROUTER_API_KEY (para imágenes con Nano Banana / Gemini) y OPENAI_ADMIN_KEY (opcional, sólo para ver el consumo acá arriba)."
+          description={t("ajustes.modelos.desc")}
         >
           <Flex direction="column" alignItems="stretch" gap={4}>
-            <Field.Root hint="Modelo de lenguaje para generación y revisión de artículos.">
-              <Field.Label>Modelo de texto</Field.Label>
+            <Field.Root hint={t("ajustes.modeloTexto.hint")}>
+              <Field.Label>{t("ajustes.modeloTexto.label")}</Field.Label>
               <SingleSelect
                 value={form.openaiTextModel}
                 onChange={(val: string | number) => set("openaiTextModel", String(val))}
               >
                 {TEXT_MODELS.map((m) => (
                   <SingleSelectOption key={m.value} value={m.value}>
-                    {m.label}
+                    {etiquetaModelo(m.label, t)}
                   </SingleSelectOption>
                 ))}
               </SingleSelect>
               <Field.Hint />
             </Field.Root>
 
-            <Field.Root hint="Modelo para covers. gpt-image-* / dall-e-3 usan OpenAI; google/gemini-* usan Nano Banana (Gemini) vía OpenRouter y requieren OPENROUTER_API_KEY.">
-              <Field.Label>Modelo de imagen</Field.Label>
+            <Field.Root hint={t("ajustes.modeloImagen.hint")}>
+              <Field.Label>{t("ajustes.modeloImagen.label")}</Field.Label>
               <SingleSelect
                 value={form.openaiImageModel}
                 onChange={(val: string | number) => set("openaiImageModel", String(val))}
               >
                 {IMAGE_MODELS.map((m) => (
                   <SingleSelectOption key={m.value} value={m.value}>
-                    {m.label}
+                    {etiquetaModelo(m.label, t)}
                   </SingleSelectOption>
                 ))}
               </SingleSelect>
@@ -371,13 +374,13 @@ function SettingsPage() {
 
           <AccentCard
             icon={<Command />}
-            title="Publicación"
+            title={t("ajustes.publicacion.titulo")}
             accent="secondary"
-            description="Qué pasa automáticamente cuando se publica una nota."
+            description={t("ajustes.publicacion.desc")}
           >
             <Flex direction="column" alignItems="stretch" gap={4}>
-              <Field.Root hint="Traduce cada nota al publicarla, al idioma configurado en Configuración editorial. En un sitio monolingüe conviene apagarlo: es una llamada al modelo por nota que no se usa.">
-                <Field.Label>Traducir automáticamente</Field.Label>
+              <Field.Root hint={t("ajustes.traducir.hint")}>
+                <Field.Label>{t("ajustes.traducir.label")}</Field.Label>
                 <Toggle
                   onLabel="Sí"
                   offLabel="No"
@@ -400,9 +403,9 @@ function SettingsPage() {
         <Box style={{ gridColumn: "1 / -1" }}>
         <AccentCard
           icon={<PaintBrush />}
-          title="Identidad visual"
+          title={t("ajustes.identidad.titulo")}
           accent="secondary"
-          description="Los colores y el logo con los que se dibujan las placas de redes y los overlays de los reels. El texto de las placas —la voz, los hashtags, el @usuario— se configura en Configuración editorial."
+          description={t("ajustes.identidad.desc")}
         >
           <BrandFields
             valores={Object.fromEntries(BRAND_KEYS.map((k) => [k, String(form[k] ?? "")]))}
@@ -420,10 +423,10 @@ function SettingsPage() {
           icon={<Key />}
           title="Google AdSense"
           accent="warning"
-          description="IDs de publisher y slots para los banners del sitio. Los lee el sitio en tiempo real."
+          description={t("ajustes.adsense.desc")}
         >
           <Flex direction="column" alignItems="stretch" gap={4}>
-            <Field.Root hint="Publisher ID de tu cuenta de AdSense. Formato: ca-pub-XXXXXXXXXXXXXXXX">
+            <Field.Root hint={t("ajustes.adsense.publisher.hint")}>
               <Field.Label>Publisher ID</Field.Label>
               <TextInput
                 placeholder="ca-pub-XXXXXXXXXXXXXXXX"
@@ -436,7 +439,7 @@ function SettingsPage() {
             </Field.Root>
 
             <Box paddingTop={1}>
-              <GroupLabel>Slots de anuncios</GroupLabel>
+              <GroupLabel>{t("ajustes.adsense.slots")}</GroupLabel>
             </Box>
 
             <Flex gap={3} alignItems="flex-start">
@@ -468,7 +471,7 @@ function SettingsPage() {
               </Box>
             </Flex>
 
-            <Field.Root hint="Ad in-feed que reemplaza la 3era noticia en la home.">
+            <Field.Root hint={t("ajustes.adsense.infeed")}>
               <Field.Label>In-feed home</Field.Label>
               <TextInput
                 placeholder="0000000003"
@@ -480,7 +483,7 @@ function SettingsPage() {
               <Field.Hint />
             </Field.Root>
 
-            <Field.Root hint="Banner horizontal responsive visible solo en mobile/tablet (<1536px), donde los sidebars no aparecen.">
+            <Field.Root hint={t("ajustes.adsense.mobile")}>
               <Field.Label>Banner mobile</Field.Label>
               <TextInput
                 placeholder="0000000004"
@@ -492,7 +495,7 @@ function SettingsPage() {
               <Field.Hint />
             </Field.Root>
 
-            <Field.Root hint="Ad insertado al final del cuerpo de cada post del blog (mobile + desktop).">
+            <Field.Root hint={t("ajustes.adsense.inarticle")}>
               <Field.Label>In-article (posts)</Field.Label>
               <TextInput
                 placeholder="0000000005"
@@ -506,8 +509,8 @@ function SettingsPage() {
 
             <Hairline />
 
-            <Field.Root hint="Cuando está activo, los house ads cargados en la colección 'House ad' reemplazan los slots de AdSense por slot. Desactivado = todos los slots vuelven a AdSense.">
-              <Field.Label>Mostrar house ads en lugar de AdSense</Field.Label>
+            <Field.Root hint={t("ajustes.houseAds.hint")}>
+              <Field.Label>{t("ajustes.houseAds.label")}</Field.Label>
               <Box paddingTop={1}>
                 <Toggle
                   onLabel="Sí"
@@ -527,10 +530,10 @@ function SettingsPage() {
           icon={<ChartPie />}
           title="Google Analytics & Search Console"
           accent="success"
-          description="GA4 + verificación de Search Console. Los lee el sitio; el tag de GA solo se inyecta en producción."
+          description={t("ajustes.analytics.desc")}
         >
           <Flex direction="column" alignItems="stretch" gap={4}>
-            <Field.Root hint="Measurement ID de tu propiedad GA4. Formato: G-XXXXXXXXXX (Admin → Flujos de datos → tu sitio).">
+            <Field.Root hint={t("ajustes.ga.hint")}>
               <Field.Label>GA4 — Measurement ID</Field.Label>
               <TextInput
                 placeholder="G-XXXXXXXXXX"
@@ -542,7 +545,7 @@ function SettingsPage() {
               <Field.Hint />
             </Field.Root>
 
-            <Field.Root hint="Search Console → método 'Etiqueta HTML': pegá SOLO el valor del content (no la etiqueta completa).">
+            <Field.Root hint={t("ajustes.searchConsole.hint")}>
               <Field.Label>Search Console — verification token</Field.Label>
               <TextInput
                 placeholder="abc123Def456..."
@@ -560,9 +563,9 @@ function SettingsPage() {
           icon={<Eye />}
           title="Microsoft Clarity"
           accent="primary"
-          description="Heatmaps y grabaciones de sesión. Lo lee el sitio; el script solo se inyecta en producción."
+          description={t("ajustes.clarity.desc")}
         >
-          <Field.Root hint="Project ID de Clarity (clarity.microsoft.com → Settings → Overview). Ej: wzkcreip2d">
+          <Field.Root hint={t("ajustes.clarity.hint")}>
             <Field.Label>Project ID</Field.Label>
             <TextInput
               placeholder="xxxxxxxxxx"
@@ -634,6 +637,22 @@ type AiUsage = {
   };
 };
 
+/**
+ * Rellena las etiquetas de los catálogos de modelos.
+ *
+ * Los nombres y los precios son datos y no se traducen; lo único que cambia de
+ * idioma son cuatro palabras. Se interpolan acá para no tener veinte claves
+ * casi idénticas en el catálogo.
+ */
+function etiquetaModelo(label: string, t: (k: string) => string): string {
+  return label
+    .replace("{tkn}", t("ajustes.porMillon"))
+    .replace("{razonamiento}", t("ajustes.razonamiento"))
+    .replace("{recomendado}", t("ajustes.recomendado"))
+    .replace("{alias}", t("ajustes.alias"))
+    .replace("{imagen}", t("ajustes.porImagen"));
+}
+
 const usd = (n: number | null | undefined) => (typeof n === "number" ? `$${n.toFixed(2)}` : "—");
 
 /** 1.243.117 → «1,2 M». Los tokens se cuentan en millones y el número entero no se lee. */
@@ -656,6 +675,7 @@ function UsageBar({ used, total }: { used: number; total: number }) {
 }
 
 function AiUsageCard() {
+  const t = useT();
   const { get } = useFetchClient();
   const [data, setData] = React.useState<AiUsage | null>(null);
   const [error, setError] = React.useState(false);
@@ -670,11 +690,11 @@ function AiUsageCard() {
   const oa = data?.openai;
 
   return (
-    <AccentCard icon={<Magic />} title="Uso y costo de IA" description="Datos en vivo de las APIs. OpenRouter es prepago y muestra saldo; OpenAI es pospago y sólo publica consumo." accent="success">
+    <AccentCard icon={<Magic />} title={t("ajustes.uso.titulo")} description={t("ajustes.uso.desc")} accent="success">
       {!data && !error ? (
-        <Flex justifyContent="center" padding={3}><Loader small>Consultando…</Loader></Flex>
+        <Flex justifyContent="center" padding={3}><Loader small>{t("ajustes.uso.consultando")}</Loader></Flex>
       ) : error ? (
-        <Typography variant="pi" textColor="danger600">No se pudo consultar el uso de las APIs.</Typography>
+        <Typography variant="pi" textColor="danger600">{t("ajustes.uso.err")}</Typography>
       ) : (
         <Flex direction="column" alignItems="stretch" gap={4}>
           {/* OpenRouter */}
@@ -735,14 +755,12 @@ function AiUsageCard() {
                 ))}
               </Box>
             ) : oa?.ok ? (
-              <Typography variant="pi" textColor="neutral500">Sin consumo este mes.</Typography>
+              <Typography variant="pi" textColor="neutral500">{t("ajustes.uso.sinConsumo")}</Typography>
             ) : null}
             <Typography variant="pi" textColor="neutral600">
               {oa?.reason ?? "—"}{" "}
               {oa?.dashboardUrl ? (
-                <a href={oa.dashboardUrl} target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "underline" }}>
-                  Ver en el dashboard
-                </a>
+                <a href={oa.dashboardUrl} target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "underline" }}>{t("ajustes.uso.dashboard")}</a>
               ) : null}
             </Typography>
           </Box>

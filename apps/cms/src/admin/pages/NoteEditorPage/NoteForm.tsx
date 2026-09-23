@@ -13,6 +13,7 @@ import {
 } from "@strapi/design-system";
 import { Pencil, Images, ArrowClockwise, Upload, Trash } from "@strapi/icons";
 import { AccentCard, Hairline } from "../../components/ui";
+import { useT } from "../../i18n";
 
 // El estado del form es plano: todo lo editable de una nota vive acá. La página
 // contenedora decide si al guardar llama a crear o actualizar.
@@ -81,6 +82,7 @@ export function NoteForm({
   customImagePrompt: string;
   setCustomImagePrompt: (v: string) => void;
 }) {
+  const t = useT();
   const [instruction, setInstruction] = React.useState("");
   const [refineWeb, setRefineWeb] = React.useState(false);
   const fileRef = React.useRef<HTMLInputElement | null>(null);
@@ -98,7 +100,7 @@ export function NoteForm({
       <AccentCard title="Contenido" icon={<Pencil />} accent="secondary">
         <Flex direction="column" gap={4} alignItems="stretch">
           <Field.Root>
-            <Field.Label>Título</Field.Label>
+            <Field.Label>{t("comun.titulo")}</Field.Label>
             <TextInput
               value={draft.title}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => onTitle(e.target.value)}

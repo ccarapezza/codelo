@@ -4,6 +4,7 @@ import { ArrowClockwise, Check, Download } from "@strapi/icons";
 import { useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { AccentCard, GroupLabel } from "../../components/ui";
 import { OVERLAY_FIELDS, type ReelResult } from "./types";
+import { useT } from "../../i18n";
 
 // Preview + edición del reel. "Recomponer" reusa el clip ya generado
 // (clipFileId) → $0 de IA, solo overlay satori + ffmpeg de vuelta.
@@ -18,6 +19,7 @@ export default function ReelEditor({
   onRecompose: (overlay: { type: ReelResult["overlay"]["type"]; fields: Record<string, string> }, clipFileId: number) => void;
   onSaved: (url: string | null) => void;
 }) {
+  const t = useT();
   const { post } = useFetchClient();
   const { toggleNotification } = useNotification();
 
@@ -76,7 +78,7 @@ export default function ReelEditor({
           )}
         </Box>
         <Box style={{ flex: 1, minWidth: 260 }}>
-          <GroupLabel>Overlay · {result.overlay.type === "countdown" ? "Countdown" : "Título"}</GroupLabel>
+          <GroupLabel>Overlay · {result.overlay.type === "countdown" ? "Countdown" : t("comun.titulo")}</GroupLabel>
           <Flex direction="column" alignItems="stretch" gap={3} marginTop={2}>
             {OVERLAY_FIELDS[result.overlay.type].map((f) => (
               <Field.Root key={f.key}>

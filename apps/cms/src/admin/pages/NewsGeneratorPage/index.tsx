@@ -14,6 +14,7 @@ import {
 import { Magic, Feather, Pencil, Images, ArrowClockwise } from "@strapi/icons";
 import { useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { PageContainer, PageHeader, AccentCard, Hairline } from "../../components/ui";
+import { useT } from "../../i18n";
 
 type Note = { title: string; excerpt: string; content: string };
 type Source = { title: string; url: string };
@@ -25,6 +26,7 @@ const IMAGE = "/api/news-generator/image";
 const SAVE = "/api/news-generator/save";
 
 export default function NewsGeneratorPage() {
+  const t = useT();
   const { post } = useFetchClient();
   const { toggleNotification } = useNotification();
   const navigate = useNavigate();
@@ -173,7 +175,7 @@ export default function NewsGeneratorPage() {
               startIcon={<Magic />}
               size="L"
             >
-              {generating ? "Generando…" : "Generar nota"}
+              {generating ? t("comun.generando") : "Generar nota"}
             </Button>
           </Flex>
         </AccentCard>
@@ -201,7 +203,7 @@ export default function NewsGeneratorPage() {
             >
               <Flex direction="column" gap={4} alignItems="stretch">
                 <Field.Root>
-                  <Field.Label>Título</Field.Label>
+                  <Field.Label>{t("comun.titulo")}</Field.Label>
                   <TextInput
                     value={note.title}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>

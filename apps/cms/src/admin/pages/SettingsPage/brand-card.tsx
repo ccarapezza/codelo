@@ -16,16 +16,17 @@ import * as React from "react";
 import { Box, Button, Field, Flex, TextInput, Typography } from "@strapi/design-system";
 import { Upload } from "@strapi/icons";
 import { GroupLabel, Hairline } from "../../components/ui";
+import { useT } from "../../i18n";
 
 /** Los colores, en el orden en que se leen sobre la placa: fondo, textos, acentos. */
 export const BRAND_FIELDS = [
-  { key: "brandBg", label: "Fondo", hint: "El fondo de la placa cuando no hay imagen. También tiñe el velo sobre las fotos." },
-  { key: "brandTitle", label: "Titulares", hint: "El texto más grande y de mayor contraste." },
-  { key: "brandBody", label: "Cuerpo", hint: "Bajadas, citas y texto corrido." },
-  { key: "brandMuted", label: "Pie", hint: "La firma, la atribución y las etiquetas." },
-  { key: "brandAccent", label: "Acento", hint: "El color de marca. Centro del degradé." },
-  { key: "brandAccentLight", label: "Acento claro", hint: "Todo acento que sea texto: los números grandes, la comilla, la url." },
-  { key: "brandAccentDeep", label: "Acento profundo", hint: "El cierre del degradé y los velos de color. Nunca lleva texto encima, así que puede ser oscuro." },
+  { key: "brandBg", label: "marca.bg.label", hint: t("marca.bg.hint") },
+  { key: "brandTitle", label: "marca.title.label", hint: t("marca.title.hint") },
+  { key: "brandBody", label: "marca.body.label", hint: t("marca.body.hint") },
+  { key: "brandMuted", label: "marca.muted.label", hint: t("marca.muted.hint") },
+  { key: "brandAccent", label: "marca.accent.label", hint: t("marca.accent.hint") },
+  { key: "brandAccentLight", label: "marca.accentLight.label", hint: t("marca.accentLight.hint") },
+  { key: "brandAccentDeep", label: "marca.accentDeep.label", hint: t("marca.accentDeep.hint") },
 ] as const;
 
 export const BRAND_KEYS = BRAND_FIELDS.map((f) => f.key);
@@ -58,10 +59,10 @@ export function contraste(a: string, b: string): number {
  * titular marcaría en rojo combinaciones que se leen perfecto.
  */
 const PARES = [
-  { de: "brandTitle", sobre: "brandBg", que: "Titulares sobre el fondo", minimo: 3 },
-  { de: "brandBody", sobre: "brandBg", que: "Cuerpo sobre el fondo", minimo: 4.5 },
-  { de: "brandMuted", sobre: "brandBg", que: "Pie sobre el fondo", minimo: 4.5 },
-  { de: "brandAccentLight", sobre: "brandBg", que: "Destacados sobre el fondo", minimo: 3 },
+  { de: "brandTitle", sobre: "brandBg", que: "marca.par.title", minimo: 3 },
+  { de: "brandBody", sobre: "brandBg", que: "marca.par.body", minimo: 4.5 },
+  { de: "brandMuted", sobre: "brandBg", que: "marca.par.muted", minimo: 4.5 },
+  { de: "brandAccentLight", sobre: "brandBg", que: "marca.par.accent", minimo: 3 },
 ] as const;
 
 export interface AvisoContraste {
@@ -91,10 +92,11 @@ function ColorField({
   valor: string;
   onChange: (v: string) => void;
 }) {
+  const t = useT();
   const valido = HEX.test(valor);
   return (
-    <Field.Root hint={hint} error={valor && !valido ? "Tiene que ser un hex de seis dígitos, como #1F4E63." : undefined}>
-      <Field.Label>{label}</Field.Label>
+    <Field.Root hint={hint} error={valor && !valido ? t("marca.hexInvalido") : undefined}>
+      <Field.Label>{t(label)}</Field.Label>
       <Flex gap={2} alignItems="center">
         {/*
           El selector nativo y el texto editan lo mismo. Los dos hacen falta: el
@@ -103,7 +105,7 @@ function ColorField({
         */}
         <input
           type="color"
-          aria-label={`${label}: elegir color`}
+          aria-label={`${t(label)}: ${t("marca.elegirColor")}`}
           value={valido ? valor : "#000000"}
           onChange={(e) => onChange(e.target.value.toUpperCase())}
           style={{
@@ -118,7 +120,7 @@ function ColorField({
           }}
         />
         <TextInput
-          aria-label={label}
+          aria-label={t(label)}
           value={valor}
           placeholder="#000000"
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value.toUpperCase())}
@@ -142,6 +144,7 @@ function PlacaPreview({
   logoUrl: string | null;
   handle: string;
 }) {
+  const t = useT();
   const c = (k: string, fallback: string) => (HEX.test(v[k] ?? "") ? v[k] : fallback);
   const bg = c("brandBg", "#0E1A1C");
   const degrade = `linear-gradient(95deg, ${c("brandAccentLight", "#6FE0D4")} 0%, ${c(
@@ -174,9 +177,7 @@ function PlacaPreview({
             color: c("brandMuted", "#8AA0A1"),
             fontWeight: 600,
           }}
-        >
-          Volanta
-        </div>
+        >{t("marca.preview.volanta")}</div>
         <div
           style={{
             marginTop: 10,
@@ -186,12 +187,8 @@ function PlacaPreview({
             color: c("brandTitle", "#FFFFFF"),
             textTransform: "uppercase",
           }}
-        >
-          Un titular de ejemplo
-        </div>
-        <div style={{ marginTop: 10, fontSize: 11, lineHeight: 1.4, color: c("brandBody", "#E6EDEC") }}>
-          La bajada va en el color de cuerpo, que es el que más texto lleva.
-        </div>
+        >{t("marca.preview.titular")}</div>
+        <div style={{ marginTop: 10, fontSize: 11, lineHeight: 1.4, color: c("brandBody", "#E6EDEC") }}>{t("marca.preview.bajada")}</div>
         <div style={{ marginTop: 12, fontSize: 22, fontWeight: 800, color: c("brandAccentLight", "#6FE0D4") }}>
           128
         </div>
@@ -203,7 +200,7 @@ function PlacaPreview({
             <div style={{ height: 18, width: 18, borderRadius: 4, background: degrade }} />
           )}
           <div style={{ fontSize: 10, fontWeight: 600, color: c("brandMuted", "#8AA0A1") }}>
-            {handle ? `@${handle}` : "sin firma"}
+            {handle ? `@${handle}` : t("marca.preview.sinFirma")}
           </div>
         </div>
       </div>
@@ -230,6 +227,7 @@ export function BrandFields({
   onQuitarLogo: () => void;
   subiendo: boolean;
 }) {
+  const t = useT();
   const fileRef = React.useRef<HTMLInputElement>(null);
   const avisos = avisosDeContraste(valores);
 
@@ -250,7 +248,7 @@ export function BrandFields({
               <ColorField
                 key={f.key}
                 label={f.label}
-                hint={f.hint}
+                hint={t(f.hint)}
                 valor={valores[f.key] ?? ""}
                 onChange={(v) => onChange(f.key, v)}
               />
@@ -260,11 +258,9 @@ export function BrandFields({
 
         <Box style={{ flex: "0 0 260px" }}>
           <Flex direction="column" alignItems="stretch" gap={3}>
-            <GroupLabel>Vista previa</GroupLabel>
+            <GroupLabel>{t("marca.preview.titulo")}</GroupLabel>
             <PlacaPreview v={valores} logoUrl={logoUrl} handle={handle} />
-            <Typography variant="pi" textColor="neutral600">
-              Una placa de ejemplo con estos colores. El @usuario sale de Configuración editorial.
-            </Typography>
+            <Typography variant="pi" textColor="neutral600">{t("marca.preview.nota")}</Typography>
 
             {avisos.length > 0 && (
               <Box
@@ -275,13 +271,11 @@ export function BrandFields({
                 borderWidth="1px"
                 borderStyle="solid"
               >
-                <Typography variant="pi" fontWeight="bold" textColor="warning700">
-                  Cuesta leerlo
-                </Typography>
+                <Typography variant="pi" fontWeight="bold" textColor="warning700">{t("marca.aviso.titulo")}</Typography>
                 {avisos.map((a) => (
                   <Box key={a.que} paddingTop={1}>
                     <Typography variant="pi" textColor="warning700">
-                      {a.que}: {a.valor.toFixed(1)}:1, por debajo de {a.minimo}:1.
+                      {t(a.que)}: {a.valor.toFixed(1)}:1, {t("marca.aviso.pordebajo", { minimo: a.minimo })}
                     </Typography>
                   </Box>
                 ))}
@@ -293,8 +287,8 @@ export function BrandFields({
 
       <Hairline />
 
-      <Field.Root hint="PNG con fondo transparente. Se imprime al pie de cada placa y grande en la de cierre. Sin esto se usa el del motor.">
-        <Field.Label>Logo de las placas</Field.Label>
+      <Field.Root hint={t("marca.logo.hint")}>
+        <Field.Label>{t("marca.logo.label")}</Field.Label>
         <Flex gap={2} alignItems="center" paddingTop={1}>
           <Button
             variant="tertiary"
@@ -302,12 +296,10 @@ export function BrandFields({
             loading={subiendo}
             onClick={() => fileRef.current?.click()}
           >
-            {logoUrl ? "Cambiar el logo" : "Subir un logo"}
+            {logoUrl ? t("marca.logo.cambiar") : t("marca.logo.subir")}
           </Button>
           {logoUrl && (
-            <Button variant="tertiary" onClick={onQuitarLogo}>
-              Usar el del motor
-            </Button>
+            <Button variant="tertiary" onClick={onQuitarLogo}>{t("marca.logo.motor")}</Button>
           )}
           <input
             ref={fileRef}

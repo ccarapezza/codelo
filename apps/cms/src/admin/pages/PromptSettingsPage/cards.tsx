@@ -16,7 +16,7 @@ import { Command, Eye, Feather, Images, Pencil } from "@strapi/icons";
 import type { PromptCard } from "../../seam-types";
 
 /**
- * Los idiomas que ofrecen «Idioma de escritura» y «Idioma de destino».
+ * Los idiomas que ofrecen «prompts.writingLanguage.label» y «prompts.translationLanguage.label».
  *
  * El VALOR es el nombre en inglés porque es lo que se interpola en los prompts
  * («You are a journalist writing in Spanish…»); la etiqueta va en castellano
@@ -24,77 +24,77 @@ import type { PromptCard } from "../../seam-types";
  * degrada la salida de todos los agentes sin dar un solo error.
  */
 const IDIOMAS = [
-  { value: "Spanish", label: "Español" },
-  { value: "English", label: "Inglés" },
-  { value: "Portuguese", label: "Portugués" },
-  { value: "French", label: "Francés" },
-  { value: "Italian", label: "Italiano" },
-  { value: "German", label: "Alemán" },
-  { value: "Catalan", label: "Catalán" },
+  { value: "Spanish", label: "prompts.idioma.es" },
+  { value: "English", label: "prompts.idioma.en" },
+  { value: "Portuguese", label: "prompts.idioma.pt" },
+  { value: "French", label: "prompts.idioma.fr" },
+  { value: "Italian", label: "prompts.idioma.it" },
+  { value: "German", label: "prompts.idioma.de" },
+  { value: "Catalan", label: "prompts.idioma.ca" },
 ];
 
 export const ENGINE_PROMPT_CARDS: PromptCard[] = [
   {
     id: "identidad",
-    title: "Identidad",
+    title: "prompts.identidad.titulo",
     description:
-      "Quién escribe y de qué habla el sitio. Es lo primero que leen todos los agentes: el redactor, el Director, el deduplicador y el traductor.",
+      "prompts.identidad.desc",
     accent: "primary",
     icon: <Feather />,
     fields: [
       {
         key: "brandName",
         lang: "fijo",
-        label: "Nombre de la marca",
-        hint: "Con este nombre escriben los agentes y se firman las placas.",
+        label: "prompts.brandName.label",
+        hint: "prompts.brandName.hint",
       },
       {
         key: "domainDescription",
-        label: "De qué habla el sitio",
-        hint: "Completa la frase «You are a journalist writing … for {esto}». Lo usan el redactor, el Director, el deduplicador y el traductor: si dice de más o de menos, todos se desvían igual.",
+        label: "prompts.domain.label",
+        hint: "prompts.domain.hint",
         rows: 4,
         reference: "You are a journalist writing in {idioma} for {esto}.",
       },
       {
         key: "writingLanguage",
         lang: "fijo",
-        label: "Idioma de escritura",
-        hint: "En qué idioma escriben los agentes las notas, los captions y las placas.",
+        label: "prompts.writingLanguage.label",
+        hint: "prompts.writingLanguage.hint",
         options: IDIOMAS,
       },
     ],
   },
   {
     id: "linea-editorial",
-    title: "Línea editorial",
+    title: "prompts.linea.titulo",
     description:
-      "Las reglas que separan una nota publicable de una que hay que rechazar. Las comparten el Redactor y el Director.",
+      "prompts.linea.desc",
     accent: "success",
     icon: <Pencil />,
     fields: [
       {
         key: "fabricationProneFacts",
-        label: "Hechos que no se pueden inventar",
-        hint: "Lista separada por comas de los datos que este tema suele alucinar: fechas, cifras, resoluciones, resultados.",
+        label: "prompts.fabrication.label",
+        hint: "prompts.fabrication.hint",
         rows: 3,
         reference: "NEVER invent {esto}.",
       },
       {
         key: "analysisModeFraming",
-        label: "Encuadre del modo análisis",
-        hint: "Cómo tiene que presentarse una nota cuando NO hay noticias verificadas que la respalden.",
+        label: "prompts.analysis.label",
+        hint: "prompts.analysis.hint",
         rows: 3,
       },
       {
         key: "bodyStructureGuide",
-        label: "Voz y formato del cuerpo",
-        hint: "La voz de la marca y las reglas de Markdown. Es el campo más largo y el que más define cómo suenan las notas.",
+        label: "prompts.body.label",
+        hint: "prompts.body.hint",
         rows: 12,
       },
       {
         key: "officialSources",
-        label: "Fuentes oficiales citables",
-        hint: "Organismos y publicaciones que SÍ se pueden nombrar sin que cuente como reproducir a un medio rival. Los nombres propios van como se escriben.",
+        label: "prompts.sources.label",
+        hint: "prompts.sources.hint",
         rows: 2,
         reference:
           "NOTE: an official source is NOT a rival outlet. Citing an official source ({esto}), a law or a court ruling is REQUIRED, not a violation.",
@@ -103,116 +103,116 @@ export const ENGINE_PROMPT_CARDS: PromptCard[] = [
   },
   {
     id: "portadas",
-    title: "Portadas",
+    title: "prompts.portadas.titulo",
     description:
-      "Qué se ve en la imagen de una nota. El medio (foto, ilustración, grabado) lo sortea el motor por nota; acá se decide QUÉ mostrar y con qué reglas.",
+      "prompts.portadas.desc",
     accent: "warning",
     icon: <Eye />,
     fields: [
       {
         key: "imageSystemInstructions",
-        label: "Reglas de imagen",
-        hint: "Qué se muestra, qué está prohibido, cómo se evitan las caras. El sufijo de seguridad se agrega siempre, aunque se borre todo esto.",
+        label: "prompts.imageRules.label",
+        hint: "prompts.imageRules.hint",
         rows: 12,
       },
       {
         key: "imageThemeGuide",
-        label: "Catálogo de escenas",
-        hint: "TEMA → ESCENAS. Cada categoría ofrece cuatro variantes para que dos notas parecidas no salgan con la misma portada.",
+        label: "prompts.themeGuide.label",
+        hint: "prompts.themeGuide.hint",
         rows: 12,
       },
       {
         key: "imageAnchorTaxonomy",
-        label: "Anclas a extraer",
-        hint: "⚠️ Cada línea «- clave: regla» declara una clave que se le pide al modelo. Agregar o quitar una línea cambia lo que se extrae: el motor lee las claves de acá, no las tiene escritas.",
+        label: "prompts.anchors.label",
+        hint: "prompts.anchors.hint",
         rows: 8,
       },
       {
         key: "brandPalette",
         lang: "fijo",
-        label: "Paleta de la casa",
-        hint: "Dos colores, para el acabado duotono del sorteo de ilustraciones. Ej: «amber and deep-blue».",
+        label: "prompts.palette.label",
+        hint: "prompts.palette.hint",
       },
     ],
   },
   {
     id: "redes",
-    title: "Redes y video",
+    title: "prompts.redes.titulo",
     description:
-      "Con qué usuario se firman, cómo suenan y qué aspecto tienen las piezas de Social Studio: carruseles, historias y clips. Los colores y el logo con los que se DIBUJAN las placas se eligen en Sitio e integraciones → Identidad visual: no son texto y no los lee ningún agente.",
+      "prompts.redes.desc",
     accent: "secondary",
     icon: <Images />,
     fields: [
       {
         key: "socialHandle",
         lang: "fijo",
-        label: "Usuario de redes",
-        hint: "Sin el @. Se imprime al pie de cada placa, grande en la placa de cierre y sobre los videos, y cierra el caption como último hashtag. Vacío = no se imprime en ningún lado.",
+        label: "prompts.handle.label",
+        hint: "prompts.handle.hint",
       },
       {
         key: "socialVoice",
-        label: "Voz en redes y reglas duras",
-        hint: "Qué tipo de organización es, cómo suena y qué NO se hace nunca. Es una instrucción, así que va en inglés; el texto que se publica sale en el idioma del sitio.",
+        label: "prompts.socialVoice.label",
+        hint: "prompts.socialVoice.hint",
         rows: 8,
       },
       {
         key: "socialCoverStyle",
-        label: "Estilo de la imagen de portada",
-        hint: "Qué tiene que mostrar el fondo de la primera placa. Se inserta dentro del pedido de imagen.",
+        label: "prompts.coverStyle.label",
+        hint: "prompts.coverStyle.hint",
         rows: 4,
       },
       {
         key: "socialHashtags",
         lang: "salida",
-        label: "Temas de los hashtags",
-        hint: "Separados por coma. Vacío = el modelo elige según la nota.",
+        label: "prompts.hashtags.label",
+        hint: "prompts.hashtags.hint",
         rows: 2,
       },
       {
         key: "socialCta",
         lang: "salida",
-        label: "Cierre del caption",
-        hint: "Se pega tal cual al final del caption. Vacío = no se agrega nada.",
+        label: "prompts.cta.label",
+        hint: "prompts.cta.hint",
       },
       {
         key: "coverFallbackPrompt",
-        label: "Imagen de respaldo",
-        hint: "Se usa cuando el modelo no devuelve un pedido de imagen propio. Sin esto la portada quedaba en negro.",
+        label: "prompts.fallback.label",
+        hint: "prompts.fallback.hint",
         rows: 3,
       },
       {
         key: "videoStyle",
-        label: "Estilo de video",
-        hint: "Se agrega a TODO clip. Acá van la atmósfera, la paleta y las prohibiciones (sin texto, sin logos).",
+        label: "prompts.videoStyle.label",
+        hint: "prompts.videoStyle.hint",
         rows: 6,
       },
       {
         key: "videoDefaultPrompt",
-        label: "Clip por defecto",
-        hint: "El b-roll que propone Social Studio cuando no se escribe uno.",
+        label: "prompts.videoDefault.label",
+        hint: "prompts.videoDefault.hint",
         rows: 3,
       },
     ],
   },
   {
     id: "traduccion",
-    title: "Traducción",
+    title: "prompts.traduccion.titulo",
     description:
-      "Sólo se usa si la traducción automática está activada, en Sitio e integraciones.",
+      "prompts.traduccion.desc",
     accent: "primary",
     icon: <Command />,
     fields: [
       {
         key: "translationLanguage",
         lang: "fijo",
-        label: "Idioma de destino",
-        hint: "A qué idioma se traduce cada nota. El de origen es el de escritura.",
+        label: "prompts.translationLanguage.label",
+        hint: "prompts.translationLanguage.hint",
         options: IDIOMAS,
       },
       {
         key: "translationGlossary",
-        label: "Qué NO se traduce",
-        hint: "Línea completa del prompt. Acá van los nombres propios del tema: organismos, programas, competencias, términos sin equivalente.",
+        label: "prompts.glossary.label",
+        hint: "prompts.glossary.hint",
         rows: 5,
       },
     ],

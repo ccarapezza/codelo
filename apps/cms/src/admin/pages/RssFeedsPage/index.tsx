@@ -27,6 +27,7 @@ import {
 import { PageContainer, PageHeader, EmptyState } from "../../components/ui";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import DiscoverModal from "./DiscoverModal";
+import { useT } from "../../i18n";
 
 // CRUD por la API propia y no por la del Content Manager: el content-type está
 // oculto ahí a propósito (editarlo a mano rompe cosas), y esa marca hace que
@@ -134,6 +135,7 @@ function FeedFormModal({
   onSaved: () => void;
   initial: { feed: RssFeed | null };
 }) {
+  const t = useT();
   const { post, put } = useFetchClient();
   const { toggleNotification } = useNotification();
   const [form, setForm] = React.useState<FormData>(EMPTY_FORM);
@@ -155,7 +157,7 @@ function FeedFormModal({
 
   const handleValidate = async () => {
     if (!form.url.trim()) {
-      toggleNotification({ type: "warning", message: "Ingresá una URL antes de verificar." });
+      toggleNotification({ type: "warning", message: t("rss.err.sinUrl") });
       return;
     }
     setValidation({ status: "testing" });
@@ -174,7 +176,7 @@ function FeedFormModal({
       if (data.valid) {
         setValidation({
           status: "valid",
-          feedTitle: data.feedTitle ?? "(sin título)",
+          feedTitle: data.feedTitle ?? t("rss.sinTitulo"),
           feedLink: data.feedLink ?? null,
           language: data.language ?? null,
           totalItems: data.totalItems ?? 0,
@@ -186,19 +188,19 @@ function FeedFormModal({
           setForm((prev) => ({ ...prev, name: data.feedTitle! }));
         }
       } else {
-        setValidation({ status: "invalid", error: data.error ?? "Feed inválido" });
+        setValidation({ status: "invalid", error: data.error ?? t("rss.invalido") });
       }
     } catch (err) {
       setValidation({
         status: "invalid",
-        error: err instanceof Error ? err.message : "Error al contactar el endpoint",
+        error: err instanceof Error ? err.message : t("rss.err.endpoint"),
       });
     }
   };
 
   const handleSave = async () => {
     if (!form.name.trim() || !form.url.trim()) {
-      toggleNotification({ type: "warning", message: "Nombre y URL son obligatorios." });
+      toggleNotification({ type: "warning", message: t("rss.err.obligatorios") });
       return;
     }
     setSaving(true);
@@ -214,7 +216,7 @@ function FeedFormModal({
       onClose();
     } catch (err: unknown) {
       const msg =
-        err instanceof Error ? err.message : "Error desconocido al guardar el feed.";
+        err instanceof Error ? err.message : t("rss.err.guardar");
       toggleNotification({ type: "danger", message: msg });
     } finally {
       setSaving(false);
@@ -226,20 +228,20 @@ function FeedFormModal({
       <Modal.Content>
         <Modal.Header>
           <Typography variant="omega" fontWeight="bold">
-            {initial.feed ? "Editar feed RSS" : "Nuevo feed RSS"}
+            {initial.feed ? t("rss.editarFeed") : t("rss.nuevoFeed")}
           </Typography>
         </Modal.Header>
         <Modal.Body>
           <Flex direction="column" alignItems="stretch" gap={4}>
             <Field.Root required>
-              <Field.Label>Nombre</Field.Label>
+              <Field.Label>{t("rss.nombre")}</Field.Label>
               <TextInput
-                placeholder="Ej: Portal del sector — Últimas noticias"
+                placeholder={t("rss.nombre.placeholder")}
                 value={form.name}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => set("name", e.target.value)}
               />
             </Field.Root>
-            <Field.Root required hint="URL pública del feed RSS (formato XML).">
+            <Field.Root required hint={t("rss.url.hint")}>
               <Field.Label>URL del feed</Field.Label>
               <Flex gap={2} alignItems="flex-start">
                 <Box style={{ flex: 1 }}>
@@ -257,9 +259,7 @@ function FeedFormModal({
                   loading={validation.status === "testing"}
                   onClick={handleValidate}
                   disabled={!form.url.trim()}
-                >
-                  Verificar
-                </Button>
+                >{t("comun.verificar")}</Button>
               </Flex>
               <Field.Hint />
             </Field.Root>
@@ -274,9 +274,7 @@ function FeedFormModal({
                 borderStyle="solid"
                 hasRadius
               >
-                <Typography variant="pi" textColor="danger700" fontWeight="bold">
-                  ✗ Feed inválido
-                </Typography>
+                <Typography variant="pi" textColor="danger700" fontWeight="bold">{t("rss.check.mal")}</Typography>
                 <Box marginTop={1}>
                   <Typography variant="pi" textColor="danger700">
                     {validation.error}
@@ -294,9 +292,7 @@ function FeedFormModal({
                 borderStyle="solid"
                 hasRadius
               >
-                <Typography variant="pi" textColor="success700" fontWeight="bold">
-                  ✓ Feed válido
-                </Typography>
+                <Typography variant="pi" textColor="success700" fontWeight="bold">{t("rss.check.bien")}</Typography>
                 <Box marginTop={2}>
                   <Typography variant="pi" textColor="neutral800" fontWeight="bold">
                     {validation.feedTitle}
@@ -310,9 +306,7 @@ function FeedFormModal({
                   </Box>
                 </Box>
                 <Box marginTop={3}>
-                  <Typography variant="pi" textColor="neutral600" fontWeight="bold">
-                    Últimos 5 títulos:
-                  </Typography>
+                  <Typography variant="pi" textColor="neutral600" fontWeight="bold">{t("rss.ultimos5")}</Typography>
                   <Box marginTop={1}>
                     {validation.samples.map((s, i) => (
                       <Box key={i} marginTop={1}>
@@ -335,7 +329,7 @@ function FeedFormModal({
             )}
 
             <Flex justifyContent="space-between" alignItems="center">
-              <Typography variant="delta">Habilitado</Typography>
+              <Typography variant="delta">{t("comun.habilitado")}</Typography>
               <Switch
                 checked={form.enabled}
                 onCheckedChange={(v: boolean) => set("enabled", v)}
@@ -346,11 +340,9 @@ function FeedFormModal({
         </Modal.Body>
         <Modal.Footer>
           <Modal.Close>
-            <Button variant="tertiary">Cancelar</Button>
+            <Button variant="tertiary">{t("comun.cancelar")}</Button>
           </Modal.Close>
-          <Button onClick={handleSave} loading={saving}>
-            Guardar
-          </Button>
+          <Button onClick={handleSave} loading={saving}>{t("comun.guardar")}</Button>
         </Modal.Footer>
       </Modal.Content>
     </Modal.Root>
@@ -373,6 +365,7 @@ function FeedRow({
   onFetchNow: () => void;
   fetching: boolean;
 }) {
+  const t = useT();
   const relative = relativeTime(feed.lastFetchedAt);
   // Dos dimensiones distintas: "Inactivo" es una decisión (alguien lo apagó),
   // "Error" es un síntoma (está prendido pero no responde). Mezclarlas en un
@@ -455,10 +448,10 @@ function FeedRow({
           >
             <Play />
           </IconButton>
-          <IconButton label="Editar" variant="ghost" onClick={onEdit}>
+          <IconButton label={t("comun.editar")} variant="ghost" onClick={onEdit}>
             <Pencil />
           </IconButton>
-          <IconButton label="Eliminar" variant="ghost" onClick={onDelete}>
+          <IconButton label={t("comun.eliminar")} variant="ghost" onClick={onDelete}>
             <Trash />
           </IconButton>
         </Flex>
@@ -482,6 +475,7 @@ function FeedCard({
   onFetchNow: () => void;
   fetching: boolean;
 }) {
+  const t = useT();
   const relative = relativeTime(feed.lastFetchedAt);
   const failing = feed.enabled && Boolean(feed.lastError);
   return (
@@ -541,10 +535,10 @@ function FeedCard({
         <IconButton label={fetching ? "Fetcheando…" : "Fetch ahora"} variant="ghost" onClick={onFetchNow} disabled={fetching}>
           <Play />
         </IconButton>
-        <IconButton label="Editar" variant="ghost" onClick={onEdit}>
+        <IconButton label={t("comun.editar")} variant="ghost" onClick={onEdit}>
           <Pencil />
         </IconButton>
-        <IconButton label="Eliminar" variant="ghost" onClick={onDelete}>
+        <IconButton label={t("comun.eliminar")} variant="ghost" onClick={onDelete}>
           <Trash />
         </IconButton>
       </Flex>
@@ -556,6 +550,7 @@ function FeedCard({
 // Main page
 // ---------------------------------------------------------------------------
 export default function RssFeedsPage() {
+  const t = useT();
   const { get, post, del } = useFetchClient();
   const { toggleNotification } = useNotification();
 
@@ -577,7 +572,7 @@ export default function RssFeedsPage() {
       const { data } = await get(LIST_API);
       setFeeds((data as { results: RssFeed[] }).results ?? []);
     } catch {
-      toggleNotification({ type: "danger", message: "Error al cargar los feeds." });
+      toggleNotification({ type: "danger", message: t("rss.err.cargar") });
     } finally {
       setLoading(false);
     }
@@ -601,7 +596,7 @@ export default function RssFeedsPage() {
       setDeleteTarget(null);
       loadFeeds();
     } catch {
-      toggleNotification({ type: "danger", message: "Error al eliminar el feed." });
+      toggleNotification({ type: "danger", message: t("rss.err.eliminar") });
     }
   };
 
@@ -622,8 +617,8 @@ export default function RssFeedsPage() {
     <PageContainer>
       <PageHeader
         icon={<Globe width="1.4rem" height="1.4rem" />}
-        title="Fuentes RSS"
-        subtitle="Gestioná las fuentes de noticias que alimentan la base de conocimiento diaria de los agentes."
+        title={t("rss.titulo")}
+        subtitle={t("rss.subtitulo")}
         actions={
           <Flex gap={2}>
             {/* Buscar va primero: agregar a mano exige saber de antemano la URL
@@ -632,15 +627,11 @@ export default function RssFeedsPage() {
               variant="secondary"
               startIcon={<Search />}
               onClick={() => setDiscoverOpen(true)}
-            >
-              Buscar fuentes
-            </Button>
+            >{t("rss.buscarFuentes")}</Button>
             <Button
               startIcon={<Plus />}
               onClick={() => { setEditing(null); setModalOpen(true); }}
-            >
-              Agregar feed
-            </Button>
+            >{t("rss.agregarFeed")}</Button>
           </Flex>
         }
       />
@@ -653,7 +644,7 @@ export default function RssFeedsPage() {
       ) : feeds.length === 0 ? (
         <EmptyState
           icon={<Globe />}
-          title="No hay feeds configurados. Buscá fuentes por tema para empezar."
+          title={t("rss.vacio")}
           action={
             <Flex gap={2}>
               <Button
@@ -666,9 +657,7 @@ export default function RssFeedsPage() {
                 variant="secondary"
                 startIcon={<Plus />}
                 onClick={() => { setEditing(null); setModalOpen(true); }}
-              >
-                Pegar una URL
-              </Button>
+              >{t("rss.pegarUrl")}</Button>
             </Flex>
           }
         />
@@ -692,9 +681,9 @@ export default function RssFeedsPage() {
                   ? `· ingesta automática ${status.label ?? "programada"}${
                       status.lastRunAt
                         ? ` · última corrida ${relativeTime(status.lastRunAt)}`
-                        : " · sin corridas todavía"
+                        : " " + t("rss.sinCorridas")
                     }`
-                  : "· ingesta automática DESACTIVADA (CRON_ENABLED=false)"}
+                  : t("rss.cronOff")}
               </Typography>
             ) : null}
           </Flex>
@@ -729,7 +718,7 @@ export default function RssFeedsPage() {
                       <Typography variant="sigma">Items</Typography>
                     </Th>
                     <Th>
-                      <Typography variant="sigma">Último fetch OK</Typography>
+                      <Typography variant="sigma">{t("rss.ultimoFetch")}</Typography>
                     </Th>
                     <Th>
                       <Typography variant="sigma">Acciones</Typography>
@@ -775,7 +764,7 @@ export default function RssFeedsPage() {
         onOpenChange={(v) => !v && setDeleteTarget(null)}
       >
         <Dialog.Content>
-          <Dialog.Header>Eliminar feed</Dialog.Header>
+          <Dialog.Header>{t("rss.eliminarFeed")}</Dialog.Header>
           <Dialog.Body>
             <Typography>
               ¿Eliminás el feed <strong>{deleteTarget?.name}</strong>? Esta acción no se puede deshacer.
@@ -783,12 +772,10 @@ export default function RssFeedsPage() {
           </Dialog.Body>
           <Dialog.Footer>
             <Dialog.Cancel>
-              <Button variant="tertiary">Cancelar</Button>
+              <Button variant="tertiary">{t("comun.cancelar")}</Button>
             </Dialog.Cancel>
             <Dialog.Action>
-              <Button variant="danger" onClick={handleDelete}>
-                Eliminar
-              </Button>
+              <Button variant="danger" onClick={handleDelete}>{t("comun.eliminar")}</Button>
             </Dialog.Action>
           </Dialog.Footer>
         </Dialog.Content>

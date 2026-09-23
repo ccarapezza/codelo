@@ -27,6 +27,7 @@ import {
 import { useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { PageContainer, PageHeader, EmptyState } from "../../components/ui";
 import { useIsMobile } from "../../hooks/useIsMobile";
+import { useT } from "../../i18n";
 
 const LIST_API = "/api/post-review/list";
 const PUBLISH_API = "/api/post-review/publish";
@@ -101,6 +102,7 @@ function NoteRow({
   onDelete: () => void;
   deleting: boolean;
 }) {
+  const t = useT();
   const hasCover = Boolean(note.coverUrl);
   const src = coverSrc(note.coverUrl);
   const fecha = mode === "published" ? note.publishedAt : note.createdAt;
@@ -228,9 +230,7 @@ function NoteRow({
             disabled={busy || generating}
             startIcon={<Pencil />}
             onClick={onEdit}
-          >
-            Editar
-          </Button>
+          >{t("comun.editar")}</Button>
 
           {/* Vista previa: abre la nota renderizada por la web real (borradores
               incluidos, vía draftMode) en un iframe. */}
@@ -421,6 +421,7 @@ function Section({
 
 // ── Página ───────────────────────────────────────────────────────────────────
 export default function PostReviewPage() {
+  const t = useT();
   const { get, post } = useFetchClient();
   const { toggleNotification } = useNotification();
   const navigate = useNavigate();
@@ -452,7 +453,7 @@ export default function PostReviewPage() {
   );
 
   // El banner de la web (dentro del iframe) avisa por postMessage cuando el
-  // usuario toca "Cerrar" ahí; cerramos el modal desde acá. (El banner ya limpió
+  // usuario toca t("comun.cerrar") ahí; cerramos el modal desde acá. (El banner ya limpió
   // draftMode antes de avisar.)
   React.useEffect(() => {
     const onMessage = (e: MessageEvent) => {
@@ -724,7 +725,7 @@ export default function PostReviewPage() {
             </Modal.Body>
             <Modal.Footer>
               <Modal.Close>
-                <Button variant="tertiary">Cerrar</Button>
+                <Button variant="tertiary">{t("comun.cerrar")}</Button>
               </Modal.Close>
               <Button
                 variant="secondary"
@@ -758,7 +759,7 @@ export default function PostReviewPage() {
             </Modal.Body>
             <Modal.Footer>
               <Modal.Close>
-                <Button variant="tertiary">Cancelar</Button>
+                <Button variant="tertiary">{t("comun.cancelar")}</Button>
               </Modal.Close>
               <Button
                 variant="danger"

@@ -15,6 +15,7 @@ import {
 import { ArrowClockwise, Command, Feather } from "@strapi/icons";
 import { Page, useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { ADMIN_PERMISSIONS } from "../../../lib/admin-permissions";
+import { useT } from "../../i18n";
 import {
   PageContainer,
   PageHeader,
@@ -70,9 +71,9 @@ export default function ProtectedPromptSettingsPage() {
  * mejor ahí; el idioma de lo que se PUBLICA lo decide «Idioma de escritura».
  */
 const INSIGNIA: Record<FieldLang, { texto: string; fondo: string; color: string }> = {
-  prompt: { texto: "en inglés", fondo: "primary100", color: "primary700" },
-  salida: { texto: "idioma del sitio", fondo: "success100", color: "success700" },
-  fijo: { texto: "valor fijo", fondo: "neutral150", color: "neutral700" },
+  prompt: { texto: "prompts.insignia.prompt", fondo: "primary100", color: "primary700" },
+  salida: { texto: "prompts.insignia.salida", fondo: "success100", color: "success700" },
+  fijo: { texto: "prompts.insignia.fijo", fondo: "neutral150", color: "neutral700" },
 };
 
 function CampoPrompt({
@@ -94,6 +95,7 @@ function CampoPrompt({
   onBorrador: (v: string) => void;
   onTraducir: () => void;
 }) {
+  const t = useT();
   const lang = campo.lang ?? "prompt";
   // El modo borrador sólo tiene sentido en los campos de instrucción: los de
   // texto literal ya van en el idioma del sitio, y los fijos no son texto.
@@ -107,19 +109,19 @@ function CampoPrompt({
     if (!campo.options) return [];
     const v = (valor ?? "").trim();
     return v && !campo.options.some((o) => o.value === v)
-      ? [...campo.options, { value: v, label: `${v} (configurado a mano)` }]
+      ? [...campo.options, { value: v, label: `${v} ${t("prompts.opcion.manual")}` }]
       : campo.options;
   }, [campo.options, valor]);
 
   return (
-    <Field.Root hint={campo.hint}>
+    <Field.Root hint={campo.hint ? t(campo.hint) : undefined}>
       {/* La insignia va PEGADA a la etiqueta, no alineada a la derecha: con la
           tarjeta a ancho completo quedaba a media pantalla de distancia y no se
           leía como parte del campo. */}
       <Flex gap={2} alignItems="center">
-        <Field.Label>{campo.label}</Field.Label>
+        <Field.Label>{t(campo.label)}</Field.Label>
         <Badge backgroundColor={INSIGNIA[lang].fondo} textColor={INSIGNIA[lang].color}>
-          {enBorrador ? "borrador" : INSIGNIA[lang].texto}
+          {enBorrador ? t("prompts.insignia.borrador") : t(INSIGNIA[lang].texto)}
         </Badge>
       </Flex>
       {campo.options ? (
@@ -129,7 +131,7 @@ function CampoPrompt({
         >
           {opciones.map((o) => (
             <SingleSelectOption key={o.value} value={o.value}>
-              {o.label}
+              {t(o.label)}
             </SingleSelectOption>
           ))}
         </SingleSelect>
@@ -160,22 +162,22 @@ function CampoPrompt({
             disabled={!borrador.trim() || traduciendo}
             onClick={onTraducir}
           >
-            Traducir al inglés
+            {t("prompts.traducir")}
           </Button>
           <Box paddingTop={2}>
             <Typography variant="pi" textColor="neutral600">
-              Se traduce y te lo mostramos para que lo revises: lo que se le manda al modelo es
-              el texto final, no este borrador.
+              {t("prompts.traducir.nota")}
             </Typography>
           </Box>
         </Box>
       ) : null}
-      {campo.reference ? <ReferenceNote>{campo.reference}</ReferenceNote> : null}
+      {campo.reference ? <ReferenceNote>{t(campo.reference)}</ReferenceNote> : null}
     </Field.Root>
   );
 }
 
 function PromptSettingsPage() {
+  const t = useT();
   const { get, put, post } = useFetchClient();
   const { toggleNotification } = useNotification();
 
@@ -246,7 +248,7 @@ function PromptSettingsPage() {
         setForm(next);
         setSaved(next);
       } catch {
-        toggleNotification({ type: "danger", message: "No se pudo cargar la configuración." });
+        toggleNotification({ type: "danger", message: t("prompts.err.cargar") });
       } finally {
         setLoading(false);
       }
@@ -272,10 +274,10 @@ function PromptSettingsPage() {
       setModo("final");
       toggleNotification({
         type: "success",
-        message: "Traducido. Revisalo antes de guardar.",
+        message: t("prompts.ok.traducido"),
       });
     } catch {
-      toggleNotification({ type: "danger", message: "No se pudo traducir." });
+      toggleNotification({ type: "danger", message: t("prompts.err.traducir") });
     } finally {
       setTraduciendo(null);
     }
@@ -294,9 +296,9 @@ function PromptSettingsPage() {
       await put(ADMIN_API, { ...form, sourceDrafts: borradores });
       setSaved(form);
       setBorradoresGuardados(borradores);
-      toggleNotification({ type: "success", message: "Configuración guardada." });
+      toggleNotification({ type: "success", message: t("prompts.ok.guardada") });
     } catch {
-      toggleNotification({ type: "danger", message: "Error al guardar la configuración." });
+      toggleNotification({ type: "danger", message: t("prompts.err.guardar") });
     } finally {
       setSaving(false);
     }
@@ -307,7 +309,7 @@ function PromptSettingsPage() {
   if (loading) {
     return (
       <Flex justifyContent="center" alignItems="center" minHeight="50vh">
-        <Loader>Cargando configuración…</Loader>
+        <Loader>{t("prompts.cargando")}</Loader>
       </Flex>
     );
   }
@@ -316,18 +318,18 @@ function PromptSettingsPage() {
     <PageContainer>
       <PageHeader
         icon={<Feather width="1.4rem" height="1.4rem" />}
-        title="Configuración editorial"
-        subtitle="Lo que convierte al motor en ESTE portal: los agentes lo leen en cada corrida. Cada campo dice en qué idioma va — las instrucciones para el modelo van en inglés, y el idioma de lo que se publica lo decide «Idioma de escritura». Un campo vacío usa el valor por defecto del motor, y «Restaurar» vuelve a ese valor neutro, NO al texto con el que arrancó el proyecto."
+        title={t("prompts.titulo")}
+        subtitle={t("prompts.subtitulo")}
         actions={
           <Flex gap={2} alignItems="center">
             <Box style={{ width: "17rem" }}>
               <SingleSelect
-                aria-label="Modo de escritura"
+                aria-label={t("prompts.modo")}
                 value={modo}
                 onChange={(v: string) => setModo(v === "borrador" ? "borrador" : "final")}
               >
-                <SingleSelectOption value="final">Ver el texto final</SingleSelectOption>
-                <SingleSelectOption value="borrador">Escribir en mi idioma</SingleSelectOption>
+                <SingleSelectOption value="final">{t("prompts.modo.final")}</SingleSelectOption>
+                <SingleSelectOption value="borrador">{t("prompts.modo.borrador")}</SingleSelectOption>
               </SingleSelect>
             </Box>
             <Button
@@ -335,7 +337,7 @@ function PromptSettingsPage() {
               startIcon={<ArrowClockwise />}
               onClick={() => restore(FIELD_KEYS)}
             >
-              Restaurar todo
+              {t("prompts.restaurarTodo")}
             </Button>
           </Flex>
         }
@@ -344,9 +346,7 @@ function PromptSettingsPage() {
       {modo === "borrador" ? (
         <Box marginBottom={4} padding={4} background="neutral100" hasRadius>
           <Typography variant="pi" textColor="neutral700">
-            Estás viendo un borrador en tu idioma, para leer y editar. Lo que se le manda al
-            modelo es el texto final, en inglés: traducí un campo para actualizarlo, o cambiá a
-            «Ver el texto final» para revisarlo.
+            {t("prompts.borrador.aviso")}
           </Typography>
         </Box>
       ) : null}
@@ -362,7 +362,7 @@ function PromptSettingsPage() {
             variant={i === paso ? "default" : "tertiary"}
             onClick={() => setPaso(i)}
           >
-            {i + 1} · {c.title}
+            {i + 1} · {t(c.title)}
           </Button>
         ))}
       </Flex>
@@ -370,9 +370,9 @@ function PromptSettingsPage() {
       <div id={actual.id}>
         <AccentCard
           icon={actual.icon}
-          title={`Paso ${paso + 1} de ${CARDS.length} · ${actual.title}`}
+          title={t("prompts.paso", { n: paso + 1, total: CARDS.length, titulo: t(actual.title) })}
           accent={actual.accent}
-          description={actual.description}
+          description={t(actual.description)}
           actions={
             <Button
               size="S"
@@ -380,7 +380,7 @@ function PromptSettingsPage() {
               startIcon={<ArrowClockwise />}
               onClick={() => restore(actual.fields.map((f) => f.key))}
             >
-              Restaurar este paso
+              {t("prompts.restaurarPaso")}
             </Button>
           }
         >
@@ -408,19 +408,19 @@ function PromptSettingsPage() {
           disabled={paso === 0}
           onClick={() => setPaso((p) => Math.max(0, p - 1))}
         >
-          ← Anterior
+          {t("prompts.anterior")}
         </Button>
         <Typography variant="pi" textColor="neutral600">
           {/* Se puede guardar en cualquier paso: los cambios de todos los pasos
               viajan juntos, no hay que llegar al final. */}
-          Guardá cuando quieras — se guardan los cambios de todos los pasos.
+          {t("prompts.guardaCuandoQuieras")}
         </Typography>
         <Button
           variant="tertiary"
           disabled={paso === CARDS.length - 1}
           onClick={() => setPaso((p) => Math.min(CARDS.length - 1, p + 1))}
         >
-          Siguiente →
+          {t("prompts.siguiente")}
         </Button>
       </Flex>
 

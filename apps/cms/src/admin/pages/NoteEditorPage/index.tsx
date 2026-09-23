@@ -14,6 +14,7 @@ import { Feather, Magic, ArrowLeft, Sparkle, Pencil } from "@strapi/icons";
 import { useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { PageContainer, PageHeader, AccentCard } from "../../components/ui";
 import { NoteForm, type NoteDraft, type TagOption } from "./NoteForm";
+import { useT } from "../../i18n";
 
 const GENERATE = "/api/news-generator/generate";
 const REFINE = "/api/news-generator/refine";
@@ -37,6 +38,7 @@ const EMPTY: NoteDraft = {
 type Mode = "ia" | "manual";
 
 export default function NoteEditorPage() {
+  const t = useT();
   const { get, post } = useFetchClient();
   const { toggleNotification } = useNotification();
   const navigate = useNavigate();
@@ -343,7 +345,7 @@ export default function NoteEditorPage() {
                 startIcon={<Magic />}
                 size="L"
               >
-                {generating ? "Generando…" : "Generar borrador"}
+                {generating ? t("comun.generando") : "Generar borrador"}
               </Button>
             </Flex>
           </AccentCard>

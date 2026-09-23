@@ -150,6 +150,19 @@ export default {
     // register() → disableGuidedTour; `tutorials:false` NO lo cubre.)
     tutorials: false,
     notifications: { releases: false },
+    // Idiomas del PANEL. Sin esto Strapi ofrece sólo inglés, y como nuestras
+    // pantallas están escritas en castellano el resultado era una mezcla sin
+    // salida: el chrome de Strapi en inglés y lo nuestro en español, con un
+    // selector de un solo idioma.
+    //
+    // Strapi ya trae su `es.json` y lo bundlea; lo único que faltaba era
+    // listarlo. Elegido «Español», el panel queda entero en castellano —el de
+    // Strapi y el nuestro—.
+    //
+    // ⚠️ Esto NO traduce nuestras pantallas: sus textos están escritos en el
+    // JSX, no en archivos de mensajes, así que en inglés siguen saliendo en
+    // castellano. Para eso hace falta internacionalizarlas de verdad.
+    locales: ["es"],
   },
 
   // ⚠️ `register` y `bootstrap` NO reciben lo mismo, aunque los tipemos igual:

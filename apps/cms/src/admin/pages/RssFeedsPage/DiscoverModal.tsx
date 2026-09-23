@@ -20,6 +20,7 @@ import {
 } from "@strapi/design-system";
 import { Check, Plus, Search } from "@strapi/icons";
 import { useFetchClient, useNotification } from "@strapi/strapi/admin";
+import { useT } from "../../i18n";
 
 const DISCOVER_API = "/api/rss-feed/discover";
 const CREATE_API = "/api/rss-feed/admin-create";
@@ -42,8 +43,8 @@ type Discovered = {
 
 const ORIGEN: Record<Discovered["via"], string> = {
   feedly: "directorio",
-  autodiscovery: "declarado por el sitio",
-  sonda: "encontrado sondeando el sitio",
+  autodiscovery: t("rss.desc.declarado"),
+  sonda: t("rss.desc.sondeado"),
 };
 
 /** Verde sólo con evidencia fuerte: el color es una recomendación. */
@@ -60,6 +61,7 @@ function ritmo(f: Discovered): string | null {
 }
 
 function Resultado({ feed, onAdded }: { feed: Discovered; onAdded: () => void }) {
+  const t = useT();
   const { post } = useFetchClient();
   const { toggleNotification } = useNotification();
   const [guardando, setGuardando] = React.useState(false);
@@ -75,7 +77,7 @@ function Resultado({ feed, onAdded }: { feed: Discovered; onAdded: () => void })
     } catch (e) {
       const msg = (e as { response?: { data?: { error?: { message?: string } } } })?.response?.data
         ?.error?.message;
-      toggleNotification({ type: "danger", message: msg || "No se pudo agregar la fuente." });
+      toggleNotification({ type: "danger", message: msg || t("rss.desc.err") });
     } finally {
       setGuardando(false);
     }
@@ -116,9 +118,7 @@ function Resultado({ feed, onAdded }: { feed: Discovered; onAdded: () => void })
 
           {feed.samples.length > 0 ? (
             <Box paddingTop={3}>
-              <Typography variant="pi" textColor="neutral500">
-                Últimos títulos:
-              </Typography>
+              <Typography variant="pi" textColor="neutral500">{t("rss.desc.ultimos")}</Typography>
               {feed.samples.map((s) => (
                 <Box key={s.url} paddingTop={1}>
                   <Typography variant="pi" textColor="neutral600" ellipsis>
@@ -138,7 +138,7 @@ function Resultado({ feed, onAdded }: { feed: Discovered; onAdded: () => void })
           startIcon={agregado ? <Check /> : <Plus />}
           onClick={agregar}
         >
-          {agregado ? "Ya está" : "Agregar"}
+          {agregado ? t("rss.desc.yaEsta") : t("comun.agregar")}
         </Button>
       </Flex>
     </Box>
@@ -154,6 +154,7 @@ export default function DiscoverModal({
   onClose: () => void;
   onAdded: () => void;
 }) {
+  const t = useT();
   const { post } = useFetchClient();
   const { toggleNotification } = useNotification();
   const [query, setQuery] = React.useState("");
@@ -186,7 +187,7 @@ export default function DiscoverModal({
       });
       setResultado(data);
     } catch {
-      toggleNotification({ type: "danger", message: "La búsqueda falló. Probá de nuevo." });
+      toggleNotification({ type: "danger", message: t("rss.desc.errBusqueda") });
     } finally {
       setBuscando(false);
     }
@@ -196,14 +197,12 @@ export default function DiscoverModal({
     <Modal.Root open={open} onOpenChange={(v: boolean) => !v && onClose()}>
       <Modal.Content style={{ maxWidth: "76rem", width: "90vw" }}>
         <Modal.Header>
-          <Typography variant="omega" fontWeight="bold">
-            Buscar fuentes RSS
-          </Typography>
+          <Typography variant="omega" fontWeight="bold">{t("rss.desc.titulo")}</Typography>
         </Modal.Header>
         <Modal.Body>
           <Flex direction="column" alignItems="stretch" gap={4}>
-            <Field.Root hint="Un tema en una o dos palabras, o el dominio de un medio que ya conocés. Cada resultado se baja y se parsea antes de mostrarse, así que tarda unos segundos.">
-              <Field.Label>Qué buscás</Field.Label>
+            <Field.Root hint={t("rss.desc.hint")}>
+              <Field.Label>{t("rss.desc.label")}</Field.Label>
               <Flex gap={2} alignItems="flex-start">
                 <Box style={{ flex: 1 }}>
                   <TextInput
@@ -232,16 +231,14 @@ export default function DiscoverModal({
                   onClick={buscar}
                   loading={buscando}
                   disabled={!query.trim() || buscando}
-                >
-                  Buscar
-                </Button>
+                >{t("comun.buscar")}</Button>
               </Flex>
               <Field.Hint />
             </Field.Root>
 
             {buscando ? (
               <Flex justifyContent="center" padding={8}>
-                <Loader>Bajando y verificando candidatos…</Loader>
+                <Loader>{t("rss.desc.bajando")}</Loader>
               </Flex>
             ) : null}
 
@@ -261,9 +258,7 @@ export default function DiscoverModal({
           </Flex>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="tertiary" onClick={onClose}>
-            Cerrar
-          </Button>
+          <Button variant="tertiary" onClick={onClose}>{t("comun.cerrar")}</Button>
         </Modal.Footer>
       </Modal.Content>
     </Modal.Root>

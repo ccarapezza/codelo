@@ -23,6 +23,7 @@ import { useNavigate } from "react-router-dom";
 import * as verticals from "../../verticals";
 import { PageContainer, PageHeader, Hairline } from "../../components/ui";
 import { useIsMobile } from "../../hooks/useIsMobile";
+import { useT } from "../../i18n";
 
 // CRUD por la API propia y no por la del Content Manager: el content-type está
 // oculto ahí a propósito (editar un agente a mano rompe cosas), y esa marca hace
@@ -490,6 +491,7 @@ function AgentFormModal({
   onSaved: () => void;
   initial: { agent: Agent | null };
 }) {
+  const t = useT();
   const { post, put } = useFetchClient();
   const { toggleNotification } = useNotification();
   const isMobile = useIsMobile();
@@ -850,7 +852,7 @@ function AgentFormModal({
 
         <Modal.Footer>
           <Modal.Close>
-            <Button variant="tertiary">Cancelar</Button>
+            <Button variant="tertiary">{t("comun.cancelar")}</Button>
           </Modal.Close>
           <Button onClick={handleSave} loading={saving}>
             {initial.agent ? "Guardar cambios" : "Crear agente"}
@@ -878,6 +880,7 @@ function AgentItem({
   onToggleEnabled: (next: boolean) => void;
   toggling: boolean;
 }) {
+  const t = useT();
   const activeSchedules = (agent.schedules ?? []).filter((s) => s.enabled);
   const isMobile = useIsMobile();
 
@@ -1000,10 +1003,10 @@ function AgentItem({
               <Play />
             </IconButton>
           ) : null}
-          <IconButton label="Editar" variant="ghost" onClick={onEdit}>
+          <IconButton label={t("comun.editar")} variant="ghost" onClick={onEdit}>
             <Pencil />
           </IconButton>
-          <IconButton label="Eliminar" variant="ghost" onClick={onDelete}>
+          <IconButton label={t("comun.eliminar")} variant="ghost" onClick={onDelete}>
             <Trash />
           </IconButton>
         </Flex>
@@ -1167,6 +1170,7 @@ function EmptySectionState({
 // ─── AgentsPage ───────────────────────────────────────────────────────────────
 
 export default function AgentsPage() {
+  const t = useT();
   const { get, post, put, del } = useFetchClient();
   const { toggleNotification } = useNotification();
   const navigate = useNavigate();
@@ -1475,12 +1479,10 @@ export default function AgentsPage() {
           </Dialog.Body>
           <Dialog.Footer>
             <Dialog.Cancel>
-              <Button variant="tertiary">Cancelar</Button>
+              <Button variant="tertiary">{t("comun.cancelar")}</Button>
             </Dialog.Cancel>
             <Dialog.Action>
-              <Button variant="danger-light" onClick={handleDelete} loading={deleting}>
-                Eliminar
-              </Button>
+              <Button variant="danger-light" onClick={handleDelete} loading={deleting}>{t("comun.eliminar")}</Button>
             </Dialog.Action>
           </Dialog.Footer>
         </Dialog.Content>
@@ -1518,7 +1520,7 @@ export default function AgentsPage() {
           </Dialog.Body>
           <Dialog.Footer>
             <Dialog.Cancel>
-              <Button variant="tertiary">Cancelar</Button>
+              <Button variant="tertiary">{t("comun.cancelar")}</Button>
             </Dialog.Cancel>
             <Dialog.Action>
               <Button
