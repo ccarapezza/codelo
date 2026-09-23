@@ -29,6 +29,7 @@ import {
 import type { PromptSettings } from "../../src/lib/prompt-defaults";
 
 import * as I from "./inputs";
+import { vi } from "vitest";
 import { capture, type Grabado } from "./recorder";
 
 const SIN_ANCLAS: ArticleAnchors = {
@@ -45,6 +46,13 @@ export async function construirPrompts(
   ajustes: Record<string, string>,
 ): Promise<Record<string, Grabado>> {
   const s = ajustes as unknown as PromptSettings;
+
+  // El generador manual mete la fecha de HOY en su prompt. Sin congelarla, el
+  // fixture caduca a medianoche y el test falla al día siguiente sin que nadie
+  // haya tocado una línea.
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date(I.HOY));
+  try {
 
   const portada = async (seed: string): Promise<Grabado> =>
     capture((c) =>
@@ -128,4 +136,7 @@ export async function construirPrompts(
     "cover.fallback": soloSystem(buildCoverFallbackPrompt(s, I.TITLE)),
     "overlay": soloSystem(buildOverlaySystemPrompt(s, I.OVERLAY_ASK)),
   };
+  } finally {
+    vi.useRealTimers();
+  }
 }

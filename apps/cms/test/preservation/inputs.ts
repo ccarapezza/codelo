@@ -66,6 +66,9 @@ export const RESEARCH = {
 
 export const REFINE_INSTRUCTION = "Hacela más corta y sacá la repetición del segundo párrafo.";
 
+/** Fecha congelada: el generador manual la interpola en su prompt. */
+export const HOY = "2026-09-22T12:00:00.000Z";
+
 export const SITE_HOST = "example.com";
 
 export const OVERLAY_ASK =
