@@ -26,8 +26,17 @@ const ACCENT: Record<Accent, { strip: string; chipBg: string; chipFg: string }> 
 
 /** Page outer wrapper: neutral canvas + standard padding. Every page uses this. */
 export function PageContainer({ children }: { children: React.ReactNode }) {
+  // Columna flex a alto de viewport: es lo que le permite a la SaveBar irse al
+  // fondo cuando el contenido es corto. `position: sticky` sola no alcanza —
+  // sólo pega el elemento mientras hay scroll, así que en una pantalla con pocos
+  // campos la barra quedaba flotando a media altura con espacio vacío debajo.
   return (
-    <Box padding={8} background="neutral100" minHeight="100vh">
+    <Box
+      padding={8}
+      background="neutral100"
+      minHeight="100vh"
+      style={{ display: "flex", flexDirection: "column" }}
+    >
       {children}
     </Box>
   );
@@ -283,7 +292,6 @@ export function SaveBar({
     <Box
       position="sticky"
       bottom={0}
-      marginTop={6}
       paddingTop={4}
       paddingBottom={4}
       paddingLeft={8}
@@ -292,7 +300,14 @@ export function SaveBar({
       borderColor="neutral200"
       borderWidth="1px 0 0 0"
       borderStyle="solid"
-      style={{ marginLeft: -edgeOffset, marginRight: -edgeOffset, marginBottom: -edgeOffset }}
+      // `marginTop: auto` la empuja al fondo del contenedor cuando sobra alto;
+      // con contenido largo no hace nada y manda el sticky.
+      style={{
+        marginTop: "auto",
+        marginLeft: -edgeOffset,
+        marginRight: -edgeOffset,
+        marginBottom: -edgeOffset,
+      }}
     >
       <Flex justifyContent="space-between" alignItems="center" gap={4}>
         {dirty ? (
