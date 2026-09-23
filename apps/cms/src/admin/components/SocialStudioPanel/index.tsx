@@ -3,6 +3,7 @@ import { Button, Flex, Typography } from "@strapi/design-system";
 import { Magic, Images } from "@strapi/icons";
 import { useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { useNavigate } from "react-router-dom";
+import { useT } from "../../i18n";
 
 interface SidePanelProps {
   model?: string;
@@ -17,6 +18,7 @@ type PanelDescriptor = { title: string; content: React.ReactNode } | null;
 //  2) "Abrir Social Studio" — flujo interactivo para contenido de RRSS
 //     descargable (carrusel / historia / reel) con preview editable.
 export default function SocialStudioPanel({ model, documentId }: SidePanelProps): PanelDescriptor {
+  const t = useT();
   /* eslint-disable react-hooks/rules-of-hooks */
   const navigate = useNavigate();
   const { post, get } = useFetchClient();
@@ -42,7 +44,7 @@ export default function SocialStudioPanel({ model, documentId }: SidePanelProps)
       await post("/api/post/generate-cover", { documentId });
       toggleNotification({ type: "success", message: "Generando portada en segundo plano…" });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Error al generar la portada.";
+      const msg = err instanceof Error ? err.message : t("panel.err.portada");
       toggleNotification({ type: "danger", message: msg });
     } finally {
       setLoading(false);
@@ -64,13 +66,9 @@ export default function SocialStudioPanel({ model, documentId }: SidePanelProps)
           Generar portada (IA)
         </Button>
         {agentAvailable === false ? (
-          <Typography variant="pi" textColor="neutral500" textAlign="center">
-            Configurá un agente generador de imágenes para habilitar la portada.
-          </Typography>
+          <Typography variant="pi" textColor="neutral500" textAlign="center">{t("panel.sinAgente")}</Typography>
         ) : (
-          <Typography variant="pi" textColor="neutral500" textAlign="center">
-            Portada de la nota (estilo Director): prompt con memoria, se aplica directo.
-          </Typography>
+          <Typography variant="pi" textColor="neutral500" textAlign="center">{t("panel.portada.desc")}</Typography>
         )}
 
         <Button
@@ -81,9 +79,7 @@ export default function SocialStudioPanel({ model, documentId }: SidePanelProps)
         >
           Abrir Social Studio
         </Button>
-        <Typography variant="pi" textColor="neutral500" textAlign="center">
-          Carruseles, historias y reels descargables — con preview editable.
-        </Typography>
+        <Typography variant="pi" textColor="neutral500" textAlign="center">{t("panel.studio.desc")}</Typography>
       </Flex>
     ),
   };

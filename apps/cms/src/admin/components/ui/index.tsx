@@ -13,6 +13,7 @@ import * as React from "react";
 import { Box, Flex, Typography, Button } from "@strapi/design-system";
 import { Check } from "@strapi/icons";
 import { useIsMobile } from "../../hooks/useIsMobile";
+import { useT } from "../../i18n";
 
 export type Accent = "primary" | "warning" | "success" | "danger" | "secondary";
 
@@ -134,6 +135,7 @@ export function PageHeader({
  * una tarjeta aportada por un proyecto no podía usarlo.
  */
 export function ReferenceNote({ children }: { children: React.ReactNode }) {
+  const t = useT();
   return (
     <Box
       marginTop={2}
@@ -145,9 +147,7 @@ export function ReferenceNote({ children }: { children: React.ReactNode }) {
       borderRadius="4px"
       hasRadius
     >
-      <Typography variant="pi" textColor="neutral500" fontWeight="bold">
-        Texto fijo (no editable)
-      </Typography>
+      <Typography variant="pi" textColor="neutral500" fontWeight="bold">{t("ui.textoFijo")}</Typography>
       <Box marginTop={1}>
         <Typography variant="pi" textColor="neutral500" style={{ whiteSpace: "pre-wrap" }}>
           {children}
@@ -277,6 +277,7 @@ export function SaveBar({
   saveLabel?: string;
   edgeOffset?: number;
 }) {
+  const t = useT();
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
@@ -314,13 +315,13 @@ export function SaveBar({
           <Flex gap={2} alignItems="center">
             <Box background="warning500" style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0 }} />
             <Typography variant="pi" textColor="neutral600">
-              Cambios sin guardar · <Typography variant="pi" textColor="neutral500">⌘S / Ctrl+S</Typography>
+              {t("ui.sinGuardar")} · <Typography variant="pi" textColor="neutral500">⌘S / Ctrl+S</Typography>
             </Typography>
           </Flex>
         ) : (
           <Flex gap={1} alignItems="center">
             <Typography textColor="success600"><Check width="0.9rem" height="0.9rem" /></Typography>
-            <Typography variant="pi" textColor="neutral500">Todo guardado</Typography>
+            <Typography variant="pi" textColor="neutral500">{t("ui.todoGuardado")}</Typography>
           </Flex>
         )}
         <Flex gap={2}>

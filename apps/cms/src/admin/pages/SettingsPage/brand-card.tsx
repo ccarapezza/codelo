@@ -20,13 +20,13 @@ import { useT } from "../../i18n";
 
 /** Los colores, en el orden en que se leen sobre la placa: fondo, textos, acentos. */
 export const BRAND_FIELDS = [
-  { key: "brandBg", label: "marca.bg.label", hint: t("marca.bg.hint") },
-  { key: "brandTitle", label: "marca.title.label", hint: t("marca.title.hint") },
-  { key: "brandBody", label: "marca.body.label", hint: t("marca.body.hint") },
-  { key: "brandMuted", label: "marca.muted.label", hint: t("marca.muted.hint") },
-  { key: "brandAccent", label: "marca.accent.label", hint: t("marca.accent.hint") },
-  { key: "brandAccentLight", label: "marca.accentLight.label", hint: t("marca.accentLight.hint") },
-  { key: "brandAccentDeep", label: "marca.accentDeep.label", hint: t("marca.accentDeep.hint") },
+  { key: "brandBg", label: "marca.bg.label", hint: "marca.bg.hint" },
+  { key: "brandTitle", label: "marca.title.label", hint: "marca.title.hint" },
+  { key: "brandBody", label: "marca.body.label", hint: "marca.body.hint" },
+  { key: "brandMuted", label: "marca.muted.label", hint: "marca.muted.hint" },
+  { key: "brandAccent", label: "marca.accent.label", hint: "marca.accent.hint" },
+  { key: "brandAccentLight", label: "marca.accentLight.label", hint: "marca.accentLight.hint" },
+  { key: "brandAccentDeep", label: "marca.accentDeep.label", hint: "marca.accentDeep.hint" },
 ] as const;
 
 export const BRAND_KEYS = BRAND_FIELDS.map((f) => f.key);

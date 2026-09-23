@@ -4,6 +4,7 @@ import { ArrowClockwise, Check, Download } from "@strapi/icons";
 import { useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { AccentCard, GroupLabel, Hairline } from "../../components/ui";
 import { TEMPLATE_FIELDS, type DeckResult, type Slide } from "./types";
+import { useT } from "../../i18n";
 
 // Preview editable de carrusel/historia: los textos se modifican y se
 // re-renderiza con satori SIN volver a llamar IA (el fondo ya generado se
@@ -17,6 +18,7 @@ export default function DeckEditor({
   postDocumentId: string | null;
   onSaved: () => void;
 }) {
+  const t = useT();
   const { post } = useFetchClient();
   const { toggleNotification } = useNotification();
 
@@ -58,7 +60,7 @@ export default function DeckEditor({
       setPreviews((data as { previews: string[] }).previews);
       setDirty(false);
     } catch {
-      toggleNotification({ type: "danger", message: "No se pudo re-renderizar el preview." });
+      toggleNotification({ type: "danger", message: t("ss.deck.err.preview") });
     } finally {
       setRendering(false);
     }
@@ -99,10 +101,10 @@ export default function DeckEditor({
       if (caption) await navigator.clipboard?.writeText(caption).catch(() => {});
       toggleNotification({
         type: "success",
-        message: `${done} placas descargadas${caption ? " · caption copiado" : ""}. Si el navegador pregunta, permití "descargar varios archivos".`,
+        message: t("ss.deck.descargadas", { n: done }) + (caption ? t("ss.deck.captionCopiado") : "") + t("ss.deck.permiso"),
       });
     } catch {
-      toggleNotification({ type: "danger", message: "No se pudieron descargar las placas." });
+      toggleNotification({ type: "danger", message: t("ss.deck.err.descargar") });
     } finally {
       setTimeout(() => urls.forEach((u) => URL.revokeObjectURL(u)), 10_000);
       setDownloading(false);
@@ -124,11 +126,11 @@ export default function DeckEditor({
       void data;
       toggleNotification({
         type: "success",
-        message: isCarousel ? "Carrusel guardado en la nota y en Medios." : "Historia guardada en Medios.",
+        message: isCarousel ? t("ss.deck.ok.guardado") : "Historia guardada en Medios.",
       });
       onSaved();
     } catch (err) {
-      toggleNotification({ type: "danger", message: (err as Error).message || "Error al guardar." });
+      toggleNotification({ type: "danger", message: (err as Error).message || t("ss.deck.err.guardar") });
     } finally {
       setSaving(false);
     }
@@ -138,7 +140,7 @@ export default function DeckEditor({
     <Flex direction="column" alignItems="stretch" gap={4}>
       <AccentCard
         title={isCarousel ? `Carrusel — ${slides.length} placas` : "Historia — 1080×1920"}
-        description="Editá los textos y actualizá la vista previa (gratis, no llama a la IA). Cuando esté listo: descargá las placas para subirlas a Instagram, o guardalas en la nota."
+        description={t("ss.deck.ayuda")}
         accent="success"
         actions={
           <Button
@@ -221,7 +223,7 @@ export default function DeckEditor({
           {isCarousel ? (
             <>
               <Hairline />
-              <Field.Root hint="Caption para el feed de Instagram (con hashtags).">
+              <Field.Root hint={t("ss.deck.caption")}>
                 <Field.Label>Caption</Field.Label>
                 <Textarea
                   value={caption}
@@ -236,16 +238,16 @@ export default function DeckEditor({
 
           <Box background="neutral100" hasRadius padding={3}>
             <Typography variant="pi" textColor="neutral600">
-              <b>Descargar placas</b>: baja las imágenes en alta resolución a tu compu (y copia el caption) — listo para subir a Instagram a mano.
+              <b>{t("ss.deck.descargar")}</b>: {t("ss.deck.descargar.desc")}
               {"  ·  "}
-              <b>{isCarousel ? "Guardar en la nota" : "Guardar en Medios"}</b>: las sube a la Media Library
-              {isCarousel ? " y las adjunta a la nota (campo Social Cards + caption)" : ""}. No postea a Instagram.
+              <b>{isCarousel ? t("ss.deck.guardarEnNota") : t("ss.deck.guardarEnMedios")}</b>:{" "}
+              {isCarousel ? t("ss.deck.guardar.descNota") : t("ss.deck.guardar.descMedios")}
             </Typography>
           </Box>
 
           <Flex justifyContent="flex-end" gap={2} wrap="wrap">
             <Button size="L" startIcon={<Download />} loading={downloading} onClick={download}>
-              Descargar placas
+              {t("ss.deck.descargar")}
             </Button>
             <Button
               size="L"
@@ -255,12 +257,12 @@ export default function DeckEditor({
               disabled={isCarousel && !postDocumentId}
               onClick={save}
             >
-              {isCarousel ? "Guardar en la nota" : "Guardar en Medios"}
+              {isCarousel ? t("ss.deck.guardarEnNota") : t("ss.deck.guardarEnMedios")}
             </Button>
           </Flex>
           {isCarousel && !postDocumentId ? (
             <Typography variant="pi" textColor="neutral500" textAlign="right">
-              "Guardar en la nota" necesita una nota elegida en la fuente — pero "Descargar placas" funciona igual.
+              {t("ss.deck.necesitaNota")}
             </Typography>
           ) : null}
         </Flex>

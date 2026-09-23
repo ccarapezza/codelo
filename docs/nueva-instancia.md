@@ -39,6 +39,10 @@ del panel.
 Entrá a `/admin` y creá el primer usuario. Es el único paso que no se puede
 automatizar.
 
+El panel está en **castellano e inglés**: el selector está arriba a la derecha
+en el login, y también en tu perfil. El idioma se guarda por persona, así que
+cada quien elige el suyo.
+
 ## 3. El checklist es el mapa
 
 La home del panel tiene **Puesta en marcha**: lista sólo lo que falta, marca qué

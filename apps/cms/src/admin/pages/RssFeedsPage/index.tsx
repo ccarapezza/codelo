@@ -767,7 +767,7 @@ export default function RssFeedsPage() {
           <Dialog.Header>{t("rss.eliminarFeed")}</Dialog.Header>
           <Dialog.Body>
             <Typography>
-              ¿Eliminás el feed <strong>{deleteTarget?.name}</strong>? Esta acción no se puede deshacer.
+              {t("rss.borrar.pregunta", { nombre: deleteTarget?.name ?? "" })}
             </Typography>
           </Dialog.Body>
           <Dialog.Footer>

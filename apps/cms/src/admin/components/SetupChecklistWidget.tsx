@@ -14,6 +14,7 @@ import { CheckCircle, CrossCircle, WarningCircle } from "@strapi/icons";
 import { Widget, useFetchClient } from "@strapi/strapi/admin";
 import { NavLink } from "react-router-dom";
 import { useUncapHeight } from "../hooks/useUncapHeight";
+import { useT } from "../i18n";
 
 type SetupStatus = "ok" | "warn" | "missing";
 
@@ -41,15 +42,23 @@ const ICONO: Record<SetupStatus, React.ReactNode> = {
 };
 
 function cuando(iso: string | null): string {
+  const t = useT();
   if (!iso) return "nunca";
   const d = new Date(iso);
   const horas = (Date.now() - d.getTime()) / 36e5;
-  if (horas < 1) return "hace menos de una hora";
+  if (horas < 1) return t("setup.haceMenos");
   if (horas < 24) return `hace ${Math.floor(horas)} h`;
   return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 function Fila({ check }: { check: SetupCheck }) {
+  const t = useT();
+  // El servidor manda el texto ya escrito; acá se traduce POR ID. Los ids de
+  // los checks son estables (`openai-key`, `brand-name`…), así que no hay que
+  // cambiar el contrato de la API — y si un id no está en el catálogo, cae al
+  // texto del servidor, que es lo que se mostraba antes.
+  const etiqueta = t(`setup.check.${check.id}`, {}) || check.label;
+  const detalle = check.detail ? t(`setup.check.${check.id}.detalle`, {}) : "";
   const contenido = (
     <Flex gap={2} alignItems="flex-start" paddingTop={2} paddingBottom={2}>
       <Box paddingTop={1}>{ICONO[check.status]}</Box>
@@ -59,12 +68,12 @@ function Fila({ check }: { check: SetupCheck }) {
           fontWeight={check.status === "ok" ? "regular" : "bold"}
           textColor={check.status === "ok" ? "neutral600" : "neutral800"}
         >
-          {check.label}
+          {etiqueta === `setup.check.${check.id}` ? check.label : etiqueta}
         </Typography>
         {check.detail ? (
           <Box paddingTop={1}>
             <Typography variant="pi" textColor="neutral600">
-              {check.detail}
+              {detalle && detalle !== `setup.check.${check.id}.detalle` ? detalle : check.detail}
             </Typography>
           </Box>
         ) : null}
@@ -82,6 +91,7 @@ function Fila({ check }: { check: SetupCheck }) {
 }
 
 export default function SetupChecklistWidget() {
+  const t = useT();
   // Strapi le pone tope de alto al cuerpo de un widget y lo vuelve scrolleable:
   // una lista de pendientes cortada en el cuarto ítem no sirve de checklist.
   useUncapHeight();
@@ -105,24 +115,23 @@ export default function SetupChecklistWidget() {
     <Flex className="nib-widget-body" direction="column" alignItems="stretch" gap={2}>
       <Flex gap={2} alignItems="center" wrap="wrap">
         {data.ready ? (
-          <Badge backgroundColor="success100" textColor="success700">
-            listo para publicar
-          </Badge>
+          <Badge backgroundColor="success100" textColor="success700">{t("setup.listo")}</Badge>
         ) : (
           <Badge backgroundColor="danger100" textColor="danger700">
-            {bloqueantes.length} sin resolver
+            {t("setup.sinResolver", { n: bloqueantes.length })}
           </Badge>
         )}
         <Typography variant="pi" textColor="neutral600">
-          Fuentes: {cuando(data.lastRssRun)} · Agentes: {cuando(data.lastAgentRun)} ·{" "}
-          {data.publishedPosts} publicadas
+          {t("setup.resumen", {
+            fuentes: cuando(data.lastRssRun),
+            agentes: cuando(data.lastAgentRun),
+            publicadas: data.publishedPosts,
+          })}
         </Typography>
       </Flex>
 
       {faltan.length === 0 ? (
-        <Typography variant="pi" textColor="neutral600">
-          No falta nada. Los agentes pueden escribir y publicar.
-        </Typography>
+        <Typography variant="pi" textColor="neutral600">{t("setup.completo")}</Typography>
       ) : (
         <Box>
           {/* Sólo lo pendiente: una lista de 12 tildes verdes no dice nada. */}

@@ -101,6 +101,24 @@ con empates el orden queda a merced de cómo desempate el sort de V8.
 locale. Lo que el panel no esconde es sobre qué corre: el subtítulo del login
 lo dice y la pantalla de versión de Strapi queda intacta.
 
+**El panel está en castellano e inglés, y el castellano es la FUENTE.** Los
+textos viven en `src/admin/translations/{es,en}.json` y se leen con `useT()`.
+Las pantallas se pensaron y se escribieron en castellano —el tono, el voseo, las
+advertencias— y el inglés se redactó contra él: para cambiar un texto se cambia
+el castellano primero. `es.json` es además el respaldo, así que una clave que
+falte muestra español y no un hueco. `config.locales: ["es"]` en `app.tsx` es lo
+que habilita el selector; sin esa línea Strapi ofrece sólo inglés y el panel
+queda mezclado.
+
+⚠️ **`t()` devuelve la entrada tal cual si no es una clave conocida.** Eso es lo
+que permite que las tarjetas que agrega un proyecto (`admin/verticals.ts`) sigan
+escribiendo sus etiquetas como texto literal sin armar catálogos.
+
+⚠️ **Un `t()` fuera de alcance es pantalla en blanco, y nada lo detecta**:
+`tsconfig` excluye `src/admin/` y esbuild sólo transforma. Pasó de verdad, con
+`t()` sustituido dentro de constantes de MÓDULO. Si una constante de módulo
+necesita texto, guarda la CLAVE y se traduce al renderizar.
+
 **Los colores de las placas de redes están en la BASE, no en código.** Viven en
 `site-setting` y se editan en Sitio e integraciones → Identidad visual; el
 renderer los lee con `getRenderContext(strapi)`. En `verticals/brand.ts` quedan

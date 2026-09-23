@@ -36,7 +36,7 @@ export default function BackgroundPickerModal({
       <Modal.Content>
         <Modal.Header>
           <Typography variant="omega" fontWeight="bold">
-            {type === "video" ? "Clips de video generados" : "Fondos generados"} — AI Backgrounds
+            {type === "video" ? t("ss.fondos.clips") : "Fondos generados"} — AI Backgrounds
           </Typography>
         </Modal.Header>
         <Modal.Body>
@@ -47,8 +47,8 @@ export default function BackgroundPickerModal({
           ) : files.length === 0 ? (
             <EmptyState
               icon={<Images />}
-              title="Todavía no hay fondos generados"
-              description="Cuando generes contenido con IA, los fondos quedan guardados acá para reusarlos gratis."
+              title={t("ss.fondos.vacio")}
+              description={t("ss.fondos.vacioDesc")}
             />
           ) : (
             <Box

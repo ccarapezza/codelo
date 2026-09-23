@@ -4,6 +4,7 @@ import { ArrowClockwise, Check, Download } from "@strapi/icons";
 import { useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { AccentCard, GroupLabel } from "../../components/ui";
 import { TEMPLATE_FIELDS, type Slide, type StoryVideoResult } from "./types";
+import { useT } from "../../i18n";
 
 // Historia en formato video: la placa va sobreimpresa sobre el clip. Se editan
 // los textos de la placa y "Recomponer" reusa el clip ya generado ($0 de IA,
@@ -19,6 +20,7 @@ export default function StoryVideoEditor({
   onRecompose: (slide: Slide, clipFileId: number) => void;
   onSaved: (url: string | null) => void;
 }) {
+  const t = useT();
   const { post } = useFetchClient();
   const { toggleNotification } = useNotification();
 
@@ -52,7 +54,7 @@ export default function StoryVideoEditor({
     } catch (err) {
       toggleNotification({
         type: "danger",
-        message: (err as Error).message || "Error al guardar. Probá recomponer (es gratis).",
+        message: (err as Error).message || t("ss.story.err"),
       });
     } finally {
       setSaving(false);
@@ -62,7 +64,7 @@ export default function StoryVideoEditor({
   return (
     <AccentCard
       title={`Historia (video) — ${result.seconds}s · 1080×1920`}
-      description="Editá los textos de la placa y recomponé: reusa el clip ya generado, así que no vuelve a gastar IA (solo ffmpeg)."
+      description={t("ss.story.ayuda")}
       accent="success"
       actions={
         <Button
@@ -105,9 +107,7 @@ export default function StoryVideoEditor({
                   </Field.Root>
                 ))
               : null}
-            <Typography variant="pi" textColor="neutral500">
-              El clip quedó en AI Backgrounds — recomponer no vuelve a pagar IA.
-            </Typography>
+            <Typography variant="pi" textColor="neutral500">{t("ss.story.nota")}</Typography>
             <Flex justifyContent="flex-end" gap={2} marginTop={2} wrap="wrap">
               <Button
                 size="L"

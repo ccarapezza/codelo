@@ -108,7 +108,7 @@ export default function NoteEditorPage() {
         setSlugTouched(true); // en edición el slug ya existe: no autoseguir el título
         setFormReady(true);
       })
-      .catch(() => toggleNotification({ type: "danger", message: "No se pudo cargar la nota." }))
+      .catch(() => toggleNotification({ type: "danger", message: t("nota.err.cargar") }))
       .finally(() => setLoading(false));
   }, [editId, get, toggleNotification]);
 
@@ -135,9 +135,9 @@ export default function NoteEditorPage() {
       setDraft(d => ({ ...d, slug: slugFromTitle(d.title) }));
       setSlugTouched(false);
       setFormReady(true);
-      toggleNotification({ type: "success", message: "Nota generada. Revisá y ajustá abajo." });
+      toggleNotification({ type: "success", message: t("nota.ok.generada") });
     } catch {
-      toggleNotification({ type: "danger", message: "Falló la generación." });
+      toggleNotification({ type: "danger", message: t("nota.err.generar") });
     } finally {
       setGenerating(false);
     }
@@ -159,7 +159,7 @@ export default function NoteEditorPage() {
       }));
       toggleNotification({ type: "success", message: "Nota actualizada." });
     } catch {
-      toggleNotification({ type: "danger", message: "Falló el refinamiento." });
+      toggleNotification({ type: "danger", message: t("nota.err.refinar") });
     } finally {
       setRefining(false);
     }
@@ -180,7 +180,7 @@ export default function NoteEditorPage() {
       }));
       toggleNotification({ type: "success", message: "Imagen generada." });
     } catch {
-      toggleNotification({ type: "danger", message: "Falló la generación de imagen." });
+      toggleNotification({ type: "danger", message: t("nota.err.imagen") });
     } finally {
       setImageBusy(false);
     }
@@ -199,7 +199,7 @@ export default function NoteEditorPage() {
       }));
       toggleNotification({ type: "success", message: "Imagen subida." });
     } catch {
-      toggleNotification({ type: "danger", message: "No se pudo subir la imagen." });
+      toggleNotification({ type: "danger", message: t("nota.err.subir") });
     } finally {
       setUploading(false);
     }
@@ -210,13 +210,13 @@ export default function NoteEditorPage() {
 
   const handleSave = async (publish: boolean) => {
     if (!canSave) {
-      toggleNotification({ type: "warning", message: "Falta el título o el cuerpo." });
+      toggleNotification({ type: "warning", message: t("nota.err.faltan") });
       return;
     }
     if (publish && !hasCover) {
       toggleNotification({
         type: "warning",
-        message: "Para publicar, la nota necesita una imagen.",
+        message: t("nota.err.sinImagen"),
       });
       return;
     }
@@ -255,7 +255,7 @@ export default function NoteEditorPage() {
     } catch (err) {
       const msg =
         (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error
-          ?.message ?? "No se pudo guardar.";
+          ?.message ?? t("nota.err.guardar");
       toggleNotification({ type: "danger", message: msg });
     } finally {
       setSaving(false);
@@ -266,7 +266,7 @@ export default function NoteEditorPage() {
     return (
       <PageContainer>
         <Flex justifyContent="center" padding={10}>
-          <Loader>Cargando la nota…</Loader>
+          <Loader>{t("nota.cargando")}</Loader>
         </Flex>
       </PageContainer>
     );
@@ -279,8 +279,8 @@ export default function NoteEditorPage() {
         title={isEdit ? "Editar nota" : "Nueva nota"}
         subtitle={
           isEdit
-            ? "Modificá el contenido, las etiquetas y la imagen. Si la nota está publicada, los cambios salen a la web al guardar."
-            : "Creá una nota con ayuda de la IA o escribila a mano."
+            ? t("nota.sub.editar")
+            : t("nota.sub.crear")
         }
         accent="primary"
         actions={
@@ -298,15 +298,15 @@ export default function NoteEditorPage() {
               active={mode === "ia"}
               onClick={() => setMode("ia")}
               icon={<Magic />}
-              title="Con IA"
-              text="Escribí un pedido y el modelo redacta el borrador. Después lo editás."
+              title={t("nota.conIA")}
+              text={t("nota.conIA.desc")}
             />
             <ModeCard
               active={mode === "manual"}
               onClick={goManual}
               icon={<Pencil />}
               title="A mano"
-              text="Abrí el formulario vacío y escribí la nota vos."
+              text={t("nota.aMano.desc")}
             />
           </Flex>
         </Box>
@@ -315,12 +315,12 @@ export default function NoteEditorPage() {
       {/* Paso IA: prompt. Sólo en creación-IA y antes de generar. */}
       {!isEdit && mode === "ia" && !formReady ? (
         <Box marginBottom={6}>
-          <AccentCard title="Pedido a la IA" icon={<Sparkle />} accent="primary">
-            <Field.Root hint="Describí la nota que querés. Ej: 'Qué cambió esta semana en el sector y a quién afecta'.">
+          <AccentCard title={t("nota.pedido.label")} icon={<Sparkle />} accent="primary">
+            <Field.Root hint={t("nota.pedido.hint")}>
               <Field.Label>Pedido</Field.Label>
               <Textarea
                 rows={4}
-                placeholder="Escribí el pedido de la nota…"
+                placeholder={t("nota.pedido.placeholder")}
                 value={prompt}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setPrompt(e.target.value)}
                 disabled={generating}
@@ -354,7 +354,7 @@ export default function NoteEditorPage() {
 
       {generating && !formReady ? (
         <Flex justifyContent="center" padding={8}>
-          <Loader>Redactando la nota…</Loader>
+          <Loader>{t("nota.redactando")}</Loader>
         </Flex>
       ) : null}
 
@@ -391,11 +391,11 @@ export default function NoteEditorPage() {
               <Typography variant="omega" textColor="neutral600">
                 {isEdit
                   ? wasPublished
-                    ? "La nota está publicada: al guardar, los cambios salen a la web."
-                    : "Borrador. Guardá los cambios; publicás desde Notas cuando quieras."
+                    ? t("nota.estado.publicada")
+                    : t("nota.estado.borrador")
                   : hasCover
-                    ? "Guardá como borrador para revisar, o publicá directo."
-                    : "Generá o subí una imagen para poder publicar."}
+                    ? t("nota.estado.nueva")
+                    : t("nota.estado.sinImagen")}
               </Typography>
               <Flex gap={2}>
                 {isEdit ? (

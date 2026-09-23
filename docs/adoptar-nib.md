@@ -51,7 +51,7 @@ Lo que el motor le pide al proyecto, todo con default vacío:
 | `verticals/setting-fields.ts` | Ajustes del sitio propios (claves que el controller acepta) |
 | `verticals/rss-scope.ts` | Qué ítems del pool RSS son del tema |
 | `verticals/brand.ts` | Tipografías de las placas y el logo por defecto. **Los colores ya no: van en el panel** (Sitio e integraciones → Identidad visual) |
-| `admin/verticals.ts` | Widgets, menú, rutas, identidad visual del panel (pisa la de Nib) y las tarjetas propias de las dos pantallas de configuración (`promptCards`, `settingCards`) |
+| `admin/verticals.ts` | Widgets, menú, rutas, identidad visual del panel (pisa la de Nib) y las tarjetas propias de las dos pantallas de configuración (`promptCards`, `settingCards`). Las etiquetas de esas tarjetas van como texto literal: `t()` devuelve tal cual lo que no sea una clave conocida, así que no hace falta armar catálogos. Para traducirlas, se declaran claves `nib.*` en `translations` de la costura |
 | `lib/site.ts` | Nombre, dominio, idiomas y navegación del sitio |
 | `app/[lang]/theme.css` | Los colores del sitio |
 | `components/vertical/index.ts` | Cuatro ranuras opcionales de la web |

@@ -43,8 +43,8 @@ type Discovered = {
 
 const ORIGEN: Record<Discovered["via"], string> = {
   feedly: "directorio",
-  autodiscovery: t("rss.desc.declarado"),
-  sonda: t("rss.desc.sondeado"),
+  autodiscovery: "rss.desc.declarado",
+  sonda: "rss.desc.sondeado",
 };
 
 /** Verde sólo con evidencia fuerte: el color es una recomendación. */
@@ -113,7 +113,7 @@ function Resultado({ feed, onAdded }: { feed: Discovered; onAdded: () => void })
             ) : null}
             {cadencia ? <Badge>{cadencia}</Badge> : null}
             {feed.language ? <Badge>{feed.language}</Badge> : null}
-            <Badge>{ORIGEN[feed.via]}</Badge>
+            <Badge>{t(ORIGEN[feed.via])}</Badge>
           </Flex>
 
           {feed.samples.length > 0 ? (
@@ -221,9 +221,9 @@ export default function DiscoverModal({
                     onChange={(v: string) => setLang(v ?? "")}
                   >
                     <SingleSelectOption value="">Cualquiera</SingleSelectOption>
-                    <SingleSelectOption value="es">Español</SingleSelectOption>
-                    <SingleSelectOption value="en">Inglés</SingleSelectOption>
-                    <SingleSelectOption value="pt">Portugués</SingleSelectOption>
+                    <SingleSelectOption value="es">{t("rss.idioma.es")}</SingleSelectOption>
+                    <SingleSelectOption value="en">{t("rss.idioma.en")}</SingleSelectOption>
+                    <SingleSelectOption value="pt">{t("rss.idioma.pt")}</SingleSelectOption>
                   </SingleSelect>
                 </Box>
                 <Button

@@ -137,6 +137,7 @@ function convertTime(time: string, fromTz: string, toTz: string): string | null 
 }
 
 function formatScheduleSummary(s: ScheduleEntry): string {
+  const t = useT();
   const order: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
   const sorted = [...(s.days ?? [])].sort(
     (a, b) => order.indexOf(a as DayKey) - order.indexOf(b as DayKey),
@@ -146,7 +147,7 @@ function formatScheduleSummary(s: ScheduleEntry): string {
   };
   const daysStr =
     sorted.length === 0
-      ? "Todos los días"
+      ? t("ag.todosLosDias")
       : sorted.map((d) => dayMap[d as DayKey]).join("");
   const tz = s.timezone || DEFAULT_SCHEDULE_TZ;
   const local = tz !== BROWSER_TZ ? convertTime(s.time, tz, BROWSER_TZ) : null;
@@ -283,6 +284,7 @@ function RecurringScheduleEditor({
   schedules: ScheduleEntry[];
   onChange: (s: ScheduleEntry[]) => void;
 }) {
+  const t = useT();
   const addEntry = () => onChange([...schedules, EMPTY_SCHEDULE()]);
   const removeEntry = (idx: number) => onChange(schedules.filter((_, i) => i !== idx));
 
@@ -308,9 +310,7 @@ function RecurringScheduleEditor({
   return (
     <Box>
       <Flex justifyContent="space-between" alignItems="center" paddingBottom={2}>
-        <Typography variant="sigma" textColor="neutral600">
-          Horarios de ejecución recurrentes
-        </Typography>
+        <Typography variant="sigma" textColor="neutral600">{t("ag.horarios.titulo")}</Typography>
         <Button size="S" startIcon={<Plus />} variant="tertiary" onClick={addEntry}>
           Agregar horario
         </Button>
@@ -326,9 +326,7 @@ function RecurringScheduleEditor({
           borderRadius="4px"
           hasRadius
         >
-          <Typography textColor="neutral500" textAlign="center" variant="omega">
-            Sin horarios configurados. Agregá uno para que el agente se ejecute automáticamente.
-          </Typography>
+          <Typography textColor="neutral500" textAlign="center" variant="omega">{t("ag.horarios.vacio")}</Typography>
         </Box>
       ) : (
         <Flex direction="column" alignItems="stretch" gap={3}>
@@ -347,9 +345,7 @@ function RecurringScheduleEditor({
                 <Flex direction="column" alignItems="stretch" gap={3} style={{ flex: 1 }}>
                   {/* Days row */}
                   <Box>
-                    <Typography variant="pi" textColor="neutral600">
-                      Días
-                    </Typography>
+                    <Typography variant="pi" textColor="neutral600">{t("ag.dias")}</Typography>
                     <Flex gap={1} marginTop={1} alignItems="center">
                       <button
                         type="button"
@@ -423,7 +419,7 @@ function RecurringScheduleEditor({
                           </Box>
                           <Box style={{ width: 150 }}>
                             <Field.Root>
-                              <Field.Label>Notas por ejecución</Field.Label>
+                              <Field.Label>{t("ag.notasPorEjecucion")}</Field.Label>
                               <NumberInput
                                 value={s.notesCount}
                                 onValueChange={(v: number | undefined) =>
@@ -441,7 +437,7 @@ function RecurringScheduleEditor({
                               aria-label="Activar horario"
                             />
                             <Typography variant="pi" textColor="neutral500">
-                              {s.enabled ? "Activo" : "Inactivo"}
+                              {s.enabled ? t("ag.activo") : t("ag.inactivo")}
                             </Typography>
                           </Flex>
                         </Flex>
@@ -508,11 +504,11 @@ function AgentFormModal({
   const handleSave = async () => {
     const isImageGen = form.role === "image-generator";
     if (!form.name.trim()) {
-      toggleNotification({ type: "warning", message: "El nombre es obligatorio." });
+      toggleNotification({ type: "warning", message: t("ag.err.nombre") });
       return;
     }
     if (!isImageGen && !form.instructions.trim()) {
-      toggleNotification({ type: "warning", message: "Las instrucciones son obligatorias." });
+      toggleNotification({ type: "warning", message: t("ag.err.instrucciones") });
       return;
     }
 
@@ -553,7 +549,7 @@ function AgentFormModal({
       onSaved();
       onClose();
     } catch {
-      toggleNotification({ type: "danger", message: "Ocurrió un error al guardar." });
+      toggleNotification({ type: "danger", message: t("ag.err.guardar") });
     } finally {
       setSaving(false);
     }
@@ -562,12 +558,12 @@ function AgentFormModal({
   const instructionsLabel =
     form.role === "director"
       ? "Instrucciones editoriales del Director"
-      : "Tono y estilo del Redactor";
+      : t("ag.tono.titulo");
 
   const instructionsHint =
     form.role === "director"
-      ? "Lineamientos que el Director aplicará al revisar y publicar borradores."
-      : "Describí la voz, el estilo y la personalidad del redactor.";
+      ? t("ag.director.hint")
+      : t("ag.redactor.hint");
 
   return (
     <Modal.Root open={open} onOpenChange={(v: boolean) => !v && onClose()}>
@@ -610,13 +606,13 @@ function AgentFormModal({
                 required
                 hint={
                   form.role === "director"
-                    ? "El Director revisa los borradores generados por los Redactores y los publica."
+                    ? t("ag.rol.director")
                     : form.role === "image-generator"
-                    ? "El Generador de imágenes provee configuración para generar portadas con IA."
-                    : "El Redactor genera artículos en borrador según su tema y estilo."
+                    ? t("ag.rol.imagen")
+                    : t("ag.rol.redactor")
                 }
               >
-                <Field.Label>Tipo de agente</Field.Label>
+                <Field.Label>{t("ag.tipo")}</Field.Label>
                 <SingleSelect
                   value={form.role}
                   onChange={(val: string | number) =>
@@ -634,17 +630,15 @@ function AgentFormModal({
                       {r.label}
                     </SingleSelectOption>
                   ))}
-                  <SingleSelectOption value="image-generator" startIcon={<Magic />}>
-                    Generador de imágenes
-                  </SingleSelectOption>
+                  <SingleSelectOption value="image-generator" startIcon={<Magic />}>{t("ag.generadorImagenes")}</SingleSelectOption>
                 </SingleSelect>
                 <Field.Hint />
               </Field.Root>
 
-              <Field.Root required hint="Este nombre aparecerá como Autor en los artículos generados.">
+              <Field.Root required hint={t("ag.nombre.hint")}>
                 <Field.Label>Nombre del agente / Autor</Field.Label>
                 <TextInput
-                  placeholder="Ej: Lucas Pérez"
+                  placeholder={t("ag.nombre.placeholder")}
                   value={form.name}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     set("name", e.target.value)
@@ -654,11 +648,11 @@ function AgentFormModal({
               </Field.Root>
 
               {form.role === "redactor" ? (
-                <Field.Root hint="Definí el área temática que cubrirá este redactor. Cuanto más específico, mejor.">
+                <Field.Root hint={t("ag.tema.hint")}>
                   <Field.Label>Tema del redactor</Field.Label>
                   <Textarea
                     rows={4}
-                    placeholder="Palabras clave del beat, separadas por espacios. Ej: logística transporte flota aduana depósito"
+                    placeholder={t("ag.tema.placeholder")}
                     value={form.topic}
                     onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                       set("topic", e.target.value)
@@ -686,7 +680,7 @@ function AgentFormModal({
                     <Switch
                       checked={form.requireNewsContext}
                       onCheckedChange={(v: boolean) => set("requireNewsContext", v)}
-                      aria-label="Exigir contexto de noticias"
+                      aria-label={t("ag.exigirContexto")}
                     />
                   </Flex>
                 </Box>
@@ -695,7 +689,7 @@ function AgentFormModal({
               {form.role === "image-generator" ? (
                 <>
                   <Field.Root required>
-                    <Field.Label>Tamaño de imagen</Field.Label>
+                    <Field.Label>{t("ag.tamanoImagen")}</Field.Label>
                     <SingleSelect
                       value={form.imageSize}
                       onChange={(val: string | number) => set("imageSize", String(val))}
@@ -705,7 +699,7 @@ function AgentFormModal({
                       <SingleSelectOption value="1024x1536">1024×1536 (portrait)</SingleSelectOption>
                       <SingleSelectOption value="1792x1024">1792×1024 (wide)</SingleSelectOption>
                       <SingleSelectOption value="1024x1792">1024×1792 (tall)</SingleSelectOption>
-                      <SingleSelectOption value="512x512">512×512 (pequeña)</SingleSelectOption>
+                      <SingleSelectOption value="512x512">{t("ag.tamano.512")}</SingleSelectOption>
                     </SingleSelect>
                   </Field.Root>
 
@@ -733,9 +727,7 @@ function AgentFormModal({
                       borderRadius="4px"
                       hasRadius
                     >
-                      <Typography variant="pi" textColor="neutral600" fontWeight="bold">
-                        Costo estimado por imagen
-                      </Typography>
+                      <Typography variant="pi" textColor="neutral600" fontWeight="bold">{t("ag.costoImagen")}</Typography>
                       <Flex gap={2} marginTop={2} style={{ flexWrap: "wrap" }}>
                         {QUALITY_OPTIONS.map(({ value, label, model }) => {
                           const price = IMAGE_PRICING[form.imageSize]?.[value];
@@ -768,9 +760,7 @@ function AgentFormModal({
                         })}
                       </Flex>
                       <Box marginTop={2}>
-                        <Typography variant="pi" textColor="neutral400">
-                          * Precios aprox. en USD. El modelo de imagen se configura en Site Settings. La calidad y estos precios aplican solo a modelos OpenAI; con Nano Banana (Gemini) la calidad se ignora, el tamaño se mapea a aspect ratio y el costo es ~$0.039–0.134 por imagen.
-                        </Typography>
+                        <Typography variant="pi" textColor="neutral400">{t("ag.costoImagen.nota")}</Typography>
                       </Box>
                     </Box>
                   ) : null}
@@ -792,9 +782,7 @@ function AgentFormModal({
                       Agente activo
                     </Typography>
                     <Box>
-                      <Typography variant="pi" textColor="neutral500">
-                        Si está desactivado, el cron no lo ejecutará.
-                      </Typography>
+                      <Typography variant="pi" textColor="neutral500">{t("ag.habilitado.hint")}</Typography>
                     </Box>
                   </Box>
                   <Switch
@@ -809,11 +797,11 @@ function AgentFormModal({
             {/* RIGHT COLUMN — prompt textarea + (optional) schedules */}
             <Flex direction="column" alignItems="stretch" gap={4} style={{ minWidth: 0 }}>
               {form.role === "image-generator" ? (
-                <Field.Root hint="Instrucciones de estilo visual para el modelo de texto que genera el prompt de imagen. Cuanto más específico, más coherentes serán las portadas. Si está vacío se usan las instrucciones por defecto.">
-                  <Field.Label>Instrucciones de estilo visual</Field.Label>
+                <Field.Root hint={t("ag.estiloVisual.hint")}>
+                  <Field.Label>{t("ag.estiloVisual.label")}</Field.Label>
                   <Textarea
                     rows={18}
-                    placeholder={`Ej: Prefer botanical plate illustrations over photographs for this beat. Warm ochre inks on cream stock, herbarium-sheet layout. No consumption imagery, no people, no faces.`}
+                    placeholder={t("ag.estiloVisual.placeholder")}
                     value={form.imagePromptTemplate}
                     onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                       set("imagePromptTemplate", e.target.value)
@@ -829,8 +817,8 @@ function AgentFormModal({
                       rows={form.role === "redactor" ? 10 : 14}
                       placeholder={
                         form.role === "director"
-                          ? "Ej: Asegurate de que los títulos sean atractivos, el contenido sea preciso y la redacción sea en español rioplatense..."
-                          : "Ej: Escribí en primera persona, con un tono cercano y didáctico, para lectores del sector..."
+                          ? t("ag.director.placeholder")
+                          : t("ag.redactor.placeholder")
                       }
                       value={form.instructions}
                       onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
@@ -946,7 +934,7 @@ function AgentItem({
                 {agent.imageQuality ?? "low"}
               </Badge>
               <Typography variant="pi" textColor="neutral400">
-                {agent.imagePromptTemplate ? "Prompt personalizado" : "Prompt por defecto"}
+                {agent.imagePromptTemplate ? "Prompt personalizado" : t("ag.promptDefecto")}
               </Typography>
             </Flex>
           ) : (
@@ -960,9 +948,7 @@ function AgentItem({
                   ))}
                 </Flex>
               ) : (
-                <Typography variant="pi" textColor="neutral400">
-                  Sin horarios activos
-                </Typography>
+                <Typography variant="pi" textColor="neutral400">{t("ag.sinHorarios")}</Typography>
               )}
               {agent.lastRunAt ? (
                 <Box marginTop={1}>
@@ -1038,6 +1024,7 @@ function RoleSection({
   onCreate: () => void;
   children: React.ReactNode;
 }) {
+  const t = useT();
   const accentBg =
     accent === "primary"
       ? "primary100"
@@ -1097,7 +1084,7 @@ function RoleSection({
             </Box>
           </Flex>
           {canCreate ? (
-            <IconButton label={`Crear ${title}`} variant="tertiary" onClick={onCreate}>
+            <IconButton label={t("ag.crear", { que: title })} variant="tertiary" onClick={onCreate}>
               <Plus />
             </IconButton>
           ) : null}
@@ -1197,7 +1184,7 @@ export default function AgentsPage() {
       const { data } = await get<{ results: Agent[] }>(LIST_API);
       setAgents(data.results ?? []);
     } catch {
-      toggleNotification({ type: "danger", message: "No se pudieron cargar los agentes." });
+      toggleNotification({ type: "danger", message: t("ag.err.cargar") });
     } finally {
       setLoading(false);
     }
@@ -1216,7 +1203,7 @@ export default function AgentsPage() {
       setDeleteTarget(null);
       loadAgents();
     } catch {
-      toggleNotification({ type: "danger", message: "No se pudo eliminar el agente." });
+      toggleNotification({ type: "danger", message: t("ag.err.eliminar") });
     } finally {
       setDeleting(false);
     }
@@ -1266,7 +1253,7 @@ export default function AgentsPage() {
       setRunNowTarget(null);
       loadAgents();
     } catch {
-      toggleNotification({ type: "danger", message: "Error al ejecutar el agente." });
+      toggleNotification({ type: "danger", message: t("ag.err.ejecutar") });
     } finally {
       setRunning(false);
     }
@@ -1291,12 +1278,12 @@ export default function AgentsPage() {
         message:
           data.scheduled > 0
             ? `Traduciendo ${data.scheduled} nota${data.scheduled !== 1 ? "s" : ""} al inglés en segundo plano.`
-            : "Todas las notas publicadas ya están traducidas.",
+            : t("ag.trad.alDia"),
       });
     } catch {
       toggleNotification({
         type: "danger",
-        message: "No se pudo iniciar la traducción.",
+        message: t("ag.err.traducir"),
       });
     } finally {
       setBackfilling(false);
@@ -1323,7 +1310,7 @@ export default function AgentsPage() {
       <PageHeader
         icon={<Magic width="1.4rem" height="1.4rem" />}
         title="AI Agents"
-        subtitle="Gestioná los agentes que generan y publican artículos automáticamente."
+        subtitle={t("ag.subtitulo")}
         actions={
           <Flex gap={2}>
             {/* Audit ya no está en el menú lateral; este es su único acceso visible. */}
@@ -1335,11 +1322,9 @@ export default function AgentsPage() {
               loading={backfilling}
               onClick={handleBackfillTranslations}
             >
-              Traducir faltantes
+              {t("ag.traducirFaltantes")}
             </Button>
-            <Button startIcon={<PlusCircle />} onClick={openCreate}>
-              Nuevo agente
-            </Button>
+            <Button startIcon={<PlusCircle />} onClick={openCreate}>{t("ag.nuevo")}</Button>
           </Flex>
         }
       />
@@ -1361,10 +1346,10 @@ export default function AgentsPage() {
           <RoleSection
             icon={<Magic aria-hidden />}
             title="Director"
-            description="Revisa los borradores generados por los Redactores y publica las notas finales."
+            description={t("ag.director.desc")}
             accent="primary"
             count={director ? 1 : 0}
-            countLabel="de 1 configurado"
+            countLabel={t("ag.de1Configurado")}
             canCreate={!director}
             onCreate={openCreate}
           >
@@ -1380,8 +1365,8 @@ export default function AgentsPage() {
             ) : (
               <EmptySectionState
                 icon={<Magic aria-hidden />}
-                message="Sin Director configurado. Sin él, los borradores no se publicarán automáticamente."
-                actionLabel="Crear Director"
+                message={t("ag.director.vacio")}
+                actionLabel={t("ag.crear", { que: t("ag.director") })}
                 onAction={openCreate}
               />
             )}
@@ -1390,11 +1375,11 @@ export default function AgentsPage() {
           {/* Image Generator */}
           <RoleSection
             icon={<Magic aria-hidden />}
-            title="Generador de imágenes"
-            description="Provee la configuración para generar portadas con IA. Sin él, las notas se publicarán sin imagen."
+            title={t("ag.generadorImagenes")}
+            description={t("ag.imagen.desc")}
             accent="warning"
             count={imageGenerator ? 1 : 0}
-            countLabel="de 1 configurado"
+            countLabel={t("ag.de1Configurado")}
             canCreate={!imageGenerator}
             onCreate={openCreate}
           >
@@ -1410,8 +1395,8 @@ export default function AgentsPage() {
             ) : (
               <EmptySectionState
                 icon={<Magic aria-hidden />}
-                message="Sin Generador de imágenes. El botón de portada del Content Manager quedará deshabilitado."
-                actionLabel="Crear Generador"
+                message={t("ag.imagen.vacio")}
+                actionLabel={t("ag.crear", { que: t("ag.generadorImagenes") })}
                 onAction={openCreate}
               />
             )}
@@ -1420,11 +1405,11 @@ export default function AgentsPage() {
           {/* Redactors */}
           <RoleSection
             icon={<Feather aria-hidden />}
-            title="Redactores"
-            description="Cada Redactor genera artículos en borrador sobre su tema específico, con su propio tono y estilo."
+            title={t("ag.redactores")}
+            description={t("ag.redactores.desc")}
             accent="success"
             count={redactors.length}
-            countLabel={`Redactor${redactors.length !== 1 ? "es" : ""} configurado${redactors.length !== 1 ? "s" : ""}`}
+            countLabel={t("ag.redactoresConfigurados", { n: redactors.length })}
             canCreate
             onCreate={openCreate}
           >
@@ -1445,8 +1430,8 @@ export default function AgentsPage() {
             ) : (
               <EmptySectionState
                 icon={<Feather aria-hidden />}
-                message="Sin Redactores configurados. Agregá al menos uno para empezar a generar artículos."
-                actionLabel="Crear Redactor"
+                message={t("ag.redactores.vacio")}
+                actionLabel={t("ag.crear", { que: t("ag.redactor") })}
                 onAction={openCreate}
               />
             )}
@@ -1501,8 +1486,8 @@ export default function AgentsPage() {
             <Flex direction="column" gap={4} padding={2}>
               <Typography textAlign="center" textColor="neutral600">
                 {runNowTarget?.role === "redactor"
-                  ? "¿Cuántas notas generar?"
-                  : "¿Cuántos borradores revisar y publicar?"}
+                  ? t("ag.cuantasNotas")
+                  : t("ag.cuantosBorradores")}
               </Typography>
               <Flex justifyContent="center">
                 <Box style={{ width: 160 }}>

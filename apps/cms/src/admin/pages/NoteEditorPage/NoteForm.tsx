@@ -107,7 +107,7 @@ export function NoteForm({
             />
           </Field.Root>
 
-          <Field.Root hint="Se usa en la URL de la nota. Se genera solo del título; editalo si querés.">
+          <Field.Root hint={t("nota.slug.hint")}>
             <Field.Label>Slug</Field.Label>
             <TextInput
               value={draft.slug}
@@ -142,12 +142,12 @@ export function NoteForm({
             <Field.Hint />
           </Field.Root>
 
-          <Field.Root hint="Definen en qué sección del sitio aparece la nota.">
+          <Field.Root hint={t("nota.tags.hint")}>
             <Field.Label>Etiquetas</Field.Label>
             <MultiSelect
               value={draft.tags.map(String)}
               onChange={(vals: string[]) => set("tags", vals.map(Number))}
-              placeholder="Elegí una o más…"
+              placeholder={t("nota.tags.placeholder")}
               withTags
             >
               {tagOptions.map(t => (
@@ -163,12 +163,12 @@ export function NoteForm({
       </AccentCard>
 
       {/* Refinar con IA — disponible también en modo manual. */}
-      <AccentCard title="Mejorar con IA" icon={<ArrowClockwise />} accent="warning">
-        <Field.Root hint="Pedí un cambio sobre lo que hay arriba. Ej: 'Más corta', 'Tono más formal', 'Agregá un cierre'.">
-          <Field.Label>Instrucción</Field.Label>
+      <AccentCard title={t("nota.mejorar")} icon={<ArrowClockwise />} accent="warning">
+        <Field.Root hint={t("nota.mejorar.hint")}>
+          <Field.Label>{t("nota.instruccion")}</Field.Label>
           <Textarea
             rows={2}
-            placeholder="¿Qué querés que la IA cambie?"
+            placeholder={t("nota.instruccion.placeholder")}
             value={instruction}
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInstruction(e.target.value)}
             disabled={refining}
@@ -180,11 +180,9 @@ export function NoteForm({
             <Switch
               checked={refineWeb}
               onCheckedChange={(v: boolean) => setRefineWeb(v)}
-              aria-label="Buscar fuentes al refinar"
+              aria-label={t("nota.buscar.label")}
             />
-            <Typography variant="omega" textColor="neutral700">
-              Buscar fuentes (si el cambio necesita datos nuevos)
-            </Typography>
+            <Typography variant="omega" textColor="neutral700">{t("nota.buscar.hint")}</Typography>
           </Flex>
           <Button
             variant="secondary"
@@ -204,7 +202,7 @@ export function NoteForm({
       </AccentCard>
 
       {/* Imagen de portada: generar por IA o subir una propia. */}
-      <AccentCard title="Imagen de portada" icon={<Images />} accent="success">
+      <AccentCard title={t("nota.imagen.titulo")} icon={<Images />} accent="success">
         {draft.cover?.url ? (
           <Box marginBottom={4}>
             <img
@@ -226,11 +224,11 @@ export function NoteForm({
           </Box>
         ) : null}
 
-        <Field.Root hint="Opcional. Si lo dejás vacío, la IA elige la escena con el agente configurado.">
-          <Field.Label>Prompt para generar (opcional)</Field.Label>
+        <Field.Root hint={t("nota.imagen.hint")}>
+          <Field.Label>{t("nota.imagen.label")}</Field.Label>
           <Textarea
             rows={2}
-            placeholder="Describí la imagen, o dejalo vacío…"
+            placeholder={t("nota.imagen.placeholder")}
             value={customImagePrompt}
             onChange={e => setCustomImagePrompt(e.target.value)}
             disabled={imageBusy}
@@ -246,7 +244,7 @@ export function NoteForm({
             disabled={imageBusy || uploading || !draft.title.trim()}
             onClick={onGenerateImage}
           >
-            {draft.cover ? "Regenerar con IA" : "Generar con IA"}
+            {draft.cover ? t("nota.imagen.regenerar") : t("nota.imagen.generar")}
           </Button>
           <Button
             variant="tertiary"
@@ -254,9 +252,7 @@ export function NoteForm({
             loading={uploading}
             disabled={imageBusy || uploading}
             onClick={() => fileRef.current?.click()}
-          >
-            Subir una imagen
-          </Button>
+          >{t("nota.imagen.subir")}</Button>
           <input
             ref={fileRef}
             type="file"

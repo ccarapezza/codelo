@@ -59,7 +59,7 @@ export default function NewsGeneratorPage() {
       setSources(Array.isArray(data.sources) ? data.sources : []);
       toggleNotification({ type: "success", message: "Nota generada." });
     } catch {
-      toggleNotification({ type: "danger", message: "Falló la generación." });
+      toggleNotification({ type: "danger", message: t("gen.err.generar") });
     } finally {
       setGenerating(false);
     }
@@ -74,7 +74,7 @@ export default function NewsGeneratorPage() {
       setInstruction("");
       toggleNotification({ type: "success", message: "Nota actualizada." });
     } catch {
-      toggleNotification({ type: "danger", message: "Falló el refinamiento." });
+      toggleNotification({ type: "danger", message: t("gen.err.refinar") });
     } finally {
       setRefining(false);
     }
@@ -92,7 +92,7 @@ export default function NewsGeneratorPage() {
       setCover({ mediaId: data.mediaId, url: data.url, prompt: data.prompt });
       toggleNotification({ type: "success", message: "Imagen generada." });
     } catch {
-      toggleNotification({ type: "danger", message: "Falló la generación de imagen." });
+      toggleNotification({ type: "danger", message: t("gen.err.imagen") });
     } finally {
       setImageBusy(false);
     }
@@ -120,7 +120,7 @@ export default function NewsGeneratorPage() {
       // Notas es la pantalla curada donde cualquier rol gestiona la nota.
       navigate("/notas");
     } catch {
-      toggleNotification({ type: "danger", message: "Falló el guardado." });
+      toggleNotification({ type: "danger", message: t("gen.err.guardar") });
     } finally {
       setSaving(false);
     }
@@ -138,19 +138,19 @@ export default function NewsGeneratorPage() {
     <PageContainer>
       <PageHeader
         icon={<Magic />}
-        title="Generador de notas"
-        subtitle="Generá una nota a demanda con un prompt. El modelo busca fuentes en internet, vos editás, refinás y publicás."
+        title={t("gen.titulo")}
+        subtitle={t("gen.subtitulo")}
         accent="primary"
       />
 
       {/* 1 — Prompt */}
       <Box marginBottom={6}>
         <AccentCard title="1 · Prompt" icon={<Feather />} accent="primary">
-          <Field.Root hint="Describí la nota que querés. Ej: 'Resumen de las novedades de la semana y por qué importan'.">
+          <Field.Root hint={t("gen.pedido.hint")}>
             <Field.Label>Pedido</Field.Label>
             <Textarea
               rows={4}
-              placeholder="Escribí el pedido de la nota…"
+              placeholder={t("gen.pedido.placeholder")}
               value={prompt}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setPrompt(e.target.value)}
               disabled={generating}
@@ -183,7 +183,7 @@ export default function NewsGeneratorPage() {
 
       {generating && !note ? (
         <Flex justifyContent="center" padding={8}>
-          <Loader>Generando la nota…</Loader>
+          <Loader>{t("gen.generando")}</Loader>
         </Flex>
       ) : null}
 
@@ -192,13 +192,11 @@ export default function NewsGeneratorPage() {
           {/* 2 — Preview + edición */}
           <Box marginBottom={6}>
             <AccentCard
-              title="2 · Preview y edición"
+              title={t("gen.paso2")}
               icon={<Pencil />}
               accent="secondary"
               actions={
-                <Button variant="tertiary" onClick={handleReset} disabled={saving}>
-                  Empezar de nuevo
-                </Button>
+                <Button variant="tertiary" onClick={handleReset} disabled={saving}>{t("gen.empezarDeNuevo")}</Button>
               }
             >
               <Flex direction="column" gap={4} alignItems="stretch">
@@ -221,7 +219,7 @@ export default function NewsGeneratorPage() {
                     }
                   />
                 </Field.Root>
-                <Field.Root hint="Cuerpo en Markdown. Editá libremente.">
+                <Field.Root hint={t("gen.cuerpo.hint")}>
                   <Field.Label>Cuerpo (Markdown)</Field.Label>
                   <Textarea
                     rows={18}
@@ -257,15 +255,15 @@ export default function NewsGeneratorPage() {
           {/* 3 — Refinar con prompt */}
           <Box marginBottom={6}>
             <AccentCard
-              title="3 · Refinar con un prompt"
+              title={t("gen.paso3")}
               icon={<ArrowClockwise />}
               accent="warning"
             >
-              <Field.Root hint="Pedí un cambio. Ej: 'Hacela más corta', 'Agregá una cita', 'Cambiá el enfoque al impacto para el lector'.">
-                <Field.Label>Instrucción de modificación</Field.Label>
+              <Field.Root hint={t("gen.refinar.hint")}>
+                <Field.Label>{t("gen.refinar.label")}</Field.Label>
                 <Textarea
                   rows={2}
-                  placeholder="¿Qué querés cambiar?"
+                  placeholder={t("gen.refinar.placeholder")}
                   value={instruction}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                     setInstruction(e.target.value)
@@ -279,11 +277,9 @@ export default function NewsGeneratorPage() {
                   <Switch
                     checked={refineWeb}
                     onCheckedChange={(v: boolean) => setRefineWeb(v)}
-                    aria-label="Buscar en internet al refinar"
+                    aria-label={t("gen.buscar.label")}
                   />
-                  <Typography variant="omega" textColor="neutral700">
-                    Buscar fuentes (si el cambio necesita datos nuevos)
-                  </Typography>
+                  <Typography variant="omega" textColor="neutral700">{t("gen.buscar.hint")}</Typography>
                 </Flex>
                 <Button
                   onClick={handleRefine}
@@ -300,12 +296,12 @@ export default function NewsGeneratorPage() {
 
           {/* 4 — Imagen de portada */}
           <Box marginBottom={6}>
-            <AccentCard title="4 · Imagen de portada" icon={<Images />} accent="success">
-              <Field.Root hint="Opcional. Si lo dejás vacío, usa el agente de imagen configurado.">
+            <AccentCard title={t("gen.paso4")} icon={<Images />} accent="success">
+              <Field.Root hint={t("gen.imagen.hint")}>
                 <Field.Label>Prompt custom (opcional)</Field.Label>
                 <Textarea
                   rows={2}
-                  placeholder="Dejalo vacío para usar el agente, o describí la imagen…"
+                  placeholder={t("gen.imagen.placeholder")}
                   value={customImagePrompt}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                     setCustomImagePrompt(e.target.value)

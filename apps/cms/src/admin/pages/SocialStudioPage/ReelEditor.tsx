@@ -41,7 +41,7 @@ export default function ReelEditor({
     } catch (err) {
       toggleNotification({
         type: "danger",
-        message: (err as Error).message || "Error al guardar el reel. Probá recomponerlo (es gratis).",
+        message: (err as Error).message || t("ss.reel.err"),
       });
     } finally {
       setSaving(false);
@@ -51,7 +51,7 @@ export default function ReelEditor({
   return (
     <AccentCard
       title={`Reel — ${result.seconds}s · 1080×1920`}
-      description="Editá los textos del overlay y recomponé: reusa el clip ya generado, así que no vuelve a gastar IA (solo ffmpeg)."
+      description={t("ss.reel.ayuda")}
       accent="success"
       actions={
         <Button
@@ -93,9 +93,7 @@ export default function ReelEditor({
                 />
               </Field.Root>
             ))}
-            <Typography variant="pi" textColor="neutral500">
-              El clip quedó guardado en la carpeta AI Backgrounds — recomponer o regenerar overlays no vuelve a pagar IA.
-            </Typography>
+            <Typography variant="pi" textColor="neutral500">{t("ss.reel.nota")}</Typography>
             <Flex justifyContent="flex-end" gap={2} marginTop={2} wrap="wrap">
               <Button
                 size="L"

@@ -83,10 +83,10 @@ const ACTION_LABEL: Record<string, string> = {
   cover_manual: "Cover manual",
   batch_dispatched: "Batch despachado",
   post_translated: "Traducido (EN)",
-  translation_failed: "Traducción fallida",
+  translation_failed: "audit.trad.fallida",
   agent_failed: "Error",
-  redactor_idle: "Sin fuentes",
-  director_idle: "Sin drafts",
+  redactor_idle: "audit.sinFuentes",
+  director_idle: "audit.sinDrafts",
 };
 
 const ACTION_COLOR: Record<string, "success" | "danger" | "neutral" | "warning"> = {
@@ -149,7 +149,7 @@ function DetailModal({ item, onClose }: { item: AuditItem | null; onClose: () =>
     <Modal.Root open={open} onOpenChange={(v: boolean) => !v && onClose()}>
       <Modal.Content style={{ width: "80vw", maxWidth: "1000px" }}>
         <Modal.Header>
-          <Modal.Title>Detalle de acción</Modal.Title>
+          <Modal.Title>{t("audit.detalle")}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {item ? (
@@ -165,7 +165,7 @@ function DetailModal({ item, onClose }: { item: AuditItem | null; onClose: () =>
                   backgroundColor={`${ACTION_COLOR[item.action] ?? "neutral"}100`}
                   textColor={`${ACTION_COLOR[item.action] ?? "neutral"}700`}
                 >
-                  {ACTION_LABEL[item.action] ?? item.action}
+                  {t(ACTION_LABEL[item.action] ?? item.action)}
                 </Badge>
                 {item.agentName ? (
                   <Typography variant="pi" textColor="neutral600">
@@ -195,7 +195,7 @@ function DetailModal({ item, onClose }: { item: AuditItem | null; onClose: () =>
                   </Typography>
                   <Box marginTop={1}>
                     <Typography variant="omega" textColor="neutral800">
-                      {item.postTitle ?? "(sin título)"}
+                      {item.postTitle ?? t("audit.sinTitulo")}
                     </Typography>
                     {item.postDocumentId ? (
                       <Box>
@@ -250,6 +250,7 @@ function DetailModal({ item, onClose }: { item: AuditItem | null; onClose: () =>
 // Tarjeta apilada para mobile: la tabla de 7 columnas sólo mostraba Fecha+Rol
 // en un celular. Acá cada acción entra completa.
 function AuditCard({ item, onDetail }: { item: AuditItem; onDetail: () => void }) {
+  const t = useT();
   return (
     <Box background="neutral0" borderColor="neutral200" borderWidth="1px" borderStyle="solid" hasRadius padding={3} shadow="tableShadow">
       <Flex justifyContent="space-between" alignItems="flex-start" gap={2}>
@@ -258,7 +259,7 @@ function AuditCard({ item, onDetail }: { item: AuditItem; onDetail: () => void }
             {ROLE_LABEL[item.agentRole] ?? item.agentRole}
           </Badge>
           <Badge backgroundColor={`${ACTION_COLOR[item.action] ?? "neutral"}100`} textColor={`${ACTION_COLOR[item.action] ?? "neutral"}700`}>
-            {ACTION_LABEL[item.action] ?? item.action}
+            {t(ACTION_LABEL[item.action] ?? item.action)}
           </Badge>
         </Flex>
         <IconButton label="Ver detalle" variant="ghost" onClick={onDetail}>
@@ -327,7 +328,7 @@ export default function AuditPage() {
       setItems(data.items);
       setPagination(data.pagination);
     } catch {
-      toggleNotification({ type: "danger", message: "No se pudo cargar el audit log." });
+      toggleNotification({ type: "danger", message: t("audit.err.cargar") });
     } finally {
       setLoading(false);
     }
@@ -352,8 +353,8 @@ export default function AuditPage() {
     <PageContainer>
       <PageHeader
         icon={<Eye width="1.4rem" height="1.4rem" />}
-        title="Audit · Acciones de Agentes IA"
-        subtitle="Trazabilidad de cada acción que ejecutan los Directores, Redactores y Generadores de Imágenes. Solo lectura — append-only."
+        title={t("audit.titulo")}
+        subtitle={t("audit.subtitulo")}
         actions={
           <Flex gap={2}>
             {/* La página ya no está en el menú lateral: sin esta vuelta explícita
@@ -376,7 +377,7 @@ export default function AuditPage() {
               value={roleFilter}
               onChange={(v: string | number) => setRoleFilter(String(v))}
             >
-              <SingleSelectOption value="all">Todos los roles</SingleSelectOption>
+              <SingleSelectOption value="all">{t("audit.todosRoles")}</SingleSelectOption>
               {ALL_ROLES.map((r) => (
                 <SingleSelectOption key={r.value} value={r.value}>
                   {r.label}
@@ -392,7 +393,7 @@ export default function AuditPage() {
               value={actionFilter}
               onChange={(v: string | number) => setActionFilter(String(v))}
             >
-              <SingleSelectOption value="all">Todas las acciones</SingleSelectOption>
+              <SingleSelectOption value="all">{t("audit.todasAcciones")}</SingleSelectOption>
               <SingleSelectOption value="draft_created">Draft creado</SingleSelectOption>
               <SingleSelectOption value="draft_published">Publicado</SingleSelectOption>
               <SingleSelectOption value="draft_rejected">Rechazado</SingleSelectOption>
@@ -400,8 +401,8 @@ export default function AuditPage() {
               <SingleSelectOption value="cover_failed">Cover fallido</SingleSelectOption>
               <SingleSelectOption value="cover_manual">Cover manual</SingleSelectOption>
               <SingleSelectOption value="agent_failed">Error</SingleSelectOption>
-              <SingleSelectOption value="redactor_idle">Sin fuentes</SingleSelectOption>
-              <SingleSelectOption value="director_idle">Sin drafts</SingleSelectOption>
+              <SingleSelectOption value="redactor_idle">{t("audit.sinFuentes")}</SingleSelectOption>
+              <SingleSelectOption value="director_idle">{t("audit.sinDrafts")}</SingleSelectOption>
             </SingleSelect>
           </Field.Root>
         </Box>
@@ -415,8 +416,8 @@ export default function AuditPage() {
         <Box marginTop={6} background="neutral0" hasRadius shadow="filterShadow">
           <EmptyState
             icon={<Eye width="1.5rem" height="1.5rem" />}
-            title="Sin acciones registradas"
-            description="Sin acciones registradas con estos filtros."
+            title={t("audit.vacio.titulo")}
+            description={t("audit.vacio.desc")}
           />
         </Box>
       ) : (
@@ -483,7 +484,7 @@ export default function AuditPage() {
                         backgroundColor={`${ACTION_COLOR[item.action] ?? "neutral"}100`}
                         textColor={`${ACTION_COLOR[item.action] ?? "neutral"}700`}
                       >
-                        {ACTION_LABEL[item.action] ?? item.action}
+                        {t(ACTION_LABEL[item.action] ?? item.action)}
                       </Badge>
                     </Td>
                     <Td>
@@ -554,13 +555,13 @@ export default function AuditPage() {
               <Box minWidth={100}>
                 <SingleSelect
                   size="S"
-                  aria-label="Filas por página"
+                  aria-label={t("audit.filasPorPagina")}
                   value={String(pageSize)}
                   onChange={(v: string | number) => setPageSize(Number(v))}
                 >
                   {PAGE_SIZE_OPTIONS.map((n) => (
                     <SingleSelectOption key={n} value={String(n)}>
-                      {n} / página
+                      {n} / {t("audit.pagina")}
                     </SingleSelectOption>
                   ))}
                 </SingleSelect>
@@ -581,7 +582,7 @@ export default function AuditPage() {
               </PreviousLink>
               {visiblePages(pagination.page, pagination.pageCount).map((p, i) =>
                 p === "dots" ? (
-                  <Dots key={`dots-${i}`}>Más páginas</Dots>
+                  <Dots key={`dots-${i}`}>{t("audit.masPaginas")}</Dots>
                 ) : (
                   <PageLink
                     key={p}

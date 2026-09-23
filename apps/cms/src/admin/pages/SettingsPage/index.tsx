@@ -703,10 +703,10 @@ function AiUsageCard() {
               <GroupLabel>OpenRouter</GroupLabel>
               {or?.ok ? (
                 <Typography variant="omega" fontWeight="bold" textColor="success600">
-                  {usd(or.remaining)} disponibles
+                  {t("ajustes.uso.disponibles", { monto: usd(or.remaining) })}
                 </Typography>
               ) : (
-                <Typography variant="pi" textColor="neutral500">{or?.configured ? "sin datos" : "no configurada"}</Typography>
+                <Typography variant="pi" textColor="neutral500">{or?.configured ? t("ajustes.uso.sinDatos") : t("ajustes.uso.noConfig")}</Typography>
               )}
             </Flex>
             {or?.ok ? (
@@ -714,10 +714,10 @@ function AiUsageCard() {
                 <UsageBar used={or.totalUsage ?? 0} total={or.totalCredits ?? 0} />
                 <Flex justifyContent="space-between" marginTop={1}>
                   <Typography variant="pi" textColor="neutral600">
-                    Usados {usd(or.totalUsage)} de {usd(or.totalCredits)}
+                    {t("ajustes.uso.usados", { usados: usd(or.totalUsage), total: usd(or.totalCredits) })}
                   </Typography>
                   <Typography variant="pi" textColor="neutral500">
-                    Hoy {usd(or.keyUsage?.daily)} · Semana {usd(or.keyUsage?.weekly)} · Mes {usd(or.keyUsage?.monthly)}
+                    {t("ajustes.uso.periodos", { hoy: usd(or.keyUsage?.daily), semana: usd(or.keyUsage?.weekly), mes: usd(or.keyUsage?.monthly) })}
                   </Typography>
                 </Flex>
               </>
@@ -732,10 +732,10 @@ function AiUsageCard() {
               <GroupLabel>OpenAI</GroupLabel>
               {oa?.ok && typeof oa.monthlyCost === "number" ? (
                 <Typography variant="omega" fontWeight="bold" textColor="neutral800">
-                  {usd(oa.monthlyCost)} este mes
+                  {t("ajustes.uso.esteMes", { monto: usd(oa.monthlyCost) })}
                 </Typography>
               ) : (
-                <Typography variant="pi" textColor="neutral500">{!oa?.configured ? "sin clave" : "sin Admin key"}</Typography>
+                <Typography variant="pi" textColor="neutral500">{!oa?.configured ? t("ajustes.uso.sinClave") : t("ajustes.uso.sinAdminKey")}</Typography>
               )}
             </Flex>
             {oa?.models && oa.models.length > 0 ? (

@@ -36,17 +36,19 @@ import {
   type StudioFormat,
   type StudioState,
 } from "./types";
+import { useT } from "../../i18n";
 
 const FORMAT_META: Array<{ key: StudioFormat; title: string; description: string }> = [
-  { key: "portada", title: "Portada", description: "Imagen IA para la nota" },
+  { key: "portada", title: "Portada", description: "ss.formato.portada" },
   { key: "carrusel", title: "Carrusel", description: "3–7 placas 1080×1350" },
   { key: "historia", title: "Historia", description: "1 placa 1080×1920" },
-  { key: "reel", title: "Reel", description: "Video 9:16 con texto" },
+  { key: "reel", title: "Reel", description: "ss.formato.video" },
 ];
 
 type PostHit = { documentId: string; title: string };
 
 export default function SocialStudioPage() {
+  const t = useT();
   const { get, post } = useFetchClient();
   const { toggleNotification } = useNotification();
   const [searchParams] = useSearchParams();
@@ -113,7 +115,7 @@ export default function SocialStudioPage() {
           videoPrompt: data.defaults.videoPrompt,
         }));
       })
-      .catch(() => toggleNotification({ type: "danger", message: "No se pudo cargar la configuración del Studio." }));
+      .catch(() => toggleNotification({ type: "danger", message: t("ss.err.config") }));
 
     const preselect = searchParams.get("post");
     if (preselect) {
@@ -152,7 +154,7 @@ export default function SocialStudioPage() {
           setJob(null);
           toggleNotification({
             type: "warning",
-            message: "El trabajo expiró (reinicio del servidor). Los fondos generados quedaron en AI Backgrounds.",
+            message: t("ss.err.expiro"),
           });
         }
       }, 2500);
@@ -193,7 +195,7 @@ export default function SocialStudioPage() {
       const detail = (err as { response?: { data?: { error?: { message?: string }; message?: string } } }).response?.data;
       toggleNotification({
         type: "danger",
-        message: detail?.error?.message || detail?.message || "No se pudo lanzar la generación.",
+        message: detail?.error?.message || detail?.message || t("ss.err.lanzar"),
       });
     } finally {
       setLaunching(false);
@@ -236,9 +238,7 @@ export default function SocialStudioPage() {
     <AccentCard icon={<PaperPlane />} title="Fuente" accent="primary">
       <Flex direction="column" alignItems="stretch" gap={3}>
         <Flex gap={2}>
-          <Button variant={state.sourceMode === "post" ? "default" : "tertiary"} onClick={() => set("sourceMode", "post")}>
-            Desde una nota
-          </Button>
+          <Button variant={state.sourceMode === "post" ? "default" : "tertiary"} onClick={() => set("sourceMode", "post")}>{t("ss.desdeNota")}</Button>
           <Button variant={state.sourceMode === "prompt" ? "default" : "tertiary"} onClick={() => set("sourceMode", "prompt")}>
             Prompt propio
           </Button>
@@ -257,7 +257,7 @@ export default function SocialStudioPage() {
           ) : (
             <Flex direction="column" alignItems="stretch" gap={2}>
               <TextInput
-                placeholder="Buscar nota por título…"
+                placeholder={t("ss.buscarNota")}
                 value={query}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
               />
@@ -282,7 +282,7 @@ export default function SocialStudioPage() {
                       </button>
                     ))}
                     {hits.length === 0 ? (
-                      <Typography variant="pi" textColor="neutral500">Sin resultados.</Typography>
+                      <Typography variant="pi" textColor="neutral500">{t("ss.sinResultados")}</Typography>
                     ) : null}
                   </Flex>
                 </Box>
@@ -290,7 +290,7 @@ export default function SocialStudioPage() {
             </Flex>
           )
         ) : (
-          <Field.Root hint="Para portada, este texto ES el prompt de la imagen.">
+          <Field.Root hint={t("ss.portadaEsPrompt")}>
             <Field.Label>Prompt</Field.Label>
             <Textarea value={state.customPrompt} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => set("customPrompt", e.target.value)} />
             <Field.Hint />
@@ -301,7 +301,7 @@ export default function SocialStudioPage() {
   );
 
   const planCard = (
-    <AccentCard icon={<Check />} title="Plan de costos" accent={plan.totalUsd > 0.5 ? "danger" : "success"}>
+    <AccentCard icon={<Check />} title={t("ss.planCostos")} accent={plan.totalUsd > 0.5 ? "danger" : "success"}>
       <Flex direction="column" alignItems="stretch" gap={2}>
         {plan.lines.map((l, i) => (
           <Flex key={i} justifyContent="space-between" gap={3}>
@@ -313,17 +313,15 @@ export default function SocialStudioPage() {
         ))}
         <Hairline />
         <Flex justifyContent="space-between">
-          <Typography variant="omega" fontWeight="bold">Total estimado</Typography>
+          <Typography variant="omega" fontWeight="bold">{t("ss.totalEstimado")}</Typography>
           <Typography variant="omega" fontWeight="bold" textColor={plan.totalUsd === 0 ? "success600" : "warning600"}>
             ~${plan.totalUsd.toFixed(3)} USD
           </Typography>
         </Flex>
-        <Typography variant="pi" textColor="neutral500">
-          Costos estimados; el precio real depende del proveedor. Nada se ejecuta hasta que toques Generar.
-        </Typography>
+        <Typography variant="pi" textColor="neutral500">{t("ss.planCostos.nota")}</Typography>
         {keysMissing ? (
           <Typography variant="pi" textColor="danger600">
-            Falta la API key {state.format === "reel" ? "de OpenRouter (OPENROUTER_API_KEY)" : "de OpenAI (OPENAI_API_KEY)"}.
+            {t("ss.faltaApiKey", { proveedor: state.format === "reel" ? "OpenRouter (OPENROUTER_API_KEY)" : "OpenAI (OPENAI_API_KEY)" })}
           </Typography>
         ) : null}
       </Flex>
@@ -375,10 +373,10 @@ export default function SocialStudioPage() {
   );
 
   const modelosCard = (
-    <AccentCard icon={<Magic />} title={isVideoFormat ? "Modelo de video y clip" : "Modelo de imagen y fondo"} accent="warning">
+    <AccentCard icon={<Magic />} title={isVideoFormat ? t("ss.modeloVideo.titulo") : t("ss.modeloImagen.titulo")} accent="warning">
       <Flex direction="column" alignItems="stretch" gap={4}>
         {state.format === "historia" ? (
-          <Field.Root hint="Una historia puede ser una placa estática o un video (la placa va sobreimpresa sobre un clip).">
+          <Field.Root hint={t("ss.historia.nota")}>
             <Field.Label>Salida</Field.Label>
             <Flex gap={2}>
               <Button
@@ -401,10 +399,10 @@ export default function SocialStudioPage() {
 
         {state.format === "historia" ? (
           <Field.Root>
-            <Field.Label>Template de la placa</Field.Label>
+            <Field.Label>{t("ss.template")}</Field.Label>
             <SingleSelect value={state.template} onChange={(v: string | number) => set("template", String(v) as StudioState["template"])}>
-              <SingleSelectOption value="cover">Cover (kicker + título)</SingleSelectOption>
-              <SingleSelectOption value="stat">Stat (número grande)</SingleSelectOption>
+              <SingleSelectOption value="cover">{t("ss.template.cover")}</SingleSelectOption>
+              <SingleSelectOption value="stat">{t("ss.template.stat")}</SingleSelectOption>
               <SingleSelectOption value="quote">Quote (frase textual)</SingleSelectOption>
               <SingleSelectOption value="countdown">Countdown</SingleSelectOption>
             </SingleSelect>
@@ -413,8 +411,8 @@ export default function SocialStudioPage() {
 
         {!isVideoFormat ? (
           <>
-            <Field.Root hint="Quién genera el fondo IA (si no elegís uno existente).">
-              <Field.Label>Modelo de imagen</Field.Label>
+            <Field.Root hint={t("ss.fondoIA.hint")}>
+              <Field.Label>{t("ss.modeloImagen")}</Field.Label>
               <SingleSelect value={state.imageModel} onChange={(v: string | number) => set("imageModel", String(v))}>
                 {Object.entries(config.imageModels).map(([id, m]) => (
                   <SingleSelectOption key={id} value={id}>
@@ -427,7 +425,7 @@ export default function SocialStudioPage() {
 
             {state.format === "carrusel" ? (
               <Field.Root>
-                <Field.Label>Cantidad de placas</Field.Label>
+                <Field.Label>{t("ss.cantidadPlacas")}</Field.Label>
                 <NumberInput value={state.slideCount} onValueChange={(v?: number) => set("slideCount", Math.max(3, Math.min(v ?? 6, 7)))} />
               </Field.Root>
             ) : null}
@@ -435,7 +433,7 @@ export default function SocialStudioPage() {
             {state.format !== "portada" ? (
               <>
                 <Hairline />
-                <GroupLabel>Fondo de la portada</GroupLabel>
+                <GroupLabel>{t("ss.fondoPortada")}</GroupLabel>
                 {state.bgFile ? (
                   <Flex gap={2} alignItems="center" justifyContent="space-between">
                     <Flex gap={2} alignItems="center" style={{ minWidth: 0 }}>
@@ -452,16 +450,14 @@ export default function SocialStudioPage() {
                     </Button>
                   </Flex>
                 )}
-                <Typography variant="pi" textColor="neutral500">
-                  Sin fondo elegido, se genera con IA y queda en AI Backgrounds para reusar.
-                </Typography>
+                <Typography variant="pi" textColor="neutral500">{t("ss.fondoPortada.hint")}</Typography>
               </>
             ) : null}
           </>
         ) : (
           <>
-            <Field.Root hint="Precio por segundo de video generado.">
-              <Field.Label>Modelo de video</Field.Label>
+            <Field.Root hint={t("ss.modeloVideo.hint")}>
+              <Field.Label>{t("ss.modeloVideo")}</Field.Label>
               <SingleSelect value={state.videoModel} onChange={(v: string | number) => set("videoModel", String(v))}>
                 {Object.entries(config.videoModels).map(([id, m]) => (
                   <SingleSelectOption key={id} value={id}>
@@ -473,7 +469,7 @@ export default function SocialStudioPage() {
             </Field.Root>
 
             <Field.Root>
-              <Field.Label>Duración (segundos)</Field.Label>
+              <Field.Label>{t("ss.duracion")}</Field.Label>
               <NumberInput
                 value={state.videoSeconds}
                 onValueChange={(v?: number) => {
@@ -488,8 +484,8 @@ export default function SocialStudioPage() {
                 <Field.Root>
                   <Field.Label>Overlay</Field.Label>
                   <SingleSelect value={state.overlayType} onChange={(v: string | number) => set("overlayType", String(v) as StudioState["overlayType"])}>
-                    <SingleSelectOption value="title">Título de la nota</SingleSelectOption>
-                    <SingleSelectOption value="countdown">Countdown (Faltan X días)</SingleSelectOption>
+                    <SingleSelectOption value="title">{t("ss.overlay.titulo")}</SingleSelectOption>
+                    <SingleSelectOption value="countdown">{t("ss.overlay.countdown")}</SingleSelectOption>
                   </SingleSelect>
                 </Field.Root>
 
@@ -505,13 +501,11 @@ export default function SocialStudioPage() {
                 ))}
               </>
             ) : (
-              <Typography variant="pi" textColor="neutral500">
-                La placa (template elegido arriba) se compone desde la fuente y se sobreimprime sobre el clip. Los textos se editan en el preview.
-              </Typography>
+              <Typography variant="pi" textColor="neutral500">{t("ss.overlay.nota")}</Typography>
             )}
 
             <Hairline />
-            <GroupLabel>Clip de fondo</GroupLabel>
+            <GroupLabel>{t("ss.clipFondo")}</GroupLabel>
             {state.clipFile ? (
               <Flex gap={2} alignItems="center" justifyContent="space-between">
                 <Typography variant="pi" textColor="neutral600" ellipsis>{state.clipFile.name}</Typography>
@@ -519,7 +513,7 @@ export default function SocialStudioPage() {
               </Flex>
             ) : (
               <>
-                <Field.Root hint="Describí el b-roll (sin texto). Se le agrega el estilo de marca.">
+                <Field.Root hint={t("ss.clipFondo.hint")}>
                   <Field.Label>Prompt del clip</Field.Label>
                   <Textarea value={state.videoPrompt} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => set("videoPrompt", e.target.value)} />
                   <Field.Hint />
@@ -541,8 +535,8 @@ export default function SocialStudioPage() {
     <Box background="neutral0" borderColor="neutral200" borderWidth="1px" borderStyle="solid" hasRadius>
       <EmptyState
         icon={<Magic />}
-        title="Configurá y generá"
-        description="Elegí fuente, formato y modelos. Vas a ver el plan de costos antes de ejecutar, y después un preview editable que se re-renderiza gratis."
+        title={t("ss.configura.titulo")}
+        description={t("ss.configura.desc")}
       />
     </Box>
   ) : job.status === "running" || job.status === "failed" ? (
@@ -600,7 +594,7 @@ export default function SocialStudioPage() {
             </Flex>
             <Box marginLeft={isMobile ? 0 : 2}>{formatTabs}</Box>
             {!isMobile ? (
-              <Typography variant="pi" textColor="neutral500">{currentFormat.description}</Typography>
+              <Typography variant="pi" textColor="neutral500">{t(currentFormat.description)}</Typography>
             ) : null}
           </Flex>
 
@@ -638,9 +632,7 @@ export default function SocialStudioPage() {
           {fuenteCard}
           {modelosCard}
           {!config.ffmpegAvailable ? (
-            <Typography variant="pi" textColor="warning600">
-              Reel deshabilitado: falta ffmpeg en el servidor (apt/brew install ffmpeg, o env FFMPEG_PATH).
-            </Typography>
+            <Typography variant="pi" textColor="warning600">{t("ss.reelDeshabilitado")}</Typography>
           ) : null}
         </Flex>
 
@@ -667,6 +659,7 @@ export default function SocialStudioPage() {
 
 // Resultado de portada: imagen + aplicar a la nota (si hay nota elegida).
 function PortadaView({ result, postDocumentId }: { result: PortadaResult; postDocumentId: string | null }) {
+  const t = useT();
   const { post } = useFetchClient();
   const { toggleNotification } = useNotification();
   const [saving, setSaving] = React.useState(false);
@@ -683,16 +676,16 @@ function PortadaView({ result, postDocumentId }: { result: PortadaResult; postDo
         imagePrompt: result.imagePrompt,
       });
       setApplied(true);
-      toggleNotification({ type: "success", message: "Portada aplicada a la nota (sin tocar la fecha de publicación)." });
+      toggleNotification({ type: "success", message: t("ss.ok.portada") });
     } catch {
-      toggleNotification({ type: "danger", message: "No se pudo aplicar la portada." });
+      toggleNotification({ type: "danger", message: t("ss.err.portada") });
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <AccentCard title="Portada generada" description="La imagen ya quedó en Medios (carpeta AI Backgrounds)." accent="success">
+    <AccentCard title="Portada generada" description={t("ss.imagenEnMedios")} accent="success">
       <Flex gap={5} alignItems="flex-start" wrap="wrap">
         {/* eslint-disable-next-line jsx-a11y/alt-text */}
         <img src={result.url} style={{ width: 320, maxWidth: "100%", borderRadius: 8, display: "block" }} />
@@ -700,11 +693,11 @@ function PortadaView({ result, postDocumentId }: { result: PortadaResult; postDo
           <Typography variant="pi" textColor="neutral600">Prompt: {result.imagePrompt}</Typography>
           {postDocumentId ? (
             <Button size="L" startIcon={<Check />} loading={saving} disabled={applied} onClick={apply}>
-              {applied ? "Aplicada a la nota" : "Usar como portada de la nota"}
+              {applied ? t("ss.aplicada") : t("ss.usarComoPortada")}
             </Button>
           ) : (
             <Typography variant="pi" textColor="neutral500">
-              Generada desde un prompt propio: quedó en Medios, lista para usar donde quieras.
+              {t("ss.generadaSuelta")}
             </Typography>
           )}
         </Flex>
