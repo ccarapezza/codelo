@@ -33,6 +33,7 @@ import { generateOpenRouterImage } from "../../../lib/openrouter-image";
 import {
   composeCarousel,
   dataUriFromBuffer,
+  getRenderContext,
   renderSlide,
   renderToPng,
   SIZES,
@@ -230,11 +231,11 @@ async function buildCarouselFor(
   }
 
   // 3) Render + upload each slide sequentially (keeps the memory pool stable).
-  const ps = await getPromptSettings(strapi);
+  const ctxRender = await getRenderContext(strapi);
   const uploadIds: number[] = [];
   const planSlides: Array<{ index: number; uploadId: number; slide: Slide }> = [];
   for (let i = 0; i < slides.length; i++) {
-    const png = await renderToPng(renderSlide(slides[i], SIZES.portrait, ps.socialHandle), SIZES.portrait);
+    const png = await renderToPng(renderSlide(slides[i], SIZES.portrait, ctxRender), SIZES.portrait);
     const n = String(i + 1).padStart(2, "0");
     const filename = `slide-${n}-${documentId}-${Date.now()}.png`;
     const uploadId = await uploadImageToStrapi(

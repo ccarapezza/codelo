@@ -29,9 +29,11 @@ import {
   composeCarousel,
   dataUriFromBuffer,
   dataUriFromFile,
+  getRenderContext,
   renderSlide,
   renderToPng,
   SIZES,
+  type RenderContext,
   type Slide,
 } from "../social-cards";
 import { sanitizeSlide } from "../social-cards/composer";
@@ -146,8 +148,8 @@ export async function renderDeck(
   sizeKey: SizeKey,
   bgUri: string | null,
   scale = 1,
-  /** El @handle del sitio, de los ajustes. Vacío = las placas no lo imprimen. */
-  handle = "",
+  /** La marca, el logo y el @handle de la instalación. Vacío = los del motor. */
+  ctx: RenderContext = {},
 ): Promise<Buffer[]> {
   const size = SIZES[sizeKey];
   const out: Buffer[] = [];
@@ -156,7 +158,7 @@ export async function renderDeck(
     delete slide.bg;
     delete slide._bgUri;
     if (bgUri) slide._bgUri = bgUri;
-    out.push(await renderToPng(renderSlide(slide, size, handle), size, scale));
+    out.push(await renderToPng(renderSlide(slide, size, ctx), size, scale));
   }
   return out;
 }
@@ -357,10 +359,9 @@ async function runStoryVideo(
   updateStep(job, "overlay", { status: "running" });
   const overlayPng = path.join(job.tmpDir, "overlay.png");
   const overlaySlide: Slide = { ...slide, _transparent: true };
-  const ps = await getPromptSettings(strapi);
   fs.writeFileSync(
     overlayPng,
-    await renderToPng(renderSlide(overlaySlide, SIZES.story, ps.socialHandle), SIZES.story),
+    await renderToPng(renderSlide(overlaySlide, SIZES.story, await getRenderContext(strapi)), SIZES.story),
   );
   updateStep(job, "overlay", { status: "done" });
 
@@ -511,7 +512,7 @@ export async function runGenerateJob(strapi: any, job: StudioJob): Promise<void>
         }
 
         updateStep(job, "render", { status: "running" });
-        const previews = (await renderDeck(slides, sizeKey, bgUri, PREVIEW_SCALE, (await getPromptSettings(strapi)).socialHandle)).map((b) =>
+        const previews = (await renderDeck(slides, sizeKey, bgUri, PREVIEW_SCALE, await getRenderContext(strapi))).map((b) =>
           dataUriFromBuffer(b, "image/png"),
         );
         updateStep(job, "render", { status: "done" });
@@ -549,11 +550,10 @@ export async function runGenerateJob(strapi: any, job: StudioJob): Promise<void>
 
         updateStep(job, "overlay", { status: "running" });
         const overlayPng = path.join(job.tmpDir, "overlay.png");
-        const ps = await getPromptSettings(strapi);
         fs.writeFileSync(
           overlayPng,
           await renderToPng(
-            renderOverlayNode(overlayType, fields, SIZES.story, ps.socialHandle),
+            renderOverlayNode(overlayType, fields, SIZES.story, await getRenderContext(strapi)),
             SIZES.story,
           ),
         );

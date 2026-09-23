@@ -21,7 +21,27 @@ export const ENGINE_SETTING_KEYS = [
   "googleSiteVerification",
   "clarityProjectId",
   "houseAdsEnabled",
+  /**
+   * Identidad visual de las placas. Se derivan de BRAND_COLOR_KEYS, que es la
+   * fuente de verdad: el test de contrato compara las dos listas contra el
+   * schema.json para que no se pueda agregar un color en un lado solo.
+   */
+  "brandBg",
+  "brandTitle",
+  "brandBody",
+  "brandMuted",
+  "brandAccent",
+  "brandAccentLight",
+  "brandAccentDeep",
 ] as const;
+
+/**
+ * El logo de las placas, aparte porque NO es texto: es una relación de media.
+ *
+ * El controller lo guarda como id y el resto de los ajustes como string, así
+ * que meterlo en la lista de arriba lo convertiría en la cadena "42".
+ */
+export const MEDIA_SETTING_KEY = "brandLogo";
 
 /** Los que se guardan como booleano y no como texto. */
 export const BOOLEAN_SETTING_KEYS = new Set<string>(["autoTranslate", "houseAdsEnabled"]);

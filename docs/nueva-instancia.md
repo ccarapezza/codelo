@@ -79,6 +79,29 @@ vista), si se traduce automáticamente cada nota —en un sitio monolingüe conv
 apagarlo, es una llamada al modelo por nota que no se usa—, y AdSense, Analytics
 y Clarity si corresponden.
 
+### Identidad visual
+
+En esa misma pantalla están **los colores y el logo de las placas de redes**.
+Es el paso que evita que tus carruseles salgan con el verde azulado de Nib.
+
+Los colores se nombran por el papel que cumplen, no por el tono, y el orden en
+que están es el de la placa: fondo, los tres niveles de texto (titular, cuerpo,
+pie) y los tres acentos.
+
+- **Acento claro** es el que lleva TODO acento que sea texto: los números
+  grandes, la comilla de las citas, la url del cierre.
+- **Acento profundo** cierra el degradé y tiñe los velos. Nunca lleva texto
+  encima, así que puede ser bien oscuro.
+
+**Mirá la vista previa mientras elegís.** El error nunca está en un color suelto
+sino en la combinación, y la placa de ejemplo es donde se ve. Si un texto queda
+por debajo del contraste mínimo aparece un aviso con el número.
+
+El logo se sube ahí mismo. **El logo por defecto está dibujado para fondo
+oscuro**: si tu fondo es claro, subí el tuyo o la firma al pie no se va a ver.
+Un campo de color vacío usa el del motor, igual que en la configuración
+editorial.
+
 ## 6. Agentes
 
 `/admin/ai-agents`. Necesitás como mínimo **un redactor y un Director**. Sin

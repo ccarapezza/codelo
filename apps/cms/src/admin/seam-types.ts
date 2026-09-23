@@ -67,8 +67,13 @@ export interface SettingField {
   key: string;
   label: string;
   hint?: string;
-  /** `text-model` y `image-model` reusan los catálogos de modelos del motor. */
-  kind: "text" | "toggle" | "text-model" | "image-model";
+  /**
+   * `text-model` y `image-model` reusan los catálogos de modelos del motor.
+   * `color` es un hex `#RRGGBB`: muestra + selector nativo + el texto editable,
+   * porque un hex escrito a mano es la forma más fácil de dejar una placa con
+   * un color que no es el que se quiso.
+   */
+  kind: "text" | "toggle" | "text-model" | "image-model" | "color";
   placeholder?: string;
 }
 

@@ -50,7 +50,7 @@ Lo que el motor le pide al proyecto, todo con default vacío:
 | `verticals/prompt-fields.ts` | Campos de prompt propios de un módulo del proyecto |
 | `verticals/setting-fields.ts` | Ajustes del sitio propios (claves que el controller acepta) |
 | `verticals/rss-scope.ts` | Qué ítems del pool RSS son del tema |
-| `verticals/brand.ts` | Colores, tipografías y logo de las placas de redes |
+| `verticals/brand.ts` | Tipografías de las placas y el logo por defecto. **Los colores ya no: van en el panel** (Sitio e integraciones → Identidad visual) |
 | `admin/verticals.ts` | Widgets, menú, rutas, identidad visual del panel (pisa la de Nib) y las tarjetas propias de las dos pantallas de configuración (`promptCards`, `settingCards`) |
 | `lib/site.ts` | Nombre, dominio, idiomas y navegación del sitio |
 | `app/[lang]/theme.css` | Los colores del sitio |

@@ -10,13 +10,14 @@ import {
   Toggle,
   Typography,
 } from "@strapi/design-system";
-import { ChartPie, Cog, Command, Eye, Key, Magic } from "@strapi/icons";
+import { ChartPie, Cog, Command, Eye, Key, Magic, PaintBrush } from "@strapi/icons";
 import { createGlobalStyle } from "styled-components";
 import { PageContainer, PageHeader, AccentCard, Hairline, GroupLabel, SaveBar } from "../../components/ui";
 
 import { Page, useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { ADMIN_PERMISSIONS } from "../../../lib/admin-permissions";
 import type { SettingCard, SettingField } from "../../seam-types";
+import { BRAND_FIELDS, BRAND_KEYS, BrandFields } from "./brand-card";
 import * as verticals from "../../verticals";
 
 // Strapi's <SingleSelect> caps its dropdown at max-height: 15.6rem (~6 options),
@@ -53,6 +54,13 @@ type Settings = {
   clarityProjectId: string;
   autoTranslate: boolean;
   houseAdsEnabled: boolean;
+  brandBg: string;
+  brandTitle: string;
+  brandBody: string;
+  brandMuted: string;
+  brandAccent: string;
+  brandAccentLight: string;
+  brandAccentDeep: string;
 };
 
 const EMPTY: Settings = {
@@ -69,6 +77,16 @@ const EMPTY: Settings = {
   clarityProjectId: "",
   autoTranslate: true,
   houseAdsEnabled: false,
+  // Los colores del motor, que son los que el render usa si no se guarda nada.
+  // Están duplicados de NEUTRAL_BRAND_COLORS a propósito: importarlo desde acá
+  // arrastraría el módulo del renderer al bundle del panel.
+  brandBg: "#0E1A1C",
+  brandTitle: "#FFFFFF",
+  brandBody: "#E6EDEC",
+  brandMuted: "#8AA0A1",
+  brandAccent: "#2BAFA3",
+  brandAccentLight: "#6FE0D4",
+  brandAccentDeep: "#1F4E63",
   // Las del proyecto arrancan vacías; el toggle se resuelve al cargar.
   ...Object.fromEntries(VERTICAL_KEYS.map((k) => [k, ""])),
 };
@@ -158,19 +176,26 @@ export default function ProtectedSettingsPage() {
 }
 
 function SettingsPage() {
-  const { get, put } = useFetchClient();
+  const { get, post, put } = useFetchClient();
   const { toggleNotification } = useNotification();
 
   const [form, setForm] = React.useState<Settings>(EMPTY);
   const [saved, setSaved] = React.useState<Settings>(EMPTY);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
+  // El logo se sube aparte (multipart) y se guarda con el resto: hasta que no se
+  // guarda, `logo.id` es el pendiente y `logo.url` lo que muestra la preview.
+  const [logo, setLogo] = React.useState<{ id: number | null; url: string | null }>({ id: null, url: null });
+  const [logoGuardado, setLogoGuardado] = React.useState<{ id: number | null; url: string | null }>({ id: null, url: null });
+  const [subiendoLogo, setSubiendoLogo] = React.useState(false);
+  // Sólo para la vista previa: el @usuario vive en Configuración editorial.
+  const [handle, setHandle] = React.useState("");
 
   // Dirty = the form diverged from the last persisted snapshot. Drives the
   // unsaved-changes pill, the Save/Discard enablement and the ⌘/Ctrl+S guard.
   const dirty = React.useMemo(
-    () => JSON.stringify(form) !== JSON.stringify(saved),
-    [form, saved],
+    () => JSON.stringify(form) !== JSON.stringify(saved) || logo.id !== logoGuardado.id,
+    [form, saved, logo.id, logoGuardado.id],
   );
 
   React.useEffect(() => {
@@ -193,6 +218,9 @@ function SettingsPage() {
           autoTranslate: data.autoTranslate !== false,
           houseAdsEnabled: Boolean(data.houseAdsEnabled),
           ...Object.fromEntries(
+            BRAND_FIELDS.map((f) => [f.key, (data[f.key] as string) || EMPTY[f.key]]),
+          ),
+          ...Object.fromEntries(
             VERTICAL_CARDS.flatMap((c) =>
               c.fields.map((f) => [
                 f.key,
@@ -203,6 +231,10 @@ function SettingsPage() {
         };
         setForm(next);
         setSaved(next);
+        const media = (data as { brandLogo?: { id?: number; url?: string } }).brandLogo;
+        const cargado = { id: media?.id ?? null, url: media?.url ?? null };
+        setLogo(cargado);
+        setLogoGuardado(cargado);
       } catch {
         toggleNotification({ type: "danger", message: "No se pudieron cargar las configuraciones." });
       } finally {
@@ -217,17 +249,57 @@ function SettingsPage() {
   const handleSave = React.useCallback(async () => {
     setSaving(true);
     try {
-      await put(ADMIN_API, form);
+      await put(ADMIN_API, { ...form, brandLogo: logo.id });
       setSaved(form);
+      setLogoGuardado(logo);
       toggleNotification({ type: "success", message: "Configuración guardada." });
     } catch {
       toggleNotification({ type: "danger", message: "Error al guardar la configuración." });
     } finally {
       setSaving(false);
     }
-  }, [form, put, toggleNotification]);
+  }, [form, logo, put, toggleNotification]);
 
-  const handleDiscard = () => setForm(saved);
+  const handleDiscard = () => {
+    setForm(saved);
+    setLogo(logoGuardado);
+  };
+
+  // El @usuario vive en Configuración editorial; acá se lee sólo para que la
+  // vista previa muestre el pie como va a salir. Si falla, la preview dice
+  // "sin firma" y no pasa nada más.
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await get<{
+          current?: Record<string, string>;
+          defaults?: Record<string, string>;
+        }>("/api/prompt-setting/admin-config");
+        // Mismo criterio que el loader del servidor: vacío = el valor por defecto.
+        setHandle((data?.current?.socialHandle || data?.defaults?.socialHandle) ?? "");
+      } catch {
+        setHandle("");
+      }
+    })();
+  }, [get]);
+
+  const subirLogo = React.useCallback(
+    async (file: File) => {
+      setSubiendoLogo(true);
+      try {
+        const body = new FormData();
+        body.append("file", file);
+        const { data } = await post<{ mediaId: number; url: string }>("/api/site-setting/admin-logo", body);
+        setLogo({ id: data.mediaId, url: data.url });
+        toggleNotification({ type: "success", message: "Logo subido. Guardá para aplicarlo." });
+      } catch {
+        toggleNotification({ type: "danger", message: "No se pudo subir el logo." });
+      } finally {
+        setSubiendoLogo(false);
+      }
+    },
+    [post, toggleNotification],
+  );
 
   if (loading) {
     return (
@@ -318,6 +390,31 @@ function SettingsPage() {
               </Field.Root>
             </Flex>
           </AccentCard>
+
+        {/*
+          Ocupa la fila entera —`1 / -1` y no `span 2`, que en una sola columna
+          inventaría una segunda— porque son siete colores más la vista previa:
+          en una columna de 380px queda una tira de campos con la placa perdida
+          al fondo, justo lo que hay que mirar mientras se elige.
+        */}
+        <Box style={{ gridColumn: "1 / -1" }}>
+        <AccentCard
+          icon={<PaintBrush />}
+          title="Identidad visual"
+          accent="secondary"
+          description="Los colores y el logo con los que se dibujan las placas de redes y los overlays de los reels. El texto de las placas —la voz, los hashtags, el @usuario— se configura en Configuración editorial."
+        >
+          <BrandFields
+            valores={Object.fromEntries(BRAND_KEYS.map((k) => [k, String(form[k] ?? "")]))}
+            onChange={(k, v) => set(k, v)}
+            logoUrl={logo.url}
+            handle={handle}
+            onSubirLogo={(f) => void subirLogo(f)}
+            onQuitarLogo={() => setLogo({ id: null, url: null })}
+            subiendo={subiendoLogo}
+          />
+        </AccentCard>
+        </Box>
 
         <AccentCard
           icon={<Key />}

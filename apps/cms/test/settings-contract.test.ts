@@ -13,7 +13,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { ENGINE_PROMPT_KEYS, NEUTRAL_PROMPT_SETTINGS } from "../src/lib/prompt-defaults";
-import { ENGINE_SETTING_KEYS } from "../src/lib/setting-keys";
+import { ENGINE_SETTING_KEYS, MEDIA_SETTING_KEY } from "../src/lib/setting-keys";
+import { BRAND_COLOR_KEYS, NEUTRAL_BRAND_COLORS, settingKeyForColor } from "../src/lib/social-cards/brand";
 import { verticalPromptKeys } from "../src/verticals/prompt-fields";
 import { verticalSettingKeys } from "../src/verticals/setting-fields";
 
@@ -69,7 +70,24 @@ describe("prompt-setting", () => {
 describe("site-setting", () => {
   it("el schema tiene exactamente las claves del motor más las del vertical", () => {
     expect(atributosDe("site-setting").sort()).toEqual(
-      [...ENGINE_SETTING_KEYS, ...verticalSettingKeys].sort(),
+      [...ENGINE_SETTING_KEYS, MEDIA_SETTING_KEY, ...verticalSettingKeys].sort(),
     );
+  });
+
+  it("cada color de la marca tiene su clave en los ajustes", () => {
+    // Los colores se declaran en el renderer (BRAND_COLOR_KEYS) y se guardan en
+    // los ajustes: si se agrega uno de un lado solo, el render lo lee del
+    // default para siempre y el panel nunca lo ofrece. Sin error.
+    for (const key of BRAND_COLOR_KEYS) {
+      expect(ENGINE_SETTING_KEYS as readonly string[]).toContain(settingKeyForColor(key));
+    }
+  });
+
+  it("los colores del motor son hex de seis dígitos", () => {
+    // Un color mal escrito no rompe el render —cae al default— pero deja la
+    // placa con un color que nadie eligió, que es peor que un error.
+    for (const valor of Object.values(NEUTRAL_BRAND_COLORS)) {
+      expect(valor).toMatch(/^#[0-9A-F]{6}$/);
+    }
   });
 });

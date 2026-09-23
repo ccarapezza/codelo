@@ -101,6 +101,24 @@ con empates el orden queda a merced de cómo desempate el sort de V8.
 locale. Lo que el panel no esconde es sobre qué corre: el subtítulo del login
 lo dice y la pantalla de versión de Strapi queda intacta.
 
+**Los colores de las placas de redes están en la BASE, no en código.** Viven en
+`site-setting` y se editan en Sitio e integraciones → Identidad visual; el
+renderer los lee con `getRenderContext(strapi)`. En `verticals/brand.ts` quedan
+sólo las tipografías y el logo por defecto, que son archivos: una fuente que no
+esté en `assets/fonts/` no da error, dibuja con otra.
+
+⚠️ **Los colores NO llevan `default` en el schema.** Una columna con default no
+se distingue de una configurada a mano, y la semilla —que escribe sólo lo
+vacío— la saltearía para siempre: un proyecto que ya tiene fila de
+`site_settings` se quedaría con los colores de Nib sin un solo aviso. Vacío =
+el del motor, resuelto en `resolveBrand()`.
+
+⚠️ **`accentDeep` nunca va como texto.** Es el cierre del degradé y los velos:
+va DEBAJO de algo. `stat` y `countdown` lo usaban para su número de 460px
+—herencia del prototipo, donde el slot era naranja brillante— y con el azul
+profundo de Nib eso daba 1.97:1 sobre su propio fondo. Hay un test que lo
+impide.
+
 **Los tipos de Strapi están gitignoreados.** Tras tocar un content-type:
 `cd apps/cms && pnpm exec strapi ts:generate-types`. Sin eso el typecheck falla
 en cada `.update()`. El comando no necesita base de datos.

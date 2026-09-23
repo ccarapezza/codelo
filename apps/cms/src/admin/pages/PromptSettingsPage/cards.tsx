@@ -139,7 +139,7 @@ export const ENGINE_PROMPT_CARDS: PromptCard[] = [
     id: "redes",
     title: "Redes y video",
     description:
-      "Con qué usuario se firman, cómo suenan y qué aspecto tienen las piezas de Social Studio: carruseles, historias y clips.",
+      "Con qué usuario se firman, cómo suenan y qué aspecto tienen las piezas de Social Studio: carruseles, historias y clips. Los colores y el logo con los que se DIBUJAN las placas se eligen en Sitio e integraciones → Identidad visual: no son texto y no los lee ningún agente.",
     accent: "secondary",
     icon: <Images />,
     fields: [

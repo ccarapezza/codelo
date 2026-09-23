@@ -1,44 +1,26 @@
-// Identidad de marca para las placas de redes.
+// Tipografías y logo por defecto de las placas.
 //
-// Es una COSTURA: el motor (lib/social-cards) compone las placas sin saber de
-// qué color son. Los TAMAÑOS son del motor —los define Instagram, no la marca—
-// y no se tocan.
+// ⚠️ Los COLORES ya no están acá. Viven en `site-setting` y se editan desde el
+// panel (Sitio e integraciones → Identidad visual), porque tenerlos en código
+// obligaba a editar TypeScript y reconstruir la imagen para que una instancia
+// nueva dejara de publicar las placas de Nib. Un proyecto que venía de la
+// versión anterior carga los suyos una sola vez con su semilla
+// (`verticals/seed.ts`, clave `siteSettings`) y de ahí en más manda la base.
 //
-// ⚠️ CONTRATO: el motor consume estas claves por ROL, no por color. Todas son
-// obligatorias; si falta una, el typecheck lo dice. Nombrarlas por rol y no por
-// tono ("accent", no "green") es lo que permite que un proyecto naranja y uno
-// verde usen las mismas plantillas.
+// Lo que queda es lo que ES un archivo y no se puede escribir en un campo:
 //
-//   bg / bgSoft     fondo de la placa y su variante suave
-//   white / offwhite / muted   la escala de texto sobre ese fondo
-//   accent          color primario de marca
-//   accentLight     variante clara, para números y destacados sobre el fondo
-//   accentWarm      acento secundario, para llamados a la acción
-//   fontDisplay / fontBody     titulares y cuerpo
-//
-// El @usuario de redes NO está acá: es `socialHandle`, un ajuste editable desde
-// el panel. Estaba en los dos lados y podían decir cosas distintas — la placa
-// firmaba de una forma y el caption de otra.
+//   · Las FUENTES tienen que nombrar una familia que satori haya cargado de
+//     `lib/social-cards/assets/fonts/`. Nombrar una que no está no da ningún
+//     error: dibuja con otra. Para usar otra tipografía hay que dejar el .woff
+//     en esa carpeta y nombrarlo acá.
+//   · El LOGO por defecto es el archivo de `assets/logo/`. Se usa mientras no
+//     haya ninguno subido desde el panel, que es el camino normal.
 
-// Los valores son los de Nib: una sola tinta a distintas profundidades. Los tres
-// acentos no son tres colores sino el mismo pigmento más claro y más hondo, así
-// que el gradiente FIRE sale como una aguada de tinta y no como un arcoíris. Un
-// proyecto que adopta el motor reescribe este archivo entero con los suyos.
-export const BRAND = {
-  bg: "#0E1A1C",
-  bgSoft: "#17282B",
-  white: "#FFFFFF",
-  offwhite: "#E6EDEC",
-  muted: "#8AA0A1",
-  accent: "#2BAFA3",
-  accentLight: "#6FE0D4",
-  accentWarm: "#1F4E63",
+/** Familias tipográficas. Tienen que estar cargadas en assets/fonts/. */
+export const BRAND_FONTS = {
   fontDisplay: "Anton",
   fontBody: "Inter",
 };
-
-/** Gradiente de marca reutilizable. */
-export const FIRE = `linear-gradient(95deg, ${BRAND.accentLight} 0%, ${BRAND.accent} 55%, ${BRAND.accentWarm} 100%)`;
 
 /** Nombre del archivo dentro de lib/social-cards/assets/logo/. */
 export const LOGO_FILE = "nib.png";
