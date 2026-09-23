@@ -15,6 +15,7 @@
 
 import hideMarketplace from "./hide-marketplace.css?inline";
 import menuGroups from "./menu-groups.css?inline";
+import ilustraciones from "./ilustraciones.css?inline";
 
 export function injectAdminStyles(): void {
   try {
@@ -22,7 +23,7 @@ export function injectAdminStyles(): void {
     if (document.getElementById(ID)) return;
     const style = document.createElement("style");
     style.id = ID;
-    style.textContent = [hideMarketplace, menuGroups].join("\n");
+    style.textContent = [hideMarketplace, menuGroups, ilustraciones].join("\n");
     document.head.appendChild(style);
   } catch {
     // Cosmético: si algo falla, el panel funciona igual. Nunca debe romper el

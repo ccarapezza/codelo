@@ -1,0 +1,29 @@
+/* Las ilustraciones de Strapi traen el violeta escrito a mano.
+ *
+ * Los estados vacíos ("No content found", la Media Library sin archivos, el
+ * 404) son SVG inline con los hexes del primario de Strapi puestos como
+ * literales —#f0f0ff, #d9d8ff y el trazo #7b79ff— en vez de leer el token del
+ * tema. Por eso sobrevivieron a la paleta: el tema cambia los tokens y estos
+ * dibujos no los usan.
+ *
+ * Como son literales, se los puede alcanzar por selector de atributo. Es una
+ * dependencia de valores ajenos: si Strapi retoca una ilustración, el dibujo
+ * vuelve a violeta —se ve enseguida— pero nada se rompe.
+ *
+ * ⚠️ El flag `i` no es opcional. Strapi los escribe en MAYÚSCULAS (`#D9D8FF`) y
+ * el selector de atributo compara el valor respetando mayúsculas: sin el flag
+ * la regla es válida, no da ningún error y no pinta nada.
+ *
+ * Los tres reemplazos mantienen la LUMINANCIA del original (86 · 69 · 25) para
+ * que el dibujo siga leyéndose igual sobre fondo claro y sobre fondo oscuro:
+ * la misma ilustración se usa en los dos temas.
+ */
+svg [fill="#f0f0ff" i] {
+  fill: #e3f2f0;
+}
+svg [fill="#d9d8ff" i] {
+  fill: #b9e0db;
+}
+svg [stroke="#7b79ff" i] {
+  stroke: #1e998f;
+}

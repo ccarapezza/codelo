@@ -17,6 +17,41 @@
 import Mark from "./brand/mark.png";
 import Favicon from "./brand/favicon.png";
 
+// La escala NEUTRA: el gris con el que se pinta todo lo que no es acento —el
+// fondo de la página, las tarjetas, los bordes, el texto—. Es la que define de
+// qué color "se siente" el panel, mucho más que el acento: Strapi la tiene con
+// matiz violeta (240°, el mismo de su primario) y por eso un panel con sólo el
+// acento cambiado seguía leyéndose como Strapi.
+//
+// Acá el matiz es 194° —azul-verde, tinta muy diluida—, quince grados más frío
+// que el acento pavo real para que el acento siga separándose del fondo en vez
+// de fundirse con él.
+//
+// ⚠️ Cada tono se derivó resolviendo la LUMINANCIA RELATIVA del tono de Strapi,
+// no su claridad HSL: los doce pares de contraste del panel (texto sobre
+// tarjeta, texto sobre página, atenuado, placeholder, borde, separador, en los
+// dos temas) quedan dentro de 0.05 de los de Strapi. Si se retoca la escala a
+// ojo eso se pierde y hay que reauditar los doce, no sólo mirar si "se ve
+// bien".
+//
+// El tema oscuro de Strapi no tiene escala propia: REMAPEA estos mismos doce
+// valores (su `neutral0` es el `neutral900` del claro, y así). Por eso alcanza
+// con una sola escala para los dos temas.
+const TINTA = {
+  n0: "#ffffff",
+  n100: "#f4f7f7",
+  n150: "#e8ebec",
+  n200: "#d8dedf",
+  n300: "#b9c3c6",
+  n400: "#9ba9ae",
+  n500: "#819399",
+  n600: "#5b6c71",
+  n700: "#405054",
+  n800: "#2a373a",
+  n900: "#1b2427",
+  n1000: "#141a1c",
+};
+
 // Rampa "pavo real", el acento de Nib. La paleta es una sola tinta a distintas
 // profundidades: grafito con fondo verde-azulado, y el acento saliendo de esa
 // misma superficie en vez de pegado encima.
@@ -44,6 +79,18 @@ const COLORS_LIGHT = {
   primary700: "#0c5a55",
   buttonPrimary500: "#12857c",
   buttonPrimary600: "#0f6e68",
+  neutral0: TINTA.n0,
+  neutral100: TINTA.n100,
+  neutral150: TINTA.n150,
+  neutral200: TINTA.n200,
+  neutral300: TINTA.n300,
+  neutral400: TINTA.n400,
+  neutral500: TINTA.n500,
+  neutral600: TINTA.n600,
+  neutral700: TINTA.n700,
+  neutral800: TINTA.n800,
+  neutral900: TINTA.n900,
+  neutral1000: TINTA.n1000,
 };
 const COLORS_DARK = {
   primary100: "#0a2422",
@@ -53,6 +100,23 @@ const COLORS_DARK = {
   primary700: "#3bc2b5",
   buttonPrimary500: "#12857c",
   buttonPrimary600: "#0f6e68",
+  // El remapeo del tema oscuro, con los mismos tonos dados vuelta: `neutral0`
+  // es el fondo de la tarjeta (el más claro de los oscuros) y `neutral800` en
+  // adelante son el texto. No es un error que 400 y 600 compartan tono ni que
+  // 800/900/1000 sean los tres blancos: así está en Strapi y respetarlo es lo
+  // que mantiene los contrastes.
+  neutral0: TINTA.n900,
+  neutral100: TINTA.n1000,
+  neutral150: TINTA.n800,
+  neutral200: TINTA.n700,
+  neutral300: TINTA.n600,
+  neutral400: TINTA.n400,
+  neutral500: TINTA.n300,
+  neutral600: TINTA.n400,
+  neutral700: TINTA.n150,
+  neutral800: TINTA.n0,
+  neutral900: TINTA.n0,
+  neutral1000: TINTA.n0,
 };
 
 // Los dos slots llevan el tile cuadrado, no el lockup:
