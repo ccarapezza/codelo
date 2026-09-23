@@ -20,8 +20,20 @@ export default ({ env }) => ({
   secrets: {
     encryptionKey: env("ENCRYPTION_KEY"),
   },
+  // Ruido de Strapi apagado por defecto. Que el panel no lo esconda —el login
+  // dice sobre qué corre y la pantalla de versión queda intacta— no significa
+  // que tenga que pedirle cosas al usuario en nombre de Strapi:
+  //
+  //   · nps — la encuesta "¿qué tan probable es que recomiendes Strapi a un
+  //     amigo?". Quien entra acá no eligió Strapi ni sabe necesariamente qué es:
+  //     la pregunta no tiene sentido para él y su respuesta no le sirve a nadie.
+  //     (La lee NpsSurvey.mjs como `window.strapi.flags.nps === false`.)
+  //   · promoteEE — la promoción de la edición Enterprise.
+  //
+  // Se pueden volver a encender por env, que es lo que las deja como decisión de
+  // la instalación y no del motor.
   flags: {
-    nps: env.bool("FLAG_NPS", true),
-    promoteEE: env.bool("FLAG_PROMOTE_EE", true),
+    nps: env.bool("FLAG_NPS", false),
+    promoteEE: env.bool("FLAG_PROMOTE_EE", false),
   },
 });
