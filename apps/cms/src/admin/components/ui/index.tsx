@@ -298,9 +298,30 @@ export function SaveBar({
   }, [dirty, saving, onSave]);
 
   return (
+    // Envoltorio con una franja del color de la PÁGINA arriba de la barra.
+    //
+    // Es el aire entre la última tarjeta y la barra. No alcanza con un
+    // `marginTop` en la barra: `marginTop: auto` es lo que la empuja al fondo
+    // cuando el contenido es corto, y con contenido largo `auto` resuelve a 0 —
+    // o sea que justo cuando hay scroll, que es cuando se nota, el aire
+    // desaparecía y la tarjeta quedaba pegada al borde.
+    //
+    // La franja va DENTRO del elemento sticky para que viaje con él: es lo que
+    // tapa el contenido que pasa por debajo mientras se scrollea, en vez de
+    // dejarlo asomar contra la barra.
     <Box
       position="sticky"
       bottom={0}
+      paddingTop={5}
+      background="neutral100"
+      style={{
+        marginTop: "auto",
+        marginLeft: -edgeOffset,
+        marginRight: -edgeOffset,
+        marginBottom: -edgeOffset,
+      }}
+    >
+    <Box
       paddingTop={4}
       paddingBottom={4}
       paddingLeft={8}
@@ -309,14 +330,6 @@ export function SaveBar({
       borderColor="neutral200"
       borderWidth="1px 0 0 0"
       borderStyle="solid"
-      // `marginTop: auto` la empuja al fondo del contenedor cuando sobra alto;
-      // con contenido largo no hace nada y manda el sticky.
-      style={{
-        marginTop: "auto",
-        marginLeft: -edgeOffset,
-        marginRight: -edgeOffset,
-        marginBottom: -edgeOffset,
-      }}
     >
       <Flex justifyContent="space-between" alignItems="center" gap={4}>
         {dirty ? (
@@ -343,6 +356,7 @@ export function SaveBar({
           </Button>
         </Flex>
       </Flex>
+    </Box>
     </Box>
   );
 }
