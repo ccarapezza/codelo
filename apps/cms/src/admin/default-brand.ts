@@ -17,36 +17,42 @@
 import Mark from "./brand/mark.png";
 import Favicon from "./brand/favicon.png";
 
-// Rampa ámbar, muestreada del logo (#F4B04A, la pluma) y extendida respetando
-// la lógica de contraste de Strapi, que NO es simétrica entre temas:
+// Rampa "pavo real", el acento de Nib. La paleta es una sola tinta a distintas
+// profundidades: grafito con fondo verde-azulado, y el acento saliendo de esa
+// misma superficie en vez de pegado encima.
 //
-//   · en claro,  primary600 es el fondo del botón y lleva texto blanco encima,
-//     así que tiene que ser un ámbar QUEMADO. El de la marca da 1.88:1 contra
-//     blanco —ilegible—; #9A6410 da 4.99:1 y pasa AA.
-//   · en oscuro, primary600 es el tono que resalta contra el panel, así que ahí
-//     sí va el ámbar de la marca: 8.4:1 contra el fondo del admin. Los botones
-//     usan buttonPrimary600 (el quemado) para no perder el contraste del texto.
+// ⚠️ El primario NO puede ser ámbar ni naranja: el `warning600` de Strapi es
+// #d9822f y convivimos con él en la misma pantalla. El ámbar que tenía Nib
+// estaba a SIETE grados de matiz de ese warning — en una UI densa, "esto está
+// activo" y "cuidado" se veían casi igual. El teal queda a 147°.
 //
-// Si se retoca la paleta, recalcular estos dos ratios antes de commitear: el
-// error fácil es usar el ámbar lindo en los dos lados y dejar los botones del
-// tema claro con texto blanco ilegible.
+// El contraste tampoco es simétrico entre temas:
+//
+//   · en claro,  primary600 es el fondo del botón y lleva texto blanco encima:
+//     #0F6E68 da 6.09:1 y pasa AA con margen.
+//   · en oscuro, primary600 es el tono que resalta contra el panel, así que va
+//     el claro: #3BC2B5 da 7.99:1. Los botones usan buttonPrimary600 (el
+//     profundo) para no perder el contraste del texto.
+//
+// Si se retoca la paleta, recalcular esos dos ratios Y la separación de matiz
+// contra el warning antes de commitear.
 const COLORS_LIGHT = {
-  primary100: "#fdf3e3",
-  primary200: "#f6dcae",
-  primary500: "#c98a2a",
-  primary600: "#9a6410",
-  primary700: "#7a4e0b",
-  buttonPrimary500: "#c98a2a",
-  buttonPrimary600: "#9a6410",
+  primary100: "#e3f2f0",
+  primary200: "#b9e0db",
+  primary500: "#12857c",
+  primary600: "#0f6e68",
+  primary700: "#0c5a55",
+  buttonPrimary500: "#12857c",
+  buttonPrimary600: "#0f6e68",
 };
 const COLORS_DARK = {
-  primary100: "#2a1e0c",
-  primary200: "#6b4e20",
-  primary500: "#c98a2a",
-  primary600: "#f4b04a",
-  primary700: "#f4b04a",
-  buttonPrimary500: "#c98a2a",
-  buttonPrimary600: "#9a6410",
+  primary100: "#0a2422",
+  primary200: "#17514b",
+  primary500: "#2bafa3",
+  primary600: "#3bc2b5",
+  primary700: "#3bc2b5",
+  buttonPrimary500: "#12857c",
+  buttonPrimary600: "#0f6e68",
 };
 
 // Los dos slots llevan el tile cuadrado, no el lockup:

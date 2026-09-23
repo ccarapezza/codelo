@@ -20,17 +20,19 @@
 // el panel. Estaba en los dos lados y podían decir cosas distintas — la placa
 // firmaba de una forma y el caption de otra.
 
-// Los valores son los de Nib: grafito y ámbar, muestreados del logo. Un
+// Los valores son los de Nib: una sola tinta a distintas profundidades. Los tres
+// acentos no son tres colores sino el mismo pigmento más claro y más hondo, así
+// que el gradiente FIRE sale como una aguada de tinta y no como un arcoíris. Un
 // proyecto que adopta el motor reescribe este archivo entero con los suyos.
 export const BRAND = {
-  bg: "#1B1B1F",
-  bgSoft: "#26262B",
+  bg: "#0E1A1C",
+  bgSoft: "#17282B",
   white: "#FFFFFF",
-  offwhite: "#EDEDED",
-  muted: "#9A9AA2",
-  accent: "#F4B04A",
-  accentLight: "#F9CF8F",
-  accentWarm: "#C2661A",
+  offwhite: "#E6EDEC",
+  muted: "#8AA0A1",
+  accent: "#2BAFA3",
+  accentLight: "#6FE0D4",
+  accentWarm: "#1F4E63",
   fontDisplay: "Anton",
   fontBody: "Inter",
 };
