@@ -254,6 +254,43 @@ export function BrandFields({
               />
             ))}
           </Box>
+
+          {/* El logo va ACÁ y no debajo de todo: la vista previa es más alta
+              que las dos filas de colores, así que abajo a la izquierda había
+              un rectángulo muerto de unos 250px. Esto lo llena. */}
+          <Box paddingTop={4}>
+            <Hairline />
+          </Box>
+          <Box paddingTop={4}>
+      <Field.Root hint={t("marca.logo.hint")}>
+              <Field.Label>{t("marca.logo.label")}</Field.Label>
+              <Flex gap={2} alignItems="center" paddingTop={1}>
+                <Button
+                  variant="tertiary"
+                  startIcon={<Upload />}
+                  loading={subiendo}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  {logoUrl ? t("marca.logo.cambiar") : t("marca.logo.subir")}
+                </Button>
+                {logoUrl && (
+                  <Button variant="tertiary" onClick={onQuitarLogo}>{t("marca.logo.motor")}</Button>
+                )}
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) onSubirLogo(f);
+                    e.target.value = "";
+                  }}
+                />
+              </Flex>
+              <Field.Hint />
+            </Field.Root>
+          </Box>
         </Box>
 
         <Box style={{ flex: "0 0 260px" }}>
@@ -285,36 +322,6 @@ export function BrandFields({
         </Box>
       </Flex>
 
-      <Hairline />
-
-      <Field.Root hint={t("marca.logo.hint")}>
-        <Field.Label>{t("marca.logo.label")}</Field.Label>
-        <Flex gap={2} alignItems="center" paddingTop={1}>
-          <Button
-            variant="tertiary"
-            startIcon={<Upload />}
-            loading={subiendo}
-            onClick={() => fileRef.current?.click()}
-          >
-            {logoUrl ? t("marca.logo.cambiar") : t("marca.logo.subir")}
-          </Button>
-          {logoUrl && (
-            <Button variant="tertiary" onClick={onQuitarLogo}>{t("marca.logo.motor")}</Button>
-          )}
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            style={{ display: "none" }}
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) onSubirLogo(f);
-              e.target.value = "";
-            }}
-          />
-        </Flex>
-        <Field.Hint />
-      </Field.Root>
     </Flex>
   );
 }

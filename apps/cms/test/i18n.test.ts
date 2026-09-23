@@ -44,6 +44,33 @@ describe("catálogos del panel", () => {
     }
   });
 
+  it("toda clave que el código usa existe en el catálogo", () => {
+    // El agujero por el que se coló `marca.bg.label`: el código la pedía, el
+    // catálogo no la tenía, y `t()` devuelve la entrada tal cual cuando no la
+    // reconoce — así que la pantalla mostraba «marca.bg.label» como si fuera
+    // una etiqueta. Sin error, sin aviso: sólo una captura lo delata.
+    const dir = path.join(__dirname, "../src/admin");
+    const archivos: string[] = [];
+    const recorrer = (d: string) => {
+      for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+        const p = path.join(d, e.name);
+        if (e.isDirectory()) recorrer(p);
+        else if (/\.tsx?$/.test(e.name)) archivos.push(p);
+      }
+    };
+    recorrer(dir);
+
+    const usadas = new Set<string>();
+    for (const f of archivos) {
+      const src = fs.readFileSync(f, "utf8");
+      for (const m of src.matchAll(/(?<![A-Za-z_$.])t\(\s*"([a-z][\w.]*\.[\w.]+)"/g)) usadas.add(m[1]);
+      // claves guardadas como dato: `label: "marca.bg.label"`
+      for (const m of src.matchAll(/(?:label|hint|que|description|texto):\s*"([a-z]+\.[\w.]+)"/g)) usadas.add(m[1]);
+    }
+    const huerfanas = [...usadas].filter((k) => !(k in es)).sort();
+    expect(huerfanas).toEqual([]);
+  });
+
   it("el inglés no quedó en castellano", () => {
     // Una cadena larga idéntica en los dos idiomas es una que se copió sin
     // traducir. Las cortas sí pueden coincidir legítimamente («Nib», «Post»).

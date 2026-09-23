@@ -18,6 +18,7 @@ import { Page, useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { ADMIN_PERMISSIONS } from "../../../lib/admin-permissions";
 import type { SettingCard, SettingField } from "../../seam-types";
 import { BRAND_FIELDS, BRAND_KEYS, BrandFields } from "./brand-card";
+import { SeccionPlegable } from "./SeccionPlegable";
 import * as verticals from "../../verticals";
 import { useT } from "../../i18n";
 
@@ -263,6 +264,11 @@ function SettingsPage() {
     }
   }, [form, logo, put, toggleNotification]);
 
+  /** Cuántos de esos ajustes tienen valor. Es lo que decide si una sección
+   *  arranca abierta y lo que dice su encabezado sin tener que desplegarla. */
+  const cuantos = (claves: string[]) =>
+    claves.filter((k) => String(form[k] ?? "").trim() !== "").length;
+
   const handleDiscard = () => {
     setForm(saved);
     setLogo(logoGuardado);
@@ -321,16 +327,29 @@ function SettingsPage() {
         subtitle={t("ajustes.subtitulo")}
       />
 
-      <Box marginBottom={6}>
-        <AiUsageCard />
-      </Box>
+      {/*
+        Dos columnas y no `auto-fit`: con tres columnas y dos tarjetas quedaba
+        un tercio de la fila vacío, y las tarjetas se estiraban a la altura de
+        la más larga — «Publicación», que es UN toggle, medía 320px.
 
+        `start` en vez de `stretch` por lo mismo: cada tarjeta mide lo que
+        necesita. Lo que ocupa la fila entera lo pide con `1 / -1`.
+      */}
+      {/*
+        La fila de arriba va en SU PROPIA grilla de dos columnas.
+
+        Compartía la de abajo, que a 1600px da tres de 472px: con dos tarjetas
+        quedaba un tercio de la fila en blanco al lado de «Modelos de IA». El
+        `min(100%, 620px)` es lo que la deja colapsar a una sola columna en
+        pantallas angostas sin necesitar media queries.
+      */}
       <Box
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 620px), 1fr))",
           gap: 24,
-          alignItems: "stretch",
+          alignItems: "start",
+          marginBottom: 24,
         }}
       >
         <AccentCard
@@ -369,6 +388,7 @@ function SettingsPage() {
               </SingleSelect>
               <Field.Hint />
             </Field.Root>
+            <ConsumoDeIA />
           </Flex>
         </AccentCard>
 
@@ -393,6 +413,16 @@ function SettingsPage() {
               </Field.Root>
             </Flex>
           </AccentCard>
+      </Box>
+
+      <Box
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))",
+          gap: 24,
+          alignItems: "start",
+        }}
+      >
 
         {/*
           Ocupa la fila entera —`1 / -1` y no `span 2`, que en una sola columna
@@ -419,164 +449,193 @@ function SettingsPage() {
         </AccentCard>
         </Box>
 
-        <AccentCard
-          icon={<Key />}
-          title="Google AdSense"
-          accent="warning"
-          description={t("ajustes.adsense.desc")}
-        >
-          <Flex direction="column" alignItems="stretch" gap={4}>
-            <Field.Root hint={t("ajustes.adsense.publisher.hint")}>
-              <Field.Label>Publisher ID</Field.Label>
-              <TextInput
-                placeholder="ca-pub-XXXXXXXXXXXXXXXX"
-                value={form.adsensePublisherId}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  set("adsensePublisherId", e.target.value)
-                }
-              />
-              <Field.Hint />
-            </Field.Root>
+        {/*
+          Las tres integraciones de terceros, juntas y plegadas.
 
-            <Box paddingTop={1}>
-              <GroupLabel>{t("ajustes.adsense.slots")}</GroupLabel>
-            </Box>
+          Lo que las agrupa no es comodidad: NINGUNA la lee el CMS. Las tres las
+          inyecta el sitio público en su HTML, y ninguna cambia lo que hacen los
+          agentes. Estaban como tres tarjetas hermanas de «Modelos de IA», que sí
+          es crítica — sin modelo no se genera nada.
 
-            <Flex gap={3} alignItems="flex-start">
-              <Box flex="1">
-                <Field.Root hint="Sidebar izquierdo (visible en pantallas ≥1536px).">
-                  <Field.Label>Sidebar izquierdo</Field.Label>
-                  <TextInput
-                    placeholder="0000000001"
-                    value={form.adsenseSidebarLeftSlot}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      set("adsenseSidebarLeftSlot", e.target.value)
-                    }
-                  />
-                  <Field.Hint />
-                </Field.Root>
-              </Box>
-              <Box flex="1">
-                <Field.Root hint="Sidebar derecho.">
-                  <Field.Label>Sidebar derecho</Field.Label>
-                  <TextInput
-                    placeholder="0000000002"
-                    value={form.adsenseSidebarRightSlot}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      set("adsenseSidebarRightSlot", e.target.value)
-                    }
-                  />
-                  <Field.Hint />
-                </Field.Root>
-              </Box>
-            </Flex>
+          Y son largas: AdSense sola tiene siete campos. Desplegadas ocupaban más
+          de la mitad de la pantalla con campos vacíos, porque la instalación
+          típica no usa ninguna.
+        */}
+        <Box style={{ gridColumn: "1 / -1" }}>
+          <AccentCard
+            icon={<ChartPie />}
+            title={t("ajustes.sitio.titulo")}
+            accent="warning"
+            description={t("ajustes.sitio.desc")}
+          >
+            <SeccionPlegable
+              titulo={t("ajustes.analytics.titulo")}
+              descripcion={t("ajustes.analytics.desc")}
+              icono={<ChartPie width="1rem" />}
+              configurados={cuantos(["googleAnalyticsId", "googleSiteVerification"])}
+            >
+              <Field.Root hint={t("ajustes.ga.hint")}>
+                <Field.Label>GA4 — Measurement ID</Field.Label>
+                <TextInput
+                  placeholder="G-XXXXXXXXXX"
+                  value={form.googleAnalyticsId}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    set("googleAnalyticsId", e.target.value)
+                  }
+                />
+                <Field.Hint />
+              </Field.Root>
 
-            <Field.Root hint={t("ajustes.adsense.infeed")}>
-              <Field.Label>In-feed home</Field.Label>
-              <TextInput
-                placeholder="0000000003"
-                value={form.adsenseHomeInFeedSlot}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  set("adsenseHomeInFeedSlot", e.target.value)
-                }
-              />
-              <Field.Hint />
-            </Field.Root>
-
-            <Field.Root hint={t("ajustes.adsense.mobile")}>
-              <Field.Label>Banner mobile</Field.Label>
-              <TextInput
-                placeholder="0000000004"
-                value={form.adsenseMobileBannerSlot}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  set("adsenseMobileBannerSlot", e.target.value)
-                }
-              />
-              <Field.Hint />
-            </Field.Root>
-
-            <Field.Root hint={t("ajustes.adsense.inarticle")}>
-              <Field.Label>In-article (posts)</Field.Label>
-              <TextInput
-                placeholder="0000000005"
-                value={form.adsenseInArticleSlot}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  set("adsenseInArticleSlot", e.target.value)
-                }
-              />
-              <Field.Hint />
-            </Field.Root>
+              <Field.Root hint={t("ajustes.searchConsole.hint")}>
+                <Field.Label>Search Console — verification token</Field.Label>
+                <TextInput
+                  placeholder="abc123Def456..."
+                  value={form.googleSiteVerification}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    set("googleSiteVerification", e.target.value)
+                  }
+                />
+                <Field.Hint />
+              </Field.Root>
+            </SeccionPlegable>
 
             <Hairline />
 
-            <Field.Root hint={t("ajustes.houseAds.hint")}>
-              <Field.Label>{t("ajustes.houseAds.label")}</Field.Label>
-              <Box paddingTop={1}>
-                <Toggle
-                  onLabel="Sí"
-                  offLabel="No"
-                  checked={form.houseAdsEnabled}
+            <SeccionPlegable
+              titulo={t("ajustes.clarity.titulo")}
+              descripcion={t("ajustes.clarity.desc")}
+              icono={<Eye width="1rem" />}
+              configurados={cuantos(["clarityProjectId"])}
+            >
+              <Field.Root hint={t("ajustes.clarity.hint")}>
+                          <Field.Label>Project ID</Field.Label>
+                          <TextInput
+                            placeholder="xxxxxxxxxx"
+                            value={form.clarityProjectId}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                              set("clarityProjectId", e.target.value)
+                            }
+                          />
+                          <Field.Hint />
+                        </Field.Root>
+            </SeccionPlegable>
+
+            <Hairline />
+
+            <SeccionPlegable
+              titulo={t("ajustes.adsense.titulo")}
+              descripcion={t("ajustes.adsense.desc")}
+              icono={<Key width="1rem" />}
+              configurados={cuantos([
+                "adsensePublisherId",
+                "adsenseSidebarLeftSlot",
+                "adsenseSidebarRightSlot",
+                "adsenseHomeInFeedSlot",
+                "adsenseMobileBannerSlot",
+                "adsenseInArticleSlot",
+              ])}
+            >
+              <Field.Root hint={t("ajustes.adsense.publisher.hint")}>
+                <Field.Label>Publisher ID</Field.Label>
+                <TextInput
+                  placeholder="ca-pub-XXXXXXXXXXXXXXXX"
+                  value={form.adsensePublisherId}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    set("houseAdsEnabled", e.target.checked)
+                    set("adsensePublisherId", e.target.value)
                   }
                 />
+                <Field.Hint />
+              </Field.Root>
+
+              <Box paddingTop={1}>
+                <GroupLabel>{t("ajustes.adsense.slots")}</GroupLabel>
               </Box>
-              <Field.Hint />
-            </Field.Root>
-          </Flex>
-        </AccentCard>
 
-        <AccentCard
-          icon={<ChartPie />}
-          title="Google Analytics & Search Console"
-          accent="success"
-          description={t("ajustes.analytics.desc")}
-        >
-          <Flex direction="column" alignItems="stretch" gap={4}>
-            <Field.Root hint={t("ajustes.ga.hint")}>
-              <Field.Label>GA4 — Measurement ID</Field.Label>
-              <TextInput
-                placeholder="G-XXXXXXXXXX"
-                value={form.googleAnalyticsId}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  set("googleAnalyticsId", e.target.value)
-                }
-              />
-              <Field.Hint />
-            </Field.Root>
+              <Flex gap={3} alignItems="flex-start">
+                <Box flex="1">
+                  <Field.Root hint="Sidebar izquierdo (visible en pantallas ≥1536px).">
+                    <Field.Label>Sidebar izquierdo</Field.Label>
+                    <TextInput
+                      placeholder="0000000001"
+                      value={form.adsenseSidebarLeftSlot}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        set("adsenseSidebarLeftSlot", e.target.value)
+                      }
+                    />
+                    <Field.Hint />
+                  </Field.Root>
+                </Box>
+                <Box flex="1">
+                  <Field.Root hint="Sidebar derecho.">
+                    <Field.Label>Sidebar derecho</Field.Label>
+                    <TextInput
+                      placeholder="0000000002"
+                      value={form.adsenseSidebarRightSlot}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        set("adsenseSidebarRightSlot", e.target.value)
+                      }
+                    />
+                    <Field.Hint />
+                  </Field.Root>
+                </Box>
+              </Flex>
 
-            <Field.Root hint={t("ajustes.searchConsole.hint")}>
-              <Field.Label>Search Console — verification token</Field.Label>
-              <TextInput
-                placeholder="abc123Def456..."
-                value={form.googleSiteVerification}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  set("googleSiteVerification", e.target.value)
-                }
-              />
-              <Field.Hint />
-            </Field.Root>
-          </Flex>
-        </AccentCard>
+              <Field.Root hint={t("ajustes.adsense.infeed")}>
+                <Field.Label>In-feed home</Field.Label>
+                <TextInput
+                  placeholder="0000000003"
+                  value={form.adsenseHomeInFeedSlot}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    set("adsenseHomeInFeedSlot", e.target.value)
+                  }
+                />
+                <Field.Hint />
+              </Field.Root>
 
-        <AccentCard
-          icon={<Eye />}
-          title="Microsoft Clarity"
-          accent="primary"
-          description={t("ajustes.clarity.desc")}
-        >
-          <Field.Root hint={t("ajustes.clarity.hint")}>
-            <Field.Label>Project ID</Field.Label>
-            <TextInput
-              placeholder="xxxxxxxxxx"
-              value={form.clarityProjectId}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                set("clarityProjectId", e.target.value)
-              }
-            />
-            <Field.Hint />
-          </Field.Root>
-        </AccentCard>
+              <Field.Root hint={t("ajustes.adsense.mobile")}>
+                <Field.Label>Banner mobile</Field.Label>
+                <TextInput
+                  placeholder="0000000004"
+                  value={form.adsenseMobileBannerSlot}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    set("adsenseMobileBannerSlot", e.target.value)
+                  }
+                />
+                <Field.Hint />
+              </Field.Root>
+
+              <Field.Root hint={t("ajustes.adsense.inarticle")}>
+                <Field.Label>In-article (posts)</Field.Label>
+                <TextInput
+                  placeholder="0000000005"
+                  value={form.adsenseInArticleSlot}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    set("adsenseInArticleSlot", e.target.value)
+                  }
+                />
+                <Field.Hint />
+              </Field.Root>
+
+              <Hairline />
+
+              <Field.Root hint={t("ajustes.houseAds.hint")}>
+                <Field.Label>{t("ajustes.houseAds.label")}</Field.Label>
+                <Box paddingTop={1}>
+                  <Toggle
+                    onLabel="Sí"
+                    offLabel="No"
+                    checked={form.houseAdsEnabled}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      set("houseAdsEnabled", e.target.checked)
+                    }
+                  />
+                </Box>
+                <Field.Hint />
+              </Field.Root>
+            </SeccionPlegable>
+          </AccentCard>
+        </Box>
+
 
         {/* Las tarjetas del proyecto, al final: los ajustes propios de un módulo
             que sólo existe en esta instalación. */}
@@ -674,7 +733,8 @@ function UsageBar({ used, total }: { used: number; total: number }) {
   );
 }
 
-function AiUsageCard() {
+/** El consumo de las APIs, como bloque dentro de la tarjeta de modelos. */
+function ConsumoDeIA() {
   const t = useT();
   const { get } = useFetchClient();
   const [data, setData] = React.useState<AiUsage | null>(null);
@@ -690,7 +750,11 @@ function AiUsageCard() {
   const oa = data?.openai;
 
   return (
-    <AccentCard icon={<Magic />} title={t("ajustes.uso.titulo")} description={t("ajustes.uso.desc")} accent="success">
+    <Box>
+      <Hairline marginY={4} />
+      <Box paddingBottom={2}>
+        <GroupLabel>{t("ajustes.uso.titulo")}</GroupLabel>
+      </Box>
       {!data && !error ? (
         <Flex justifyContent="center" padding={3}><Loader small>{t("ajustes.uso.consultando")}</Loader></Flex>
       ) : error ? (
@@ -766,6 +830,6 @@ function AiUsageCard() {
           </Box>
         </Flex>
       )}
-    </AccentCard>
+    </Box>
   );
 }

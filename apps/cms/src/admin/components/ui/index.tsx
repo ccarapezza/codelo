@@ -196,7 +196,15 @@ export function AccentCard({
       borderRadius="8px"
       hasRadius
       shadow="filterShadow"
-      style={{ display: "flex", overflow: "hidden", height: "100%" }}
+      // ⚠️ Sin `height: 100%`, y es deliberado: ese porcentaje se resuelve
+      // contra la altura de la FILA de la grilla, o sea contra la tarjeta más
+      // alta, así que ANULA el `align-items: start` del contenedor. Con él,
+      // «Publicación» —que es un toggle— medía lo mismo que «Modelos de IA» y
+      // arrastraba 332px de aire.
+      //
+      // Cuando se QUIERAN parejas, el contenedor lo pide con `align-items:
+      // stretch`, que es el default de grid y no necesita esto.
+      style={{ display: "flex", overflow: "hidden" }}
     >
       <Box background={a.strip} style={{ width: 4, flexShrink: 0 }} />
       <Box style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
