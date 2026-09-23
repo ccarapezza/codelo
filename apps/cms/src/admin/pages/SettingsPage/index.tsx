@@ -348,7 +348,12 @@ function SettingsPage() {
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 620px), 1fr))",
           gap: 24,
-          alignItems: "start",
+          // `stretch` acá y `start` en la grilla de abajo, a propósito: son dos
+          // tarjetas lado a lado y parejas se leen como un par. Funciona sin
+          // `height: 100%` en la tarjeta porque `stretch` es el default de grid
+          // y estira el ítem solo — ese porcentaje era justamente el que se
+          // resolvía contra la fila y rompía el `start` de abajo.
+          alignItems: "stretch",
           marginBottom: 24,
         }}
       >
@@ -359,35 +364,47 @@ function SettingsPage() {
           description={t("ajustes.modelos.desc")}
         >
           <Flex direction="column" alignItems="stretch" gap={4}>
-            <Field.Root hint={t("ajustes.modeloTexto.hint")}>
-              <Field.Label>{t("ajustes.modeloTexto.label")}</Field.Label>
-              <SingleSelect
-                value={form.openaiTextModel}
-                onChange={(val: string | number) => set("openaiTextModel", String(val))}
-              >
-                {TEXT_MODELS.map((m) => (
-                  <SingleSelectOption key={m.value} value={m.value}>
-                    {etiquetaModelo(m.label, t)}
-                  </SingleSelectOption>
-                ))}
-              </SingleSelect>
-              <Field.Hint />
-            </Field.Root>
+            {/* Los dos modelos van a la par: son la misma decisión tomada dos
+                veces —con qué se escribe, con qué se dibuja— y apilados
+                estiraban la tarjeta sin ganar nada. Colapsan a una columna
+                cuando no entran. */}
+            <Box
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 260px), 1fr))",
+                gap: 16,
+              }}
+            >
+              <Field.Root hint={t("ajustes.modeloTexto.hint")}>
+                <Field.Label>{t("ajustes.modeloTexto.label")}</Field.Label>
+                <SingleSelect
+                  value={form.openaiTextModel}
+                  onChange={(val: string | number) => set("openaiTextModel", String(val))}
+                >
+                  {TEXT_MODELS.map((m) => (
+                    <SingleSelectOption key={m.value} value={m.value}>
+                      {etiquetaModelo(m.label, t)}
+                    </SingleSelectOption>
+                  ))}
+                </SingleSelect>
+                <Field.Hint />
+              </Field.Root>
 
-            <Field.Root hint={t("ajustes.modeloImagen.hint")}>
-              <Field.Label>{t("ajustes.modeloImagen.label")}</Field.Label>
-              <SingleSelect
-                value={form.openaiImageModel}
-                onChange={(val: string | number) => set("openaiImageModel", String(val))}
-              >
-                {IMAGE_MODELS.map((m) => (
-                  <SingleSelectOption key={m.value} value={m.value}>
-                    {etiquetaModelo(m.label, t)}
-                  </SingleSelectOption>
-                ))}
-              </SingleSelect>
-              <Field.Hint />
-            </Field.Root>
+              <Field.Root hint={t("ajustes.modeloImagen.hint")}>
+                <Field.Label>{t("ajustes.modeloImagen.label")}</Field.Label>
+                <SingleSelect
+                  value={form.openaiImageModel}
+                  onChange={(val: string | number) => set("openaiImageModel", String(val))}
+                >
+                  {IMAGE_MODELS.map((m) => (
+                    <SingleSelectOption key={m.value} value={m.value}>
+                      {etiquetaModelo(m.label, t)}
+                    </SingleSelectOption>
+                  ))}
+                </SingleSelect>
+                <Field.Hint />
+              </Field.Root>
+            </Box>
             <ConsumoDeIA />
           </Flex>
         </AccentCard>
