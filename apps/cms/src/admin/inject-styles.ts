@@ -13,7 +13,7 @@
 // inyecta a mano en un <style>. Las reglas siguen viviendo en archivos .css de
 // verdad, no en un template literal, así que conservan formato y comentarios.
 
-import hideMarketplace from "./hide-marketplace.css?inline";
+import promosStrapi from "./promos-strapi.css?inline";
 import menuGroups from "./menu-groups.css?inline";
 import ilustraciones from "./ilustraciones.css?inline";
 
@@ -23,7 +23,7 @@ export function injectAdminStyles(): void {
     if (document.getElementById(ID)) return;
     const style = document.createElement("style");
     style.id = ID;
-    style.textContent = [hideMarketplace, menuGroups, ilustraciones].join("\n");
+    style.textContent = [promosStrapi, menuGroups, ilustraciones].join("\n");
     document.head.appendChild(style);
   } catch {
     // Cosmético: si algo falla, el panel funciona igual. Nunca debe romper el

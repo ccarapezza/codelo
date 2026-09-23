@@ -119,6 +119,21 @@ va DEBAJO de algo. `stat` y `countdown` lo usaban para su número de 460px
 profundo de Nib eso daba 1.97:1 sobre su propio fondo. Hay un test que lo
 impide.
 
+**`@strapi/design-system` y `@strapi/icons` van PINEADOS a la versión exacta
+que usa el Strapi instalado** (hoy 2.2.4 para Strapi 5.54). Estaban en
+`^2.0.0-rc.30` y `*`, así que nuestro código resolvía 2.2.3 mientras el admin de
+Strapi corría 2.0.0-rc.30: dos copias del mismo design system en un panel.
+Pinearlas convierte un desajuste futuro en un conflicto de install visible en
+vez de una resolución silenciosa — al subir Strapi hay que subir estas dos.
+
+**Actualizar Strapi rompe los ocultamientos cosméticos, no la arquitectura.**
+Al pasar de 5.31 a 5.54 el ítem del Marketplace reapareció porque cambió de la
+ruta interna `/marketplace` al sitio externo `market.strapi.io`, y apareció una
+barra de anuncio nueva a todo el ancho. Los dos viven en
+`src/admin/promos-strapi.css`, que se apoya en el DOM de Strapi a propósito y
+hay que mirar después de cada actualización. Cuando falla, lo oculto REAPARECE:
+se ve en una captura y no rompe nada.
+
 **Los tipos de Strapi están gitignoreados.** Tras tocar un content-type:
 `cd apps/cms && pnpm exec strapi ts:generate-types`. Sin eso el typecheck falla
 en cada `.update()`. El comando no necesita base de datos.
