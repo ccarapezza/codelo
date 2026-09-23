@@ -6,8 +6,10 @@
 // Ahora la pantalla recorre esta lista y la del proyecto (admin/verticals.ts).
 //
 // El ORDEN es el de una puesta en marcha: quién sos → cómo escribís → cómo se
-// ven las portadas → cómo se publica en redes → cómo se traduce. El checklist
-// de la home enlaza a cada tarjeta por su `id`.
+// ven las portadas → cómo se publica en redes → cómo se traduce. Cada tarjeta es
+// un PASO de la pantalla, así que el orden es el del asistente; la numeración la
+// pone la pantalla, para que una tarjeta de un proyecto no tenga que saber qué
+// número le toca. El checklist de la home enlaza a cada paso por su `id`.
 
 import * as React from "react";
 import { Command, Eye, Feather, Images, Pencil } from "@strapi/icons";
@@ -34,7 +36,7 @@ const IDIOMAS = [
 export const ENGINE_PROMPT_CARDS: PromptCard[] = [
   {
     id: "identidad",
-    title: "1 · Identidad",
+    title: "Identidad",
     description:
       "Quién escribe y de qué habla el sitio. Es lo primero que leen todos los agentes: el redactor, el Director, el deduplicador y el traductor.",
     accent: "primary",
@@ -64,7 +66,7 @@ export const ENGINE_PROMPT_CARDS: PromptCard[] = [
   },
   {
     id: "linea-editorial",
-    title: "2 · Línea editorial",
+    title: "Línea editorial",
     description:
       "Las reglas que separan una nota publicable de una que hay que rechazar. Las comparten el Redactor y el Director.",
     accent: "success",
@@ -101,7 +103,7 @@ export const ENGINE_PROMPT_CARDS: PromptCard[] = [
   },
   {
     id: "portadas",
-    title: "3 · Portadas",
+    title: "Portadas",
     description:
       "Qué se ve en la imagen de una nota. El medio (foto, ilustración, grabado) lo sortea el motor por nota; acá se decide QUÉ mostrar y con qué reglas.",
     accent: "warning",
@@ -135,7 +137,7 @@ export const ENGINE_PROMPT_CARDS: PromptCard[] = [
   },
   {
     id: "redes",
-    title: "4 · Redes y video",
+    title: "Redes y video",
     description:
       "Con qué usuario se firman, cómo suenan y qué aspecto tienen las piezas de Social Studio: carruseles, historias y clips.",
     accent: "secondary",
@@ -194,7 +196,7 @@ export const ENGINE_PROMPT_CARDS: PromptCard[] = [
   },
   {
     id: "traduccion",
-    title: "5 · Traducción",
+    title: "Traducción",
     description:
       "Sólo se usa si la traducción automática está activada, en Sitio e integraciones.",
     accent: "primary",

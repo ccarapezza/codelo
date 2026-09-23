@@ -113,7 +113,10 @@ function CampoPrompt({
 
   return (
     <Field.Root hint={campo.hint}>
-      <Flex gap={2} alignItems="center" justifyContent="space-between">
+      {/* La insignia va PEGADA a la etiqueta, no alineada a la derecha: con la
+          tarjeta a ancho completo quedaba a media pantalla de distancia y no se
+          leía como parte del campo. */}
+      <Flex gap={2} alignItems="center">
         <Field.Label>{campo.label}</Field.Label>
         <Badge backgroundColor={INSIGNIA[lang].fondo} textColor={INSIGNIA[lang].color}>
           {enBorrador ? "borrador" : INSIGNIA[lang].texto}
@@ -187,6 +190,12 @@ function PromptSettingsPage() {
    * envía al modelo sigue siendo el texto final en inglés, que se puede ver y
    * editar cambiando a «final».
    */
+  /**
+   * El paso actual. La pantalla es un asistente y no una grilla porque son 21
+   * campos: mostrados todos juntos nadie sabe por dónde empezar ni cuándo
+   * terminó. Un paso por tarjeta, incluidas las que agregue el proyecto.
+   */
+  const [paso, setPaso] = React.useState(0);
   const [modo, setModo] = React.useState<"final" | "borrador">("final");
   const [borradores, setBorradores] = React.useState<Valores>({});
   const [borradoresGuardados, setBorradoresGuardados] = React.useState<Valores>({});
@@ -202,6 +211,15 @@ function PromptSettingsPage() {
       JSON.stringify(borradores) !== JSON.stringify(borradoresGuardados),
     [form, saved, borradores, borradoresGuardados],
   );
+
+  // El checklist de la home enlaza a /prompt-settings#portadas y similares: el
+  // ancla tiene que abrir ese paso, no quedarse en el primero.
+  React.useEffect(() => {
+    const id = window.location.hash.replace("#", "");
+    if (!id) return;
+    const i = CARDS.findIndex((c) => c.id === id);
+    if (i >= 0) setPaso(i);
+  }, []);
 
   React.useEffect(() => {
     (async () => {
@@ -284,6 +302,8 @@ function PromptSettingsPage() {
     }
   }, [form, borradores, put, toggleNotification]);
 
+  const actual = CARDS[Math.min(paso, CARDS.length - 1)];
+
   if (loading) {
     return (
       <Flex justifyContent="center" alignItems="center" minHeight="50vh">
@@ -297,7 +317,7 @@ function PromptSettingsPage() {
       <PageHeader
         icon={<Feather width="1.4rem" height="1.4rem" />}
         title="Configuración editorial"
-        subtitle="De qué habla este sitio, con qué voz escribe y cómo se ven sus portadas y sus placas: es lo que convierte al motor en ESTE portal, y los agentes lo leen en cada corrida. Cada campo dice en qué idioma va — las instrucciones para el modelo se escriben en inglés, y el idioma de lo que se publica lo decide «Idioma de escritura». Un campo vacío usa el valor por defecto del motor, y «Restaurar» vuelve a ese valor neutro, NO al texto con el que arrancó el proyecto."
+        subtitle="Lo que convierte al motor en ESTE portal: los agentes lo leen en cada corrida. Cada campo dice en qué idioma va — las instrucciones para el modelo van en inglés, y el idioma de lo que se publica lo decide «Idioma de escritura». Un campo vacío usa el valor por defecto del motor, y «Restaurar» vuelve a ese valor neutro, NO al texto con el que arrancó el proyecto."
         actions={
           <Flex gap={2} alignItems="center">
             <Box style={{ width: "17rem" }}>
@@ -331,52 +351,78 @@ function PromptSettingsPage() {
         </Box>
       ) : null}
 
-      <Box
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))",
-          gap: 24,
-          alignItems: "stretch",
-        }}
-      >
-        {CARDS.map((card) => (
-          // El id es el ancla a la que enlaza el checklist de la home.
-          <div key={card.id} id={card.id}>
-            <AccentCard
-              icon={card.icon}
-              title={card.title}
-              accent={card.accent}
-              description={card.description}
-              actions={
-                <Button
-                  size="S"
-                  variant="tertiary"
-                  startIcon={<ArrowClockwise />}
-                  onClick={() => restore(card.fields.map((f) => f.key))}
-                >
-                  Restaurar
-                </Button>
-              }
-            >
-              <Flex direction="column" alignItems="stretch" gap={4}>
-                {card.fields.map((campo) => (
-                  <CampoPrompt
-                    key={campo.key}
-                    campo={campo}
-                    valor={form[campo.key] ?? ""}
-                    borrador={borradores[campo.key] ?? borradoresBase[campo.key] ?? ""}
-                    modo={modo}
-                    traduciendo={traduciendo === campo.key}
-                    onChange={(v) => set(campo.key, v)}
-                    onBorrador={(v) => setBorrador(campo.key, v)}
-                    onTraducir={() => traducir(campo.key)}
-                  />
-                ))}
-              </Flex>
-            </AccentCard>
-          </div>
+      {/* Los pasos, siempre visibles: se puede saltar a cualquiera. Un asistente
+          que obliga a pasar por todos en orden es peor que la grilla que
+          reemplaza — quien viene a cambiar UNA cosa no quiere un recorrido. */}
+      <Flex gap={2} wrap="wrap" marginBottom={5}>
+        {CARDS.map((c, i) => (
+          <Button
+            key={c.id}
+            size="S"
+            variant={i === paso ? "default" : "tertiary"}
+            onClick={() => setPaso(i)}
+          >
+            {i + 1} · {c.title}
+          </Button>
         ))}
-      </Box>
+      </Flex>
+
+      <div id={actual.id}>
+        <AccentCard
+          icon={actual.icon}
+          title={`Paso ${paso + 1} de ${CARDS.length} · ${actual.title}`}
+          accent={actual.accent}
+          description={actual.description}
+          actions={
+            <Button
+              size="S"
+              variant="tertiary"
+              startIcon={<ArrowClockwise />}
+              onClick={() => restore(actual.fields.map((f) => f.key))}
+            >
+              Restaurar este paso
+            </Button>
+          }
+        >
+          <Flex direction="column" alignItems="stretch" gap={4}>
+            {actual.fields.map((campo) => (
+              <CampoPrompt
+                key={campo.key}
+                campo={campo}
+                valor={form[campo.key] ?? ""}
+                borrador={borradores[campo.key] ?? borradoresBase[campo.key] ?? ""}
+                modo={modo}
+                traduciendo={traduciendo === campo.key}
+                onChange={(v) => set(campo.key, v)}
+                onBorrador={(v) => setBorrador(campo.key, v)}
+                onTraducir={() => traducir(campo.key)}
+              />
+            ))}
+          </Flex>
+        </AccentCard>
+      </div>
+
+      <Flex justifyContent="space-between" alignItems="center" marginTop={4}>
+        <Button
+          variant="tertiary"
+          disabled={paso === 0}
+          onClick={() => setPaso((p) => Math.max(0, p - 1))}
+        >
+          ← Anterior
+        </Button>
+        <Typography variant="pi" textColor="neutral600">
+          {/* Se puede guardar en cualquier paso: los cambios de todos los pasos
+              viajan juntos, no hay que llegar al final. */}
+          Guardá cuando quieras — se guardan los cambios de todos los pasos.
+        </Typography>
+        <Button
+          variant="tertiary"
+          disabled={paso === CARDS.length - 1}
+          onClick={() => setPaso((p) => Math.min(CARDS.length - 1, p + 1))}
+        >
+          Siguiente →
+        </Button>
+      </Flex>
 
       <SaveBar
         dirty={dirty}
