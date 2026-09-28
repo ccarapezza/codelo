@@ -66,6 +66,9 @@ En `scripts/`, fuera del arranque:
 - `seed-test-post.mjs` — dos notas de prueba con etiquetas y (con
   `OPENAI_API_KEY`) portada, para revisar maquetación. Idempotente. Borralas
   antes de producción.
+- `find-echoed-titles.mjs` — lista las notas publicadas cuyo título calca un
+  titular de las fuentes RSS. Sólo reporta. `local` levanta Strapi;
+  `prod` va por REST con `PROD_URL` y `PROD_TOKEN`.
 
 ---
 

@@ -56,6 +56,18 @@ Lo que el motor le pide al proyecto, todo con default vacío:
 | `app/[lang]/theme.css` | Los colores del sitio |
 | `components/vertical/index.ts` | Cuatro ranuras opcionales de la web |
 
+### Lo que el motor le presta a un vertical
+
+Un runner propio (un rol de `agent-roles.ts`) o un cron propio no tiene que
+copiar lo que el motor ya resuelve. Se importa de acá:
+
+| Helper | Módulo | Para qué |
+| --- | --- | --- |
+| `generateCoverForPost` | `lib/cover-pipeline.ts` | La portada de una nota: prompt, imagen (con el reintento ante el 200 vacío de Gemini) y subida. Devuelve `{ coverImageId, coverPrompt }`; persistir la nota y auditar queda del lado de quien llama |
+| `findActiveDirector`, `findActiveImageGenerator` | `lib/agent-runner.ts` | Los agentes activos que usan los runners del motor |
+| `ensureTagBySlug` | `lib/tags.ts` | Una etiqueta fija del vertical (sus secciones): la busca y, si falta, la crea |
+| `triggerInternalJob` | `lib/internal-jobs.ts` | Despertar un trabajo de un servicio propio por `POST /internal/jobs/<job>`, con falla suave |
+
 ## Traer cambios de Nib
 
 ```sh

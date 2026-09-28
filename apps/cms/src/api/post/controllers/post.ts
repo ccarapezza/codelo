@@ -5,13 +5,12 @@ import { requireAdmin } from "../../../lib/admin-auth";
 import { logAgentAction } from "../../../lib/audit";
 import { republishPreservingDate } from "../../../lib/post-publish";
 import {
-  chooseImagePrompt,
-  generateCoverImage,
   generatePost,
   getOpenAIClient,
   isOpenRouterModel,
   uploadImageToStrapi,
 } from "../../../lib/openai";
+import { generateCoverForPost, type ImageGeneratorAgentDoc } from "../../../lib/cover-pipeline";
 import { makeSlug } from "../../../lib/agent-runner";
 import { getDefaultPostTag } from "../../../lib/tags";
 import {
@@ -40,12 +39,6 @@ import {
   SIZES,
   type Slide,
 } from "../../../lib/social-cards";
-
-type ImageGeneratorAgentDoc = {
-  imagePromptTemplate: string | null;
-  imageSize: string | null;
-  imageQuality: string | null;
-};
 
 type PostRow = {
   documentId: string;
@@ -87,24 +80,6 @@ async function regenerateCoverFor(
     return;
   }
 
-  const textClient = getOpenAIClient(textKey);
-
-  // Pull the last 10 cover prompts (excluding this post's own) for memory.
-  const recent = (await strapi.documents("api::post.post").findMany({
-    filters: { coverPrompt: { $notNull: true }, documentId: { $ne: documentId } },
-    sort: { createdAt: "desc" },
-    fields: ["coverPrompt"],
-    limit: 10,
-  })) as unknown as Array<{ coverPrompt: string | null }>;
-  const recentDescriptions = recent.map(r => r.coverPrompt!).filter(Boolean);
-
-  // Some generated prompts make the Gemini image model return an empty 200
-  // deterministically (no image, no error) — retrying the same text never
-  // recovers. So if the image comes back empty, regenerate a FRESH prompt
-  // (different seed → different composition) and try again.
-  let imagePrompt = "";
-  let imageBuffer: Buffer | undefined;
-  const MAX_PROMPT_TRIES = 3;
   // El seedKey lleva un componente que cambia en cada corrida. Antes era
   // `documentId|title|tryN`: como ninguno de los tres varía entre regeneradas,
   // el hash daba siempre el mismo número y por lo tanto SIEMPRE el mismo
@@ -113,48 +88,26 @@ async function regenerateCoverFor(
   // El hash sigue repartiendo parejo entre notas; lo que se pierde es la
   // reproducibilidad por nota, que acá no aporta: regenerar ES pedir otra.
   const rotation = Date.now();
-  for (let tryN = 1; tryN <= MAX_PROMPT_TRIES; tryN++) {
-    imagePrompt = await chooseImagePrompt(textClient, textModel, {
+  const { coverImageId: newImageId, coverPrompt: imagePrompt } = await generateCoverForPost(
+    strapi,
+    {
+      documentId,
       title: post.title,
-      excerpt: post.excerpt ?? "",
-      seedKey: `${documentId}|${post.title}|${rotation}|${tryN}`,
-      recentDescriptions,
-      systemInstructions:
-        imgAgent.imagePromptTemplate?.trim() || promptSettings.imageSystemInstructions,
-      themeGuide: promptSettings.imageThemeGuide,
-      anchorTaxonomy: promptSettings.imageAnchorTaxonomy,
-        brandPalette: promptSettings.brandPalette,
-    });
-    try {
-      imageBuffer = await generateCoverImage(
-        { openaiImageKey: imageKey, openrouterKey },
-        imageModel,
-        imagePrompt,
-        {
-          size: imgAgent.imageSize ?? undefined,
-          quality: imgAgent.imageQuality ?? undefined,
-        },
-      );
-      break;
-    } catch (err) {
-      const empty = ((err as Error).message ?? "").includes("no inline image data");
-      if (!empty || tryN === MAX_PROMPT_TRIES) {
-        // Log the offending prompt before giving up: a moderation rejection is
-        // otherwise undiagnosable, since the prompt is only persisted on success.
-        strapi.log.error(
-          `[post] cover generation failed for ${documentId}; prompt was: ${imagePrompt}`,
-        );
-        throw err;
-      }
-      strapi.log.warn(
-        `[post] cover image came back empty for ${documentId}; regenerating prompt (try ${tryN}/${MAX_PROMPT_TRIES})`,
-      );
-    }
-  }
-  if (!imageBuffer) throw new Error("Cover image generation failed after retries.");
-  const ext = isOpenRouterModel(imageModel) ? "png" : "jpg";
-  const filename = `cover-${documentId}-${Date.now()}.${ext}`;
-  const newImageId = await uploadImageToStrapi(strapi, imageBuffer, filename, post.title);
+      excerpt: post.excerpt,
+      seedKey: `${documentId}|${post.title}|${rotation}`,
+    },
+    {
+      textClient: getOpenAIClient(textKey),
+      textModel,
+      imageModel,
+      keys: { openaiImageKey: imageKey, openrouterKey },
+      imgAgent,
+      promptSettings,
+      // La portada que se está reemplazando no cuenta como "reciente".
+      excludeDocumentId: documentId,
+      logTag: "[post]",
+    },
+  );
 
   await strapi.documents("api::post.post").update({
     documentId,
@@ -823,61 +776,27 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
       imgAgent = { imagePromptTemplate: null, imageSize: null, imageQuality: null };
     }
 
-    const textClient = getOpenAIClient(textKey);
     try {
-      const recent = (await strapi.documents("api::post.post").findMany({
-        filters: { coverPrompt: { $notNull: true } },
-        sort: { createdAt: "desc" },
-        fields: ["coverPrompt"],
-        limit: 10,
-      })) as unknown as Array<{ coverPrompt: string | null }>;
-      const recentDescriptions = recent.map(r => r.coverPrompt!).filter(Boolean);
-
-      const custom = customPrompt?.trim();
-      let imagePrompt = "";
-      let imageBuffer: Buffer | undefined;
-      // A custom prompt is used as-is (no re-seeding); an auto prompt can retry
-      // with a fresh seed when Gemini returns an empty 200 ("no inline image data").
-      const MAX_TRIES = custom ? 1 : 3;
-      for (let tryN = 1; tryN <= MAX_TRIES; tryN++) {
-        imagePrompt = custom
-          ? custom
-          : await chooseImagePrompt(textClient, textModel, {
-              title,
-              excerpt: excerpt ?? "",
-              seedKey: `news-${Date.now()}|${title}|${tryN}`,
-              recentDescriptions,
-              systemInstructions:
-                imgAgent.imagePromptTemplate?.trim() || settings.imageSystemInstructions,
-              themeGuide: settings.imageThemeGuide,
-              anchorTaxonomy: settings.imageAnchorTaxonomy,
-        brandPalette: settings.brandPalette,
-            });
-        try {
-          imageBuffer = await generateCoverImage(
-            { openaiImageKey: imageKey, openrouterKey },
-            imageModel,
-            imagePrompt,
-            {
-              size: imgAgent.imageSize ?? undefined,
-              quality: imgAgent.imageQuality ?? undefined,
-            },
-          );
-          break;
-        } catch (err) {
-          const empty = ((err as Error).message ?? "").includes("no inline image data");
-          if (!empty || tryN === MAX_TRIES) throw err;
-          strapi.log.warn(`[post] newsImage empty image; retrying prompt (${tryN}/${MAX_TRIES})`);
-        }
-      }
-      if (!imageBuffer) throw new Error("Image generation failed after retries.");
-
-      const ext = isOpenRouterModel(imageModel) ? "png" : "jpg";
-      const mediaId = await uploadImageToStrapi(
+      // Un prompt escrito a mano se usa tal cual, en un solo intento; uno
+      // automático reintenta con otra semilla ante el 200 vacío de Gemini.
+      const { coverImageId: mediaId, coverPrompt: imagePrompt } = await generateCoverForPost(
         strapi,
-        imageBuffer,
-        `news-cover-${Date.now()}.${ext}`,
-        title,
+        {
+          documentId: null,
+          title,
+          excerpt: excerpt ?? "",
+          seedKey: `news-${Date.now()}|${title}`,
+          customPrompt,
+        },
+        {
+          textClient: getOpenAIClient(textKey),
+          textModel,
+          imageModel,
+          keys: { openaiImageKey: imageKey, openrouterKey },
+          imgAgent,
+          promptSettings: settings,
+          logTag: "[post] newsImage",
+        },
       );
       const file = (await strapi.db
         .query("plugin::upload.file")

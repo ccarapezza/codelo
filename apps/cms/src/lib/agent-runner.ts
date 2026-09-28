@@ -1,15 +1,17 @@
 import type { Core } from "@strapi/strapi";
 import {
   generatePost,
-  generateCoverImage,
-  chooseImagePrompt,
-  uploadImageToStrapi,
   getOpenAIClient,
   isOpenRouterModel,
   reviewPost,
   findDuplicateSubject,
   type GeneratedPost,
 } from "./openai";
+import {
+  CoverPipelineError,
+  findActiveImageGenerator,
+  generateCoverForPost,
+} from "./cover-pipeline";
 import {
   getIngestWindowDays,
   getRecentNewsForTopic,
@@ -71,13 +73,6 @@ type AgentDoc = {
   defaultTag?: { documentId: string } | null;
   enabled: boolean;
   schedules: ScheduleEntry[];
-};
-
-type ImageGeneratorAgentDoc = {
-  documentId: string;
-  imagePromptTemplate: string | null;
-  imageSize: string | null;
-  imageQuality: string | null;
 };
 
 // Each schedule carries its own IANA zone (the wall-clock zone its time/days
@@ -176,12 +171,9 @@ export function makeSlug(title: string): string {
   return `${base || "post"}-${Date.now().toString(36)}`;
 }
 
-export async function findActiveImageGenerator(strapi: Core.Strapi): Promise<ImageGeneratorAgentDoc | null> {
-  const results = await strapi.documents("api::agent.agent").findMany({
-    filters: { role: "image-generator", enabled: true },
-  });
-  return (results[0] as unknown as ImageGeneratorAgentDoc) ?? null;
-}
+// Vive en cover-pipeline.ts; se re-exporta acá porque los verticales la
+// importan de este módulo junto con findActiveDirector.
+export { findActiveImageGenerator };
 
 // Exportadas para los runners que aporte el vertical (src/verticals/agent-roles.ts):
 // un rol propio que publique necesita el mismo director y el mismo generador de
@@ -555,7 +547,7 @@ async function runDirector(
   const promptSettings = await getPromptSettings(strapi);
   const client = getOpenAIClient(textKey);
   // Resolve the OpenRouter key up front, but a missing key must not abort the whole
-  // director run — generateCoverImage surfaces it as a per-draft cover_failed.
+  // director run — the cover pipeline surfaces it as a per-draft cover_failed.
   let openrouterKey: string | undefined;
   if (isOpenRouterModel(imageModel)) {
     try {
@@ -709,42 +701,25 @@ async function runDirector(
       let chosenPrompt: string | null = null;
       if (imgAgent) {
         try {
-          // Fetch the last 10 cover prompts so the new one is forced to differ.
-          const recent = (await strapi.documents("api::post.post").findMany({
-            filters: { coverPrompt: { $notNull: true } },
-            sort: { createdAt: "desc" },
-            fields: ["coverPrompt"],
-            limit: 10,
-          } as never)) as unknown as Array<{ coverPrompt: string | null }>;
-          const recentDescriptions = recent.map((r) => r.coverPrompt!).filter(Boolean);
-
-          chosenPrompt = await chooseImagePrompt(getOpenAIClient(textKey), textModel, {
-            title: refined.title,
-            excerpt: refined.excerpt,
-            seedKey: `${draft.documentId}|${refined.title}`,
-            recentDescriptions,
-            systemInstructions: imgAgent.imagePromptTemplate?.trim() || promptSettings.imageSystemInstructions,
-            themeGuide: promptSettings.imageThemeGuide,
-            anchorTaxonomy: promptSettings.imageAnchorTaxonomy,
-        brandPalette: promptSettings.brandPalette,
-          });
-          const imageBuffer = await generateCoverImage(
-            { openaiImageKey: imageKey, openrouterKey },
-            imageModel,
-            chosenPrompt,
+          // El primer intento usa la semilla de siempre (`documentId|title`):
+          // la misma nota sigue saliendo con la misma portada. Si Gemini
+          // devuelve un 200 vacío, reintenta con otra; antes publicaba sin
+          // imagen.
+          const cover = await generateCoverForPost(
+            strapi,
+            { documentId: draft.documentId, title: refined.title, excerpt: refined.excerpt },
             {
-              size: imgAgent.imageSize ?? undefined,
-              quality: imgAgent.imageQuality ?? undefined,
+              textClient: getOpenAIClient(textKey),
+              textModel,
+              imageModel,
+              keys: { openaiImageKey: imageKey, openrouterKey },
+              imgAgent,
+              promptSettings,
+              logTag: "[agent-runner]",
             },
           );
-          const ext = isOpenRouterModel(imageModel) ? "png" : "jpg";
-          const filename = `cover-${draft.documentId}-${Date.now()}.${ext}`;
-          coverImageId = await uploadImageToStrapi(
-            strapi as Parameters<typeof uploadImageToStrapi>[0],
-            imageBuffer,
-            filename,
-            refined.title,
-          );
+          coverImageId = cover.coverImageId;
+          chosenPrompt = cover.coverPrompt;
           strapi.log.info(`[agent-runner] Cover image generated for: ${refined.title}`);
           await logAgentAction(strapi, {
             agentRole: "image-generator",
@@ -757,6 +732,9 @@ async function runDirector(
             metadata: { model: imageModel, triggeredBy: agent.name, trigger: "director" },
           });
         } catch (imgErr) {
+          // El prompt se guarda aunque la imagen falle, como antes: Social
+          // Studio lo reusa para los fondos de las placas.
+          chosenPrompt = imgErr instanceof CoverPipelineError ? imgErr.prompt : null;
           strapi.log.warn(`[agent-runner] Image generation failed (publishing without image):`, imgErr);
           await logAgentAction(strapi, {
             agentRole: "image-generator",
