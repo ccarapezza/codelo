@@ -1,0 +1,19 @@
+# Lo propio de codelo que vive fuera de las costuras con nombre del motor.
+# Un patrón de grep -E por línea, contra "archivo:línea:texto" (ver
+# scripts/check-neutral.sh, que es del motor y no se edita acá).
+
+# Este mismo archivo, que nombra lo que excluye.
+^scripts/check-neutral\.ignore:
+
+# Content-types y endpoints propios (INASE, Boletín, agenda, tablero).
+^apps/cms/src/api/(cultivar|norma|operador-semilla|dashboard|event)/
+
+# Scripts de una vez contra la base de codelo.
+^apps/cms/scripts/(run-argentina-batch|copy-posts-to-prod|retitle-notes)\.mjs:
+
+# La identidad y la home del sitio. La home no tiene costura en el motor: es
+# una divergencia conocida y conflictúa si el motor la toca.
+^apps/web/app/\[lang\]/(theme\.css|page\.tsx):
+
+# El .env.example de la raíz es de este proyecto.
+^\.env\.example:

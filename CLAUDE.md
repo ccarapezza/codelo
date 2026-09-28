@@ -24,13 +24,14 @@ Dónde vive lo nuestro:
 
 | Costura | Qué hay |
 | --- | --- |
-| `apps/cms/src/verticals/` | INASE, Boletín, prompts del tema, crons, alcance RSS, marca de placas |
-| `apps/cms/src/admin/verticals.ts` | Widgets del panel y la identidad visual (logo, paleta, login) |
+| `apps/cms/src/verticals/` | INASE, Boletín (y su modelo, `norma-model.ts`), la semilla editorial (`seed.ts`), crons, alcance RSS, campos propios (`prompt-fields.ts`, `setting-fields.ts`), tipografías de las placas (`brand.ts`) |
+| `apps/cms/src/admin/verticals.ts` | Widgets del panel, identidad visual (logo, paleta, login) y las tarjetas propias de configuración: "Boletín Oficial" (`promptCards`) y "Lectura de normas" (`settingCards`) |
 | `apps/cms/src/api/{cultivar,operador-semilla,norma,event,dashboard}/` | Content-types propios |
 | `apps/web/app/[lang]/(vertical)/` | semillas, clima, normativa, actividades, quiénes somos, reprocann |
 | `apps/web/components/vertical/`, `lib/vertical/` | Componentes y librerías propias |
 | `apps/web/lib/site.ts`, `app/[lang]/{theme.css,vertical.css,fonts.ts}` | Identidad del sitio |
 | `apps/web/messages/es.vertical.json` | Cadenas propias (se mezclan con las del motor) |
+| `scripts/check-neutral.ignore` | Lo propio que vive fuera de las costuras con nombre (content-types, scripts, la home): el checker del motor lo saltea |
 
 `docs/adoptar-nib.md` en el repo de Nib tiene la tabla completa de qué archivo
 es de quién. Antes de tocar algo fuera de esa lista, pensar dos veces.
@@ -91,11 +92,14 @@ pnpm dev:web    # Next en http://localhost:3200
   matcheen su topic, el redactor NO escribe (evita el "modo análisis", que
   redacta de memoria del modelo e inventa datos).
 - Motor IA: `agent`, `agent-action`, `news-context`, `rss-feed`,
-  `prompt-setting` (overrides de los defaults en `src/verticals/prompt-defaults.ts`),
+  `prompt-setting` (la configuración editorial: vive en la BASE y se edita en
+  Configuración editorial; `src/verticals/seed.ts` la cargó una vez),
   `site-setting`, `house-ad`, `social-studio`.
-- Roles de agente: `director | redactor | image-generator`. (Existía un rol
-  `analyst` heredado de la plantilla de fulbo —analizaba partidos de fútbol—
-  eliminado junto con `match-context.ts` y `post.sourceMatchId`.)
+- Roles de agente: `director | redactor | explorador | image-generator`. El
+  explorador (del motor) elige un tema dentro de su área, lo investiga en la
+  web y escribe por el camino del redactor. (Existía un rol `analyst` heredado
+  de la plantilla de fulbo —analizaba partidos de fútbol— eliminado junto con
+  `match-context.ts` y `post.sourceMatchId`.)
 
 ## Editor de notas del admin — NO usar el Content Manager
 
@@ -222,7 +226,10 @@ complementa. Tres cosas no obvias, todas verificadas contra el sitio real:
 
 ## Reglas editoriales del vertical (prompts)
 
-`src/verticals/prompt-defaults.ts` define el dominio con reglas duras que NO deben
+La línea editorial vive en la BASE (Configuración editorial). `src/verticals/seed.ts`
+es el punto de partida versionado —lo que se sembró al adoptar Nib, idéntico a
+`test/preservation/settings.codelo.ts`—, pero editarlo NO cambia producción: una
+semilla aplicada no vuelve a correr. El dominio tiene reglas duras que NO deben
 relajarse. El temario sale de los **objetos estatutarios (Art. 2° del estatuto
 reformado 2024/25, ver `docs/estatuto-2025.md`)**: investigación y estudio del
 cultivo de cannabis y sus derivados en el marco de la Ley 27.350 y la Res.
@@ -270,8 +277,9 @@ generalistas.
 
 ## Portadas: el tratamiento visual rota, no es siempre foto
 
-`TREATMENTS` en `src/lib/openai.ts` es la dimensión que evita que todas las
-portadas se parezcan: 12 tratamientos (4 fotográficos, 8 dibujados/impresos —
+`TREATMENTS` (hoy en `src/lib/cover-pools.ts` del motor; codelo usa los del
+motor y deja vacía la costura `verticals/cover-pools.ts`) es la dimensión que
+evita que todas las portadas se parezcan: 12 tratamientos (4 fotográficos, 8 dibujados/impresos —
 lámina botánica, risografía, linograbado, diagrama, collage, aguada…) que
 `resolvePromptConstraints()` elige por hash del `seedKey`. El **medio** manda: las
 THEME → SCENE CUES dicen QUÉ mostrar, el tratamiento dice CÓMO renderizarlo.
@@ -295,6 +303,16 @@ y el parser deciden qué se conserva. Se desincronizaron una vez: la taxonomía 
 pedía `topic`/`palette`/`season` mientras el parser seguía leyendo los campos de
 fútbol `teamColors`/`jerseyNumber`, así que 3 de 5 anchors se descartaban en
 silencio y la paleta por artículo nunca llegaba al prompt. Falla sin error.
+
+## Placas de redes: colores y logo en el panel
+
+Los colores de las placas (Social Studio, carruseles, reels) están en la base:
+Ajustes del sitio → Identidad visual. Se sembraron desde el `brand.ts` viejo:
+fondo verde casi negro, verde bosque de acento, verde claro para números y
+comillas, tierra al cierre del degradé. El terracota de CTA no tiene rol en el
+motor y quedó afuera. **El logo se sube ahí mismo**: el directorio
+`lib/social-cards/assets/logo/` es del motor y tiene el de Nib, que es el que
+imprimen las placas mientras no haya uno subido.
 
 ## Diseño de la web — dirección "Dos Tintas"
 

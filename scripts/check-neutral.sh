@@ -15,6 +15,20 @@
 # escritos en inglés y ahí es donde más se esconde un resto.
 set -euo pipefail
 
+# Lo propio de un proyecto que vive fuera de las costuras con nombre —sus
+# content-types, sus scripts, una home propia— va en scripts/check-neutral.ignore:
+# un patrón de `grep -E` por línea, contra la salida `archivo:línea:texto`. En
+# Nib no existe. Existe para que ESTE archivo sea idéntico en el motor y en cada
+# proyecto: si cada uno lo editara para excluir lo suyo, el merge conflictuaría.
+IGNORAR=scripts/check-neutral.ignore
+filtrar_proyecto() {
+  if [[ -f "$IGNORAR" ]]; then
+    grep -vEf <(grep -vE '^[[:space:]]*(#|$)' "$IGNORAR") || true
+  else
+    cat
+  fi
+}
+
 TERMINOS='cannabis|cáñamo|canamo|cannábic|reprocann|ariccame|inase|boletín oficial'
 TERMINOS+='|futbol|fútbol|jugador|arquero|conmebol|cogollos|codelo|fulbo'
 TERMINOS+='|football|soccer|stadium|jersey|fifa|world cup'
@@ -25,6 +39,7 @@ hits=$(grep -rniE "$TERMINOS" \
   deploy scripts .env.example 2>/dev/null \
   | grep -vE 'apps/cms/src/verticals/|apps/cms/src/admin/verticals|apps/web/(app/\[lang\]/\(vertical\)|components/vertical|lib/vertical|lib/site\.ts)' \
   | grep -v '^scripts/check-neutral\.sh:' \
+  | filtrar_proyecto \
   || true)
 
 if [[ -n "$hits" ]]; then
