@@ -216,3 +216,211 @@ integración con api-football (su `api-football-setting` y su página) y el rol
 
 Antes de desplegar cualquier merge en fulbo, backup de la base: el CMS migra el
 schema al arrancar, y un enum mal resuelto no se deshace sin él.
+
+---
+
+# Addendum de Nib (28-sep): qué se cerró y qué le toca a fulbo
+
+Lo escribió la sesión de Nib después de implementar la sección 2. El texto de
+arriba queda como está; esto lo corrige donde quedó viejo y dice cómo seguir.
+
+## Correcciones al texto de arriba
+
+- **§1 "colores de las placas en `verticals/brand.ts`" y §3 "`LOGO_FILE`
+  necesita una ruta del vertical": obsoletos.** Desde `ae9bf74` los colores y
+  el logo de las placas viven en `site-setting` (Ajustes del sitio → Identidad
+  visual) y se cargan por semilla (`siteSettings`) o desde el panel.
+  `verticals/brand.ts` quedó con `BRAND_FONTS` y `LOGO_FILE`, que es sólo el
+  logo por defecto mientras no se suba uno.
+- **"El CHECK de Postgres tira el arranque": no en Strapi 5.54.** No crea CHECK
+  para los enums; los valida `strapi.documents()`. Igual hay que conservar
+  `analyst`, `team` y `worldcup` en los enums: sin ellos no se puede crear ni
+  editar un agente analista por la API de documentos, y el panel no los
+  etiqueta.
+- **§2.10 `generateCoverAndPublish` no existía.** La copia del pipeline de
+  portada está inline en `runAnalyst` (`verticals/analyst.ts`).
+- **Restos:** los scripts estaban en `apps/cms/scripts/`, y los comentarios de
+  `lib/` ya estaban barridos.
+
+## Qué cerró cada commit de `upstream/main`
+
+| §2 | Commit | Cómo se llama |
+| --- | --- | --- |
+| 1. Anti-calco del generador | `7dd4ec0` | `newsGenerate` reintenta dos veces y responde `titleWarning: { echoedHeadline } \| null`; `TITLE_ORIGINALITY_RULES` y `echoFeedback` en `lib/headline-similarity.ts`; aviso `nota.aviso.calco` en el editor de notas |
+| 2. Ventana de noticias | `abecc69`, `f89e0b0` | `site-setting.ingestWindowDays` (1..90, default 7): una sola ventana para ingesta, podado y pool. El prompt del redactor la nombra (`ingestWindowLabel`: "last 24h" con 1 día, "last N days" si no) |
+| 3. Filtro de relevancia | `7dd4ec0` | `selectFreePool` en `lib/rss-fetcher.ts`: filtra por `rss-scope` y, si no queda nada, usa el pool entero con un warning |
+| 4. Sufijo de imagen | `7dd4ec0` | "ONE single unified image"; y "collage of separate pictures" en vez de "collage", que le pegaba al tratamiento de collage |
+| 5. Pools de tapa | `bb50022` | Costura `verticals/cover-pools.ts` (`verticalCoverPools: Partial<CoverPools>`); tipos y `ENGINE_POOLS` en `lib/cover-pools.ts` |
+| 6. Ejemplos del dedup | `f89e0b0` | `prompt-setting.dedupExamples` (dos líneas) |
+| 7. Reglas extra del Director | `f89e0b0` | `prompt-setting.brandGuardrails`: viñetas completas (`  - …`) que entran en el STEP 2.5, después de las cuatro del motor |
+| 8. Tablero por rol | `bb50022` | Una sección de Agentes por cada `agentRoles` de `admin/verticals.ts`, con editar, borrar, correr y activar |
+| 9. Anclas | `bb50022` | Costura `verticals/anchor-enrichers.ts`: `(anchors) => { lines?, drop? } \| null` |
+| 10. Helpers | `2aa071a` | `generateCoverForPost` (`lib/cover-pipeline.ts`), `ensureTagBySlug` (`lib/tags.ts`), `triggerInternalJob` (`lib/internal-jobs.ts`), `scripts/find-echoed-titles.mjs` |
+| 10. Tag por defecto | `f89e0b0` | `site-setting.defaultPostTagSlug` |
+| Restos | `6688436` | README, Dockerfile y scripts neutros; `check-neutral.sh` los escanea |
+
+`generateCoverForPost` **no persiste ni audita**: devuelve
+`{ coverImageId, coverPrompt }` y cada caller guarda la nota y registra
+`cover_generated` después de guardar, como antes. Si falla lanza
+`CoverPipelineError`, con `.prompt` = el último prompt elegido.
+
+## Parte 3 — lo que tiene que hacer fulbo
+
+`upstream/main` trae, además de lo de arriba, los 18 commits posteriores a
+`663dc5e7`: la paleta neutra del panel (`b5f5d06`), colores y logo de las
+placas a la base (`ae9bf74`), OpenAI SDK 7 (`3d78404`) y su consumo en Ajustes
+(`e36e17c`), Strapi 5.54 con el design system pineado (`4eb9ba1`), el panel en
+castellano e inglés (`784c948`, `34bf817`, `ce51d32`), el rol explorador
+(`abecc69`) y los grupos de la sección 2.
+
+### 0. Antes de tocar nada, en el VPS
+
+- `git -C /opt/fulbo status --short`: un `docker-compose.prod.yml` editado a mano
+  en el server ya bloqueó los deploys una vez sin aviso.
+- El pipeline **no hace backup** y el CMS migra el schema al arrancar: correr
+  `scripts/backup-postgres.sh` a mano justo antes del deploy. Desde `6688436`
+  el script toma el slug del `.env` de `/opt/fulbo`; si fulbo conserva una copia
+  propia, verificar que siga apuntando a `fulbo-postgres`.
+
+### 1. Merge
+
+`git fetch upstream && git merge upstream/main`. Conflictos esperados, todos de
+clase B (quedarse con los dos lados):
+
+- `api/agent/.../schema.json`: conservar `analyst`, llega `explorador`.
+- `api/agent-action/.../schema.json`: conservar `analyst`; llegan `explorador`
+  y la acción `explorador_idle`.
+- `api/tag/.../schema.json`: conservar `topic|event|team|worldcup`.
+- `api/post/.../schema.json`: conservar `sourceMatchId`; llega `researchNotes`.
+- `api/prompt-setting/.../schema.json`: conservar `analyst*`; llegan
+  `dedupExamples` y `brandGuardrails`.
+- `api/site-setting/.../schema.json`: llegan `brand*`, `brandLogo`,
+  `ingestWindowDays` y `defaultPostTagSlug`.
+- `apps/cms/package.json` y `pnpm-lock.yaml`: la versión de Nib más lo propio,
+  y `pnpm install`.
+
+Lo de clase A va con la versión de Nib. Después: `pnpm exec strapi
+ts:generate-types`.
+
+### 2. El contenido de fulbo en las costuras (`apps/cms/src/verticals/`)
+
+Los textos salen de `47e1054e`:
+
+- **`cover-pools.ts`**:
+  - `compositions`: las 8 de `lib/openai.ts:102-111`.
+  - `moods`: los 9 de `:113-124`, con "stadium floodlights at night" y
+    "neon-accent lighting".
+  - `treatments`: los 10 `STYLES` de `:133-161` como `{ kind, value }`, con
+    `photo` → `"photo"` e `illustration` → `"art"`.
+  - `artRenders` puede quedar la del motor.
+  - ⚠️ Cinco estilos fotográficos nombran marcas y personas ("Sports
+    Illustrated", "National Geographic", "Magnum", "Annie Leibovitz", "FIFA
+    museum"), y el modelo de imagen tiende a escribir los nombres en la
+    imagen. Conviene describir el estilo sin el nombre.
+- **`anchor-enrichers.ts`**: `CLUB_MARKS`, `CLUB_MARK_HOMONYMS` y
+  `resolveTeamMark` (`:257-313`), y un enriquecedor:
+  ```ts
+  (a) => {
+    const mark = resolveTeamMark(a.country ?? null);
+    return mark
+      ? {
+          lines: [`- Team visual signature — work this KIT PATTERN into the scene (on a plain unbranded shirt, a scarf, a flag, a painted wall, a banner): ${mark}. Never a crest or badge.`],
+          drop: ["teamColors"],
+        }
+      : null;
+  }
+  ```
+  La línea va al final de MUST FEATURE (antes iba después de `country`).
+- **`brand.ts`**: la forma nueva, sólo `BRAND_FONTS` (Anton / Inter) y
+  `LOGO_FILE = "nib.png"`. Borrar `lib/social-cards/assets/logo/fulbostudio.2.png`
+  (es un directorio del motor): el logo se sube desde el panel (paso 6).
+- **`cron.ts`**: el `triggerIngestorJob` local pasa a
+  `triggerInternalJob(strapi, { baseUrl: process.env.INGESTOR_URL, apiKey: process.env.INTERNAL_API_KEY, job })`.
+- **`post-tags.ts`**: `ensureScopeTag(strapi, key)` pasa a
+  `(await ensureTagBySlug(strapi, SCOPE_TAGS[key])).documentId`. `SCOPE_TAGS` y
+  `classifyMatchScope` se quedan.
+- **`analyst.ts`**: la copia del pipeline (`runAnalyst`, ~236-311) pasa a
+  `generateCoverForPost(strapi, { documentId, title, excerpt }, { textClient, textModel, imageModel, keys, imgAgent, promptSettings, logTag: "[analyst]" })`,
+  dentro del mismo `try/catch` con su `cover_failed`. El update + publish y el
+  `cover_generated` quedan como están.
+- **`seed.ts`**: una semilla **nueva, con otra clave**, porque la aplicada no
+  vuelve a correr:
+  ```ts
+  {
+    key: "fulbo-editorial-2026-10",
+    promptSettings: {
+      dedupExamples: SETTINGS_FULBO.dedupExamples,
+      brandGuardrails: SETTINGS_FULBO.brandGuardrails,
+    },
+    siteSettings: {
+      defaultPostTagSlug: "futbol-argentino",
+      brandBg: "#0C110F", brandTitle: "#FFFFFF", brandBody: "#E9ECEA",
+      brandMuted: "#8B938F", brandAccent: "#FF7A00",
+      brandAccentLight: /* decidir, ver abajo */, brandAccentDeep: "#E5392F",
+    },
+  }
+  ```
+  Los dos textos ya están en `test/preservation/settings.fulbo.ts` de Nib: son
+  las dos líneas de `47e1054e:lib/openai.ts:395-396` y las viñetas de
+  `:849-850`.
+
+  **`brandAccentLight` es una decisión.** El motor no tiene `accentWarm`, y el
+  degradé va `accentLight → accent → accentDeep`.
+  - `#FFB02E` reproduce la estela ámbar → naranja → rojo, pero pinta de ámbar
+    las volantas, las comillas y la url.
+  - `#FF7A00` las deja en naranja y pierde el ámbar del degradé.
+
+  Elegir mirando la vista previa de Identidad visual.
+
+  `ingestWindowDays` **no se puede sembrar**: tiene default 7 en el schema, así
+  que nunca está vacío. Si fulbo quiere 1 día ("last 24h"), va en el panel.
+- **`test/seed.fulbo.test.ts`**: la unión de los `promptSettings` de todas las
+  semillas tiene que dar `toEqual(SETTINGS_FULBO)`. Rompe apenas entra el merge,
+  porque llegan dos claves nuevas, y lo arregla la semilla nueva.
+
+### 3. Propiedad de archivos, en el mismo merge
+
+- `admin/pages/ApiFootballSettingsPage/` → `admin/verticals/`, ajustando
+  `menuLinks`/`routes` en `admin/verticals.ts`.
+- `lib/rss-fetcher.test.ts`, con aserciones de fútbol → `verticals/rss-scope.fulbo.test.ts`.
+- `apps/cms/.env.example`: sumar `PROJECT_SLUG`, `PROJECT_NAME`,
+  `INTERNAL_API_KEY`, `INGESTOR_URL`, `PREVIEW_SECRET` y `PREVIEW_WEB_URL`.
+- `apps/cms/README.md` propio: el de Nib ya no dice "fulbo".
+
+### 4. Verificación local
+
+- `pnpm typecheck && pnpm test`: la preservación con `SETTINGS_FULBO` y
+  `seed.fulbo.test.ts`.
+- `./scripts/check-neutral.sh` (la copia de fulbo excluye las costuras).
+- El build de la imagen del CMS, que es lo único que compila el panel.
+- Arrancar contra una copia de la base de prod. El log tiene que mostrar
+  `[seed] fulbo-editorial-2026-10 aplicada. promptSettings: sembrados=[dedupExamples, brandGuardrails] …`
+  y, en `siteSettings`, los colores y `defaultPostTagSlug` sembrados. Si aparece
+  `IGNORADOS(no están en el schema)`, falta un atributo en un `schema.json`.
+
+### 5. Deploy
+
+Paso 0 (status y backup) → Jenkins → el log de arranque como en el paso 4, sin
+`PROJECT_SLUG no está configurada`.
+
+### 6. Después del deploy
+
+- **Configuración editorial:** "Ejemplos del deduplicador" y "Reglas extra del
+  Director" con el texto de fulbo, y la tarjeta del analista.
+- **Ajustes del sitio:** los colores y la etiqueta por defecto. **Subir el logo
+  ahí mismo**: hasta entonces las placas imprimen el de Nib.
+- **Agentes:** una sección para los analistas, con editar, borrar y correr.
+- **Auditoría:** etiqueta `analyst` y `explorador`.
+- **Correr ahora** en un redactor (el log dice "last N days") y en el analista
+  (auditoría `cover_generated` con `trigger: "analyst"`).
+- **Social Studio:** una placa con los colores y el logo correctos.
+- **Editor de notas:** generar con búsqueda web (aviso si el título calca), y
+  guardar sin etiquetas: tiene que salir con `futbol-argentino`.
+
+## Nota para codelo
+
+El neutro de `dedupExamples` no es el texto que codelo usa hoy: esas dos líneas
+son las suyas, y estaban escritas en el motor. Para que el deduplicador no le
+cambie al mergear, codelo las carga en su semilla (el valor está en
+`test/preservation/settings.codelo.ts`). Lo mismo que fulbo: una semilla nueva,
+con otra clave.
