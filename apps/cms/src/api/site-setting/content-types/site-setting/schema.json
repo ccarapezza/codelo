@@ -105,6 +105,13 @@
         "images"
       ],
       "description": "Logo que imprimen las placas. Sin esto se usa el de assets/logo/. PNG con fondo transparente."
+    },
+    "ingestWindowDays": {
+      "type": "integer",
+      "default": 7,
+      "min": 1,
+      "max": 90,
+      "description": "Cuántos días hacia atrás se ingieren noticias de los feeds, y cuánto se conservan. Subilo si tus fuentes publican poco: con 7 días, un feed que saca una nota por mes no aporta nunca. Bajarlo NO borra lo ya guardado hasta el próximo ciclo."
     }
   }
 }

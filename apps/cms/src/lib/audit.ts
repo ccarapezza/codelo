@@ -30,6 +30,8 @@ export type AgentAction =
   | "agent_failed"
   | "redactor_idle"
   | "director_idle"
+  /** El Explorador no encontró qué escribir, o la búsqueda web falló. */
+  | "explorador_idle"
   | "studio_portada"
   | "studio_carrusel"
   | "studio_historia"

@@ -55,6 +55,12 @@ export type CmsSiteSettings = {
   googleSiteVerification: string | null;
   clarityProjectId: string | null;
   houseAdsEnabled: boolean;
+  /**
+   * El logo cargado en Ajustes del sitio, ya proxeado. `null` si no hay
+   * ninguno: ahí manda el del motor, bundleado en `/brand/logo.png`. Es la
+   * misma idea del panel de Strapi, que muestra el logo propio si lo subiste.
+   */
+  brandLogoUrl: string | null;
 };
 
 export type CmsHouseAdSlot =
@@ -124,6 +130,7 @@ type StrapiSiteSetting = {
   googleSiteVerification?: string | null;
   clarityProjectId?: string | null;
   houseAdsEnabled?: boolean | null;
+  brandLogo?: { url?: string | null } | null;
 };
 
 type StrapiHouseAd = {
@@ -315,13 +322,16 @@ export async function getSiteSettings(): Promise<CmsSiteSettings> {
     googleSiteVerification: null,
     clarityProjectId: null,
     houseAdsEnabled: false,
+    brandLogoUrl: null,
   };
 
   const baseUrl = getCmsBaseUrl();
   if (!baseUrl) return empty;
 
   try {
-    const response = await fetch(`${baseUrl}/api/site-setting`, {
+    // `brandLogo` es una relación de media: sin populate no viene, y el sitio
+    // se quedaba con el logo del motor aunque hubiera uno cargado.
+    const response = await fetch(`${baseUrl}/api/site-setting?populate=brandLogo`, {
       next: { revalidate: 300 },
     });
     if (!response.ok) return empty;
@@ -341,6 +351,7 @@ export async function getSiteSettings(): Promise<CmsSiteSettings> {
       googleSiteVerification: data.googleSiteVerification ?? null,
       clarityProjectId: data.clarityProjectId ?? null,
       houseAdsEnabled: Boolean(data.houseAdsEnabled),
+      brandLogoUrl: data.brandLogo?.url ? proxiedUrl(data.brandLogo.url) : null,
     };
   } catch {
     return empty;

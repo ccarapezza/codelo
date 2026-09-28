@@ -22,6 +22,12 @@ export const ENGINE_SETTING_KEYS = [
   "clarityProjectId",
   "houseAdsEnabled",
   /**
+   * Cuántos días hacia atrás se ingieren noticias — y cuánto se conservan.
+   * Estaba fijo en 7 dentro del código, y con eso un feed que publica una nota
+   * por mes no aportaba nunca sin que hubiera forma de cambiarlo.
+   */
+  "ingestWindowDays",
+  /**
    * Identidad visual de las placas. Se derivan de BRAND_COLOR_KEYS, que es la
    * fuente de verdad: el test de contrato compara las dos listas contra el
    * schema.json para que no se pueda agregar un color en un lado solo.
@@ -45,3 +51,12 @@ export const MEDIA_SETTING_KEY = "brandLogo";
 
 /** Los que se guardan como booleano y no como texto. */
 export const BOOLEAN_SETTING_KEYS = new Set<string>(["autoTranslate", "houseAdsEnabled"]);
+
+/**
+ * Los que se guardan como entero.
+ *
+ * Sin esto el controller los pasa por `String(value)` y el campo queda con la
+ * cadena "30" en una columna integer: Postgres la acepta por casteo, pero el
+ * valor que vuelve al panel ya no es el que se guardó.
+ */
+export const NUMBER_SETTING_KEYS = new Set<string>(["ingestWindowDays"]);

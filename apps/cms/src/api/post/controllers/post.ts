@@ -1065,6 +1065,14 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
               : {}),
           ...(Array.isArray(tags) ? { tags } : {}),
           ...(typeof featured === "boolean" ? { featured } : {}),
+          // Editar una nota la DEVUELVE al pool del Director. El filtro de
+          // candidatos excluye todo borrador con `directorRejectionReason`
+          // cargado —para no re-revisar y re-rechazar lo mismo en cada
+          // corrida—, pero como nada volvía a limpiarlo, un rechazo era
+          // definitivo: el usuario leía el motivo, corregía exactamente eso, y
+          // el Director contestaba "no hay borradores". El ciclo natural
+          // (rechaza → corrijo → que revise de nuevo) no existía.
+          directorRejectionReason: null,
         } as never,
       })) as unknown as { documentId: string; slug: string };
 
@@ -1102,8 +1110,16 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
       fields: ["name", "kind"],
       sort: "name:asc",
       limit: 500,
-    })) as unknown as Array<{ id: number; name: string; kind: string | null }>;
-    ctx.body = tags.map(t => ({ id: t.id, name: t.name, kind: t.kind ?? null }));
+    })) as unknown as Array<{ id: number; documentId: string; name: string; kind: string | null }>;
+    // `documentId` además del `id`: el editor de notas guarda las etiquetas por
+    // id numérico, pero una RELACIÓN de la API de documentos se asigna por
+    // documentId. Sin él, el selector de etiqueta del agente no tenía con qué.
+    ctx.body = tags.map(t => ({
+      id: t.id,
+      documentId: t.documentId,
+      name: t.name,
+      kind: t.kind ?? null,
+    }));
   },
 
   // POST /news-generator/upload (multipart, campo "file") -> { mediaId, url }

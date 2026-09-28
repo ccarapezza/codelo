@@ -147,6 +147,16 @@
     "sourceContext": {
       "type": "json",
       "private": true
+    },
+    "researchNotes": {
+      "type": "text",
+      "private": true,
+      "pluginOptions": {
+        "i18n": {
+          "localized": false
+        }
+      },
+      "description": "Los apuntes de la investigación web del Explorador: los hechos con su atribución, tal como los encontró. Son la evidencia contra la que el Director revisa, aparte de la lista de fuentes."
     }
   }
 }

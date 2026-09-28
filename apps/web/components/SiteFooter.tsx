@@ -3,13 +3,17 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { SITE_NAME, SITE_URL, FOOTER_SECTIONS } from "@/lib/site";
 import { FooterArt } from "@/components/vertical";
+import { getSiteSettings } from "@/lib/cms";
 
 export async function SiteFooter() {
-  const [t, tHeader, tNav] = await Promise.all([
+  const [t, tHeader, tNav, settings] = await Promise.all([
     getTranslations("footer"),
     getTranslations("header"),
     getTranslations("nav"),
+    getSiteSettings(),
   ]);
+  // Mismo criterio que el header: el logo cargado en el panel gana al del motor.
+  const logoSrc = settings.brandLogoUrl ?? "/brand/logo.png";
 
   // Las columnas del pie son configuración del sitio (lib/site.ts); acá sólo se
   // traducen las claves.
@@ -42,11 +46,12 @@ export async function SiteFooter() {
               style={{ width: "fit-content" }}
             >
               <Image
-                src="/brand/logo.png"
+                src={logoSrc}
                 alt=""
                 width={160}
                 height={160}
-                className="h-28 w-28 sm:h-36 sm:w-36"
+                className="h-28 w-28 object-contain sm:h-36 sm:w-36"
+                unoptimized={Boolean(settings.brandLogoUrl)}
               />
             </Link>
             <div className="min-w-0">

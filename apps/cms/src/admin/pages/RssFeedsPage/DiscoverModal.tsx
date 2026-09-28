@@ -5,6 +5,7 @@
 // búsqueda tarda —valida cada candidato en vivo— y por eso conviene avisarlo.
 
 import React from "react";
+import { EDICIONES } from "../../../lib/google-news";
 import {
   Badge,
   Box,
@@ -163,6 +164,7 @@ export default function DiscoverModal({
   // Para un sitio en español el filtro no es una comodidad, es la diferencia
   // entre que la herramienta sirva o no.
   const [lang, setLang] = React.useState<string>("");
+  const [pais, setPais] = React.useState<string>("");
   const [buscando, setBuscando] = React.useState(false);
   const [resultado, setResultado] = React.useState<{ feeds: Discovered[]; query: string } | null>(
     null,
@@ -184,6 +186,7 @@ export default function DiscoverModal({
       const { data } = await post<{ feeds: Discovered[]; query: string }>(DISCOVER_API, {
         query: q,
         lang: lang || null,
+        country: pais || null,
       });
       setResultado(data);
     } catch {
@@ -214,7 +217,21 @@ export default function DiscoverModal({
                     }}
                   />
                 </Box>
-                <Box style={{ width: "15rem" }}>
+                <Box style={{ width: "13rem" }}>
+                  <SingleSelect
+                    aria-label={t("rss.pais.label")}
+                    value={pais}
+                    onChange={(v: string) => setPais(v ?? "")}
+                  >
+                    <SingleSelectOption value="">{t("rss.pais.cualquiera")}</SingleSelectOption>
+                    {EDICIONES.map((e) => (
+                      <SingleSelectOption key={e.code} value={e.code}>
+                        {e.label}
+                      </SingleSelectOption>
+                    ))}
+                  </SingleSelect>
+                </Box>
+                <Box style={{ width: "13rem" }}>
                   <SingleSelect
                     aria-label="Idioma"
                     value={lang}

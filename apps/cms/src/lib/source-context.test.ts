@@ -104,11 +104,25 @@ describe("parseSourceContext", () => {
 });
 
 describe("formatSourceContext", () => {
-  it("numera desde 1 y corta el resumen", () => {
+  it("numera desde 1 y no recorta por debajo de lo que se guardó", () => {
+    // El render tiene que mostrar TODO lo que el guardado conservó. Cuando el
+    // tope de render (600) era menor que el de guardado (800), el Director
+    // rechazaba por "dato sin respaldo" datos que estaban guardados y él no
+    // veía. Si alguien vuelve a bajar el tope de render, este test lo dice.
     const out = formatSourceContext(buildSourceContext([item({ summary: "z".repeat(900) })]));
     expect(out.startsWith("[1] [Sector] Revista del Sector | Mendoza")).toBe(true);
-    expect(out).toContain("z".repeat(600));
-    expect(out).not.toContain("z".repeat(601));
+    expect(out).toContain("z".repeat(800));
+    expect(out).not.toContain("z".repeat(801));
+  });
+
+  it("corta los resúmenes muy largos que no vienen de buildSourceContext", () => {
+    // Los apuntes del Explorador se guardan directo, sin pasar por el tope de
+    // 800: el render igual pone un techo para no inflar el prompt.
+    const out = formatSourceContext([
+      { title: "t", source: "s", url: "https://x.com", summary: "z".repeat(3000) },
+    ]);
+    expect(out).toContain("z".repeat(2600));
+    expect(out).not.toContain("z".repeat(2601));
   });
 
   it("permite continuar la numeración del bloque de relleno", () => {

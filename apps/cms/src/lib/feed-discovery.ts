@@ -21,6 +21,8 @@
 
 import type { Core } from "@strapi/strapi";
 import { extractKeywords, validateFeed, type FeedValidationResult } from "./rss-fetcher";
+import { esUrlPublica } from "./url-guard";
+import { buscarMedios, esEdicionValida, type CodigoEdicion } from "./google-news";
 import * as project from "./project";
 
 const UID = "api::rss-feed.rss-feed";
@@ -103,6 +105,9 @@ export function looksLikeSite(q: string): boolean {
 }
 
 async function get(url: string, timeoutMs: number): Promise<Response | null> {
+  // El autodiscovery lee la URL del `<link rel="alternate">` de un sitio
+  // ajeno: la elige un tercero, no el admin. Ver url-guard.ts.
+  if (!esUrlPublica(url)) return null;
   try {
     return await fetch(url, {
       headers: { "User-Agent": project.userAgent },
@@ -214,10 +219,21 @@ async function buscarEnFeedlyConReintento(
   locale: string | null,
 ): Promise<FeedCandidate[]> {
   const exacto = await searchFeedly(query, count, locale);
-  const palabras = extractKeywords(query).slice(0, 3);
+  const claves = extractKeywords(query);
+  const palabras = claves.slice(0, 3);
   if (exacto.length >= 5 || palabras.length < 2) return exacto;
 
-  const porPalabra = await Promise.all(palabras.map((p) => searchFeedly(p, count, locale)));
+  // El reintento por palabra suelta descartaba en silencio todo lo que no
+  // entrara en las tres primeras — y el calificador que más importa suele ir
+  // al final. "gastronomía, restaurantes, cocina y vinos de Argentina" buscaba
+  // "gastronomía", "restaurantes" y "cocina", tirando justo "argentina", que
+  // es la palabra que decide si el resultado sirve. Se agrega el par
+  // primera+última, que conserva la geografía sin multiplicar las llamadas.
+  const ultima = claves[claves.length - 1];
+  const consultas = [...palabras];
+  if (ultima && !palabras.includes(ultima)) consultas.push(`${palabras[0]} ${ultima}`);
+
+  const porPalabra = await Promise.all(consultas.map((p) => searchFeedly(p, count, locale)));
   const out = [...exacto];
   const vistos = new Set(out.map((c) => feedKey(c.url)));
 
@@ -422,10 +438,35 @@ async function yaCargados(strapi: Core.Strapi): Promise<Set<string>> {
   }
 }
 
+/**
+ * Candidatos a partir de los medios que Google News muestra para ese tema y
+ * país: se le pide su RSS propio a cada uno con el autodiscovery de siempre.
+ *
+ * El tope de medios es deliberado. Cada uno son una o dos peticiones al sitio,
+ * y con 72 medios por consulta sin tope el buscador tardaría minutos. Los
+ * primeros son los que más publicaron sobre el tema, que es el orden correcto.
+ */
+async function candidatosDesdeGoogleNews(
+  query: string,
+  code: CodigoEdicion,
+  topeMedios = 14,
+): Promise<FeedCandidate[]> {
+  const medios = await buscarMedios(query, code, project.userAgent);
+  if (medios.length === 0) return [];
+
+  const listas = await mapLimit(medios.slice(0, topeMedios), 4, async (m) => {
+    const encontrados = await discoverOnSite(m.host);
+    // El nombre que le pone Google News gana al del `<title>` del feed: suele
+    // ser el de la publicación y no "Inicio - Últimas noticias".
+    return encontrados.slice(0, 1).map((c) => ({ ...c, title: m.nombre || c.title }));
+  });
+  return listas.flat();
+}
+
 export async function discoverFeeds(
   strapi: Core.Strapi,
   query: string,
-  opts: { max?: number; lang?: string | null } = {},
+  opts: { max?: number; lang?: string | null; country?: string | null } = {},
 ): Promise<{ query: string; feeds: DiscoveredFeed[]; sources: string[] }> {
   const q = query.trim();
   const max = opts.max ?? 12;
@@ -440,7 +481,8 @@ export async function discoverFeeds(
     candidatos.push(...(await discoverOnSite(q)));
     sources.push("autodiscovery");
   } else {
-    const [feedly, porDominio] = await Promise.all([
+    const pais = esEdicionValida(opts.country) ? opts.country : null;
+    const [feedly, porDominio, porPais] = await Promise.all([
       // Con filtro de idioma se pide bastante más: lo que se descarta después
       // es casi todo, así que con el pool chico el listado quedaba vacío.
       buscarEnFeedlyConReintento(q, lang ? 60 : Math.max(max * 2, 20), lang),
@@ -450,10 +492,14 @@ export async function discoverFeeds(
         const dom = q.split(/\s+/).find((w) => looksLikeSite(w));
         return dom ? discoverOnSite(dom) : [];
       })(),
+      pais ? candidatosDesdeGoogleNews(q, pais) : Promise.resolve([]),
     ]);
     if (feedly.length) sources.push("feedly");
     if (porDominio.length) sources.push("autodiscovery");
-    candidatos.push(...porDominio, ...feedly);
+    if (porPais.length) sources.push("google-news");
+    // Los del país van PRIMERO: el dedupe conserva el primero que aparece, y
+    // cuando un medio está en los dos lados el que importa es el local.
+    candidatos.push(...porDominio, ...porPais, ...feedly);
   }
 
   // Dedupe conservando el primero, que es el de la fuente más específica.

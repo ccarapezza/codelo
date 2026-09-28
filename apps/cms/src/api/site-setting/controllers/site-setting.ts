@@ -2,7 +2,12 @@ import { factories } from "@strapi/strapi";
 import { requireAdminPermission } from "../../../lib/admin-auth";
 import { ADMIN_PERMISSIONS } from "../../../lib/admin-permissions";
 import { verticalSettingKeys } from "../../../verticals/setting-fields";
-import { BOOLEAN_SETTING_KEYS, ENGINE_SETTING_KEYS, MEDIA_SETTING_KEY } from "../../../lib/setting-keys";
+import {
+  BOOLEAN_SETTING_KEYS,
+  ENGINE_SETTING_KEYS,
+  MEDIA_SETTING_KEY,
+  NUMBER_SETTING_KEYS,
+} from "../../../lib/setting-keys";
 
 const UID = "api::site-setting.site-setting";
 
@@ -36,6 +41,13 @@ export default factories.createCoreController(UID, ({ strapi }) => ({
         // vacía sin dar ningún error.
         const id = Number(value);
         data[key] = Number.isFinite(id) && id > 0 ? id : null;
+        continue;
+      }
+      if (NUMBER_SETTING_KEYS.has(key)) {
+        // Fuera de rango o ilegible vuelve a null, que en la base cae al
+        // default del schema en vez de guardar un absurdo.
+        const n = Math.trunc(Number(value));
+        data[key] = Number.isFinite(n) && n >= 1 && n <= 90 ? n : null;
         continue;
       }
       data[key] = BOOLEAN_SETTING_KEYS.has(key)

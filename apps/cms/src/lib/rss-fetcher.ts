@@ -1,6 +1,7 @@
 import type { Core } from "@strapi/strapi";
 import * as rssScope from "../verticals/rss-scope";
 import * as project from "./project";
+import { esUrlPublica, motivoDescarte } from "./url-guard";
 
 export type NewsItem = {
   title: string;
@@ -39,6 +40,27 @@ export function decodeEntities(str: string): string {
     .replace(/&([a-z]+);/gi, (m, name) => ENTIDADES[name.toLowerCase()] ?? m);
 }
 
+// Los feeds de WordPress con imagen destacada mandan la miniatura como
+// `<description>`: el resumen entero es un `<img>` y no tiene un solo hecho.
+// El daño no es estético. El redactor recibe un titular que promete un dato
+// ("Precio de la Soja hoy") y un resumen sin contenido, así que rellena el
+// hueco inventando; y el Director, que revisa contra esos mismos 300
+// caracteres, se los come el markup y no puede verificar nada. Además el HTML
+// entraba al haystack de `isEditoriallyRelevant`, donde un nombre de archivo
+// como `soja-dolar-1024x538.webp` hacía matchear "soja".
+/** Exportada para poder testearla sin red ni base de datos. */
+export function stripHtml(str: string): string {
+  const sinTags = str
+    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<\/(p|div|li|h[1-6]|tr)>/gi, " ")
+    .replace(/<[^>]+>/g, "");
+  // Las entidades se decodifican DESPUÉS de sacar las etiquetas: dentro de un
+  // CDATA el HTML viene crudo y sin decodificar, y al revés un `&lt;img&gt;`
+  // escapado se volvería etiqueta recién después del strip.
+  return decodeEntities(sinTags).replace(/\s+/g, " ").trim();
+}
+
 function safeFromCodePoint(cp: number): string {
   // Un código inválido en un feed ajeno no debe tirar una excepción y cortar la
   // ingesta entera: se deja el texto como vino.
@@ -70,7 +92,13 @@ function parseItems(feedXml: string, source: string): NewsItem[] {
     const block = match[1];
     const title = extractField(block, "title");
     const url = extractField(block, "link") || extractField(block, "guid");
-    const summary = extractField(block, "description");
+    // `description` limpio de etiquetas; si queda vacío —el caso de la
+    // miniatura suelta— se recurre a `content:encoded`, que en los feeds de
+    // WordPress trae el cuerpo de la nota. Un ítem que igual queda sin resumen
+    // es sólo un titular, y como tal debe tratarse: no es evidencia verificable.
+    const summary =
+      stripHtml(extractField(block, "description")) ||
+      stripHtml(extractField(block, "content:encoded"));
     const pubDateStr = extractField(block, "pubDate") || extractField(block, "dc:date");
 
     if (!title || !url) continue;
@@ -93,6 +121,7 @@ function parseItems(feedXml: string, source: string): NewsItem[] {
 // éxito y el admin no tenía cómo enterarse. El caller lo envuelve en
 // allSettled, así que un feed caído sigue sin tumbar a los otros 25.
 async function fetchFeed(feedUrl: string, source: string, timeoutMs = 8000): Promise<NewsItem[]> {
+  if (!esUrlPublica(feedUrl)) throw new Error(motivoDescarte(feedUrl));
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   let res: Response;
@@ -133,7 +162,35 @@ async function fetchFeed(feedUrl: string, source: string, timeoutMs = 8000): Pro
  * del tema eran fuentes oficiales, así que todas las notas salían regulatorias. Ampliar solo la ventana de consumo no alcanza: si el ítem no
  * se guarda, no existe.
  */
+/**
+ * Ventana por defecto. El valor efectivo sale de Site Settings
+ * (`ingestWindowDays`): con 7 días un feed que publica una nota por mes no
+ * aporta nunca, y no había forma de cambiarlo sin tocar el código.
+ */
 const INGEST_WINDOW_DAYS = 7;
+
+/**
+ * La ventana configurada, en días.
+ *
+ * ⚠️ Gobierna TRES cosas que tienen que moverse juntas: qué se ingiere, cuánto
+ * se conserva antes de podar, y qué ve el Redactor en su pool. Si la ingesta
+ * mirara 30 días y el podado siguiera en 7, lo ingerido se borraría en el
+ * ciclo siguiente y el efecto sería nulo.
+ */
+export async function getIngestWindowDays(strapi: Core.Strapi): Promise<number> {
+  try {
+    const cfg = (await strapi
+      .documents("api::site-setting.site-setting")
+      .findFirst({ fields: ["ingestWindowDays"] })) as unknown as {
+      ingestWindowDays?: number | null;
+    } | null;
+    const n = Number(cfg?.ingestWindowDays);
+    if (Number.isFinite(n) && n >= 1 && n <= 90) return Math.trunc(n);
+  } catch {
+    // Falla suave: sin ajustes cargados vale el default del motor.
+  }
+  return INGEST_WINDOW_DAYS;
+}
 
 /** Clave en el core store con el ISO de la última corrida completa del cron. */
 const RSS_LAST_RUN_KEY = project.coreStoreKey("rss-last-run");
@@ -143,11 +200,11 @@ export async function getRssLastRun(strapi: Core.Strapi): Promise<string | null>
   return typeof value === "string" ? value : null;
 }
 
-function isRecentEnough(item: NewsItem): boolean {
+function isRecentEnough(item: NewsItem, dias: number): boolean {
+  // Un ítem SIN fecha pasa siempre: varios feeds no ponen pubDate y
+  // descartarlos por eso dejaría al redactor sin material sin explicar por qué.
   if (!item.itemPublishedAt) return true;
-  return (
-    item.itemPublishedAt.getTime() >= Date.now() - INGEST_WINDOW_DAYS * 24 * 60 * 60 * 1000
-  );
+  return item.itemPublishedAt.getTime() >= Date.now() - dias * 24 * 60 * 60 * 1000;
 }
 
 // ---------------------------------------------------------------------------
@@ -183,6 +240,14 @@ export async function validateFeed(
     return { valid: false, error: "URL inválida (debe empezar con http:// o https://)" };
   }
 
+  if (!esUrlPublica(feedUrl)) {
+    return {
+      valid: false,
+      error:
+        "Esa dirección apunta a la red interna o no es http(s), así que el motor no la pide. " +
+        "Si el medio publica su feed en una IP privada, pedile la URL pública.",
+    };
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   let res: Response;
@@ -231,7 +296,7 @@ export async function validateFeed(
   const feedLink = extractField(channelXml, "link") || null;
   const language = extractField(channelXml, "language") || null;
 
-  const freshItems = items.filter(isRecentEnough).length;
+  const freshItems = items.filter((i) => isRecentEnough(i, INGEST_WINDOW_DAYS)).length;
   const samples = items.slice(0, sampleSize).map((i) => ({
     title: i.title,
     url: i.url,
@@ -261,8 +326,8 @@ async function loadEnabledFeeds(
     .findMany({ filters })) as unknown as FeedSource[];
 }
 
-async function pruneOldNews(strapi: Core.Strapi): Promise<void> {
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+async function pruneOldNews(strapi: Core.Strapi, dias: number): Promise<void> {
+  const weekAgo = new Date(Date.now() - dias * 24 * 60 * 60 * 1000);
   const old = (await strapi
     .documents("api::news-context.news-context")
     .findMany({ filters: { fetchedAt: { $lt: weekAgo.toISOString() } } })) as unknown as Array<{
@@ -278,6 +343,92 @@ async function pruneOldNews(strapi: Core.Strapi): Promise<void> {
   }
 }
 
+
+// ---------------------------------------------------------------------------
+// Enriquecimiento — cuando el feed no trae resumen
+// ---------------------------------------------------------------------------
+
+/** Tope por ciclo. Cada uno es una petición al medio: no se abusa. */
+const TOPE_ENRIQUECER = 15;
+
+/**
+ * La descripción que el propio medio declara para esa nota.
+ *
+ * Se lee `og:description` (y `<meta name="description">` como respaldo) en vez
+ * de intentar extraer el cuerpo del HTML. No es pereza: medido el 24/09/2026
+ * sobre 10 notas reales de los feeds cargados, `og:description` apareció en
+ * las 10 y con una frase que dice de qué se trata; la extracción de párrafos
+ * devolvió 0 en las mismas páginas, porque el cuerpo o no está en `<p>` o lo
+ * arma JavaScript. Una frase escrita por el medio es mejor evidencia que un
+ * raspado a medias.
+ *
+ * Exportada para poder testearla sin red.
+ */
+export function descripcionDePagina(html: string): string {
+  const patrones = [
+    /<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']{40,})["']/i,
+    /<meta[^>]+content=["']([^"']{40,})["'][^>]+property=["']og:description["']/i,
+    /<meta[^>]+name=["']description["'][^>]+content=["']([^"']{40,})["']/i,
+    /<meta[^>]+content=["']([^"']{40,})["'][^>]+name=["']description["']/i,
+  ];
+  for (const re of patrones) {
+    const m = html.match(re);
+    // Las entidades se decodifican acá: vienen escapadas dentro del atributo
+    // (`&quot;`, `&#039;`) y sin esto llegan crudas al prompt del redactor.
+    if (m) return decodeEntities(m[1]).replace(/\s+/g, " ").trim();
+  }
+  return "";
+}
+
+/**
+ * Le completa el resumen a los ítems que llegaron sin uno.
+ *
+ * Los feeds de miniatura —y los de Google News— traen un `<description>` que
+ * después de limpiar el HTML queda vacío. Un ítem así es sólo un titular: el
+ * redactor lee una promesa de dato y rellena inventando, y el Director no
+ * tiene contra qué verificar. Bajarse la nota y leer lo que el medio declara
+ * cierra ese agujero.
+ *
+ * Muta los ítems recibidos. Falla suave de a uno: si un medio no responde, ese
+ * ítem se queda como estaba y el ciclo sigue.
+ */
+async function enriquecerSinResumen(strapi: Core.Strapi, items: NewsItem[]): Promise<void> {
+  const sinResumen = items.filter((i) => !i.summary?.trim() && esUrlPublica(i.url));
+  if (sinResumen.length === 0) return;
+
+  const objetivo = sinResumen.slice(0, TOPE_ENRIQUECER);
+  let completados = 0;
+
+  // De a cuatro: son medios distintos, pero no hay razón para golpearlos todos
+  // a la vez.
+  for (let i = 0; i < objetivo.length; i += 4) {
+    await Promise.all(
+      objetivo.slice(i, i + 4).map(async (item) => {
+        try {
+          const res = await fetch(item.url, {
+            headers: { "User-Agent": project.userAgent },
+            signal: AbortSignal.timeout(9000),
+            redirect: "follow",
+          });
+          if (!res.ok) return;
+          const desc = descripcionDePagina(await res.text());
+          if (desc) {
+            item.summary = desc;
+            completados += 1;
+          }
+        } catch {
+          /* el medio no respondió: el ítem queda como titular suelto */
+        }
+      }),
+    );
+  }
+
+  strapi.log.info(
+    `[rss-fetcher] Resumen completado en ${completados} de ${sinResumen.length} ítems que vinieron sin uno` +
+      (sinResumen.length > TOPE_ENRIQUECER ? ` (tope ${TOPE_ENRIQUECER} por ciclo)` : ""),
+  );
+}
+
 export async function fetchAndSaveNews(
   strapi: Core.Strapi,
   onlyDocumentId?: string,
@@ -289,6 +440,10 @@ export async function fetchAndSaveNews(
     strapi.log.info("[rss-fetcher] No enabled feeds configured.");
     return;
   }
+
+  // Una sola lectura para todo el ciclo: ingesta, podado y pool del redactor
+  // tienen que mirar la MISMA ventana (ver getIngestWindowDays).
+  const dias = await getIngestWindowDays(strapi);
 
   const results = await Promise.allSettled(
     feeds.map((f) => fetchFeed(f.url, f.name)),
@@ -303,8 +458,8 @@ export async function fetchAndSaveNews(
   const allItems: NewsItem[] = [];
   results.forEach((r, i) => {
     if (r.status === "fulfilled") {
-      const fresh = r.value.filter(isRecentEnough);
-      strapi.log.info(`[rss-fetcher] ${feeds[i].name}: ${fresh.length} items (últimos ${INGEST_WINDOW_DAYS} días)`);
+      const fresh = r.value.filter((i) => isRecentEnough(i, dias));
+      strapi.log.info(`[rss-fetcher] ${feeds[i].name}: ${fresh.length} items (últimos ${dias} días)`);
       allItems.push(...fresh);
       outcomes.push({ freshCount: fresh.length, error: null });
     } else {
@@ -327,6 +482,10 @@ export async function fetchAndSaveNews(
     strapi.log.info(
       `[rss-fetcher] ${toCreate.length} new items (${existingUrls.size} already existed).`,
     );
+
+    // Sólo sobre los nuevos: re-pedir en cada ciclo una nota ya guardada sería
+    // gratis para nosotros y molesto para el medio.
+    await enriquecerSinResumen(strapi, toCreate);
 
     const fetchedAt = new Date();
     for (const item of toCreate) {
@@ -359,7 +518,7 @@ export async function fetchAndSaveNews(
     await strapi.documents("api::rss-feed.rss-feed").update({ documentId: feed.documentId, data });
   }
 
-  await pruneOldNews(strapi);
+  await pruneOldNews(strapi, dias);
 
   // Marca del ciclo completo, para que el admin pueda mostrar cuándo corrió el
   // cron por última vez. Sólo en la corrida completa: un "fetch ahora" sobre un
@@ -457,7 +616,10 @@ export async function getRecentNewsForTopic(
   // dos o tres días: con 24 h sus notas quedaban afuera antes de que un redactor
   // las viera y el pool se llenaba solo de normativa. Medido sobre feeds reales:
   // 50 notas y 0 dentro de las últimas 24 h; otro, 100 y 0.
-  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  // La misma ventana que la ingesta: si se ingieren 30 días y acá se miran 7,
+  // lo que se sumó al subir la ventana no le llega nunca al redactor.
+  const dias = await getIngestWindowDays(strapi);
+  const since = new Date(Date.now() - dias * 24 * 60 * 60 * 1000);
 
   const keywords = extractKeywords(topic);
 

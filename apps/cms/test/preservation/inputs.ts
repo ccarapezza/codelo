@@ -87,3 +87,10 @@ export const RECENT_DESCRIPTIONS = [
  */
 export const SEED_PHOTO = "preservacion-5";
 export const SEED_ART = "preservacion-0";
+
+/**
+ * Fecha fija para el prompt de revisión. Va acá y no como `new Date()` adentro
+ * del builder porque si no el fixture guardaría la fecha del día en que se
+ * capturó y el test se rompería solo al día siguiente.
+ */
+export const TODAY = "2026-09-23";

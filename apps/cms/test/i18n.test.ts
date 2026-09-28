@@ -37,8 +37,17 @@ describe("catálogos del panel", () => {
     // Las llaves ESCAPADAS —'{esto}'— no son marcadores: son texto ilustrativo
     // que muestra la plantilla del prompt. Sin escapar, react-intl las toma
     // como variables, no recibe valor y rompe el formateo de ese mensaje.
+    // Un plural ICU —{n, plural, one {# …} other {# …}}— también interpola `n`,
+    // y la variante de un idioma puede necesitarlo aunque la del otro lo
+    // resuelva con {n} a secas. Sin contemplarlo, el test leía el plural como
+    // "sin marcadores" y daba por buena una discrepancia real.
     const marcas = (s: string) =>
-      [...s.replace(/'\{\w+\}'/g, "").matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
+      [
+        ...s.replace(/'\{\w+\}'/g, "").matchAll(/\{(\w+)\s*(?:,|\})/g),
+      ]
+        .map((m) => m[1])
+        .filter((v, i, a) => a.indexOf(v) === i)
+        .sort();
     for (const k of Object.keys(es)) {
       expect(marcas(en[k]), `los marcadores de "${k}" no coinciden`).toEqual(marcas(es[k]));
     }

@@ -55,6 +55,7 @@ type Settings = {
   googleSiteVerification: string;
   clarityProjectId: string;
   autoTranslate: boolean;
+  ingestWindowDays: string;
   houseAdsEnabled: boolean;
   brandBg: string;
   brandTitle: string;
@@ -78,6 +79,7 @@ const EMPTY: Settings = {
   googleSiteVerification: "",
   clarityProjectId: "",
   autoTranslate: true,
+  ingestWindowDays: "7",
   houseAdsEnabled: false,
   // Los colores del motor, que son los que el render usa si no se guarda nada.
   // Están duplicados de NEUTRAL_BRAND_COLORS a propósito: importarlo desde acá
@@ -220,6 +222,7 @@ function SettingsPage() {
           clarityProjectId: data.clarityProjectId ?? "",
           // Sin fila guardada el default es traducir, que es lo que hacía siempre.
           autoTranslate: data.autoTranslate !== false,
+          ingestWindowDays: String(data.ingestWindowDays ?? 7),
           houseAdsEnabled: Boolean(data.houseAdsEnabled),
           ...Object.fromEntries(
             BRAND_FIELDS.map((f) => [f.key, (data[f.key] as string) || EMPTY[f.key]]),
@@ -424,6 +427,20 @@ function SettingsPage() {
                   checked={form.autoTranslate}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     set("autoTranslate", e.target.checked)
+                  }
+                />
+                <Field.Hint />
+              </Field.Root>
+
+              <Field.Root hint={t("ajustes.ventana.hint")}>
+                <Field.Label>{t("ajustes.ventana.label")}</Field.Label>
+                <TextInput
+                  type="number"
+                  min={1}
+                  max={90}
+                  value={form.ingestWindowDays}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    set("ingestWindowDays", e.target.value)
                   }
                 />
                 <Field.Hint />

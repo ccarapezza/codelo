@@ -78,6 +78,7 @@ export async function construirPrompts(
         draft: I.DRAFT,
         newsContext: I.NEWS_CONTEXT,
         writerSources: I.WRITER_SOURCES,
+        today: I.TODAY,
       }),
     ),
 

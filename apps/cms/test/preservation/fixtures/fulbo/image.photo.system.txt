@@ -25,4 +25,4 @@ When you mention a jersey / kit / shirt / scarf, always describe it as PLAIN, BL
 
 - End every prompt with this exact final sentence: 'No text, no watermarks, no logos, no crests, no badges, no sponsor patches, no manufacturer marks, no scoreboards.'
 
-Hard constraint: NO recognizable real faces — hide identity from behind, at distance, backlit or cropped by the frame, NEVER by removing a head or showing detached limbs. End with: No text, no watermarks, no logos.
+Hard constraint: NO recognizable real faces — hide identity from behind, at distance, backlit or cropped by the frame, NEVER by removing a head or showing detached limbs. NEVER quote or restate the article headline in your description — not even in quotation marks, not as context. Describe ONLY what is physically in the frame. End with: No text, no watermarks, no logos.

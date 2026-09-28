@@ -360,10 +360,10 @@ export default function AuditPage() {
             {/* La página ya no está en el menú lateral: sin esta vuelta explícita
                 el único regreso sería el back del navegador. */}
             <Button variant="tertiary" startIcon={<ArrowLeft />} onClick={() => navigate("/ai-agents")}>
-              AI Agents
+              {t("audit.volverAgentes")}
             </Button>
             <Button variant="tertiary" onClick={fetchPage}>
-              Refrescar
+              {t("audit.refrescar")}
             </Button>
           </Flex>
         }

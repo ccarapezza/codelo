@@ -181,6 +181,7 @@ type Agent = {
   imagePromptTemplate: string | null;
   imageSize: string | null;
   imageQuality: string | null;
+  defaultTag?: { documentId: string; name: string } | null;
 };
 
 type FormData = {
@@ -194,6 +195,8 @@ type FormData = {
   imagePromptTemplate: string;
   imageSize: string;
   imageQuality: string;
+  /** documentId de la etiqueta, o "" para ninguna. */
+  defaultTag: string;
 };
 
 const EMPTY_FORM: FormData = {
@@ -207,6 +210,7 @@ const EMPTY_FORM: FormData = {
   imagePromptTemplate: "",
   imageSize: "1024x1024",
   imageQuality: "low",
+  defaultTag: "",
 };
 
 const EMPTY_SCHEDULE = (): ScheduleEntry => ({
@@ -225,6 +229,7 @@ function agentToForm(a: Agent): FormData {
     instructions: a.instructions ?? "",
     topic: a.topic ?? "",
     requireNewsContext: a.requireNewsContext ?? false,
+    defaultTag: a.defaultTag?.documentId ?? "",
     enabled: a.enabled,
     schedules: a.schedules.map((s) => ({
       id: s.id,
@@ -488,14 +493,20 @@ function AgentFormModal({
   initial: { agent: Agent | null };
 }) {
   const t = useT();
-  const { post, put } = useFetchClient();
+  const { get, post, put } = useFetchClient();
   const { toggleNotification } = useNotification();
   const isMobile = useIsMobile();
   const [form, setForm] = React.useState<FormData>(EMPTY_FORM);
+  const [etiquetas, setEtiquetas] = React.useState<Array<{ documentId: string; name: string }>>([]);
   const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
     setForm(initial.agent ? agentToForm(initial.agent) : EMPTY_FORM);
+    // Las etiquetas se listan al abrir el modal y no al montar la pantalla: es
+    // el único lugar donde se usan.
+    get<Array<{ documentId: string; name: string }>>("/api/news-generator/tags")
+      .then((r) => setEtiquetas(r.data ?? []))
+      .catch(() => setEtiquetas([]));
   }, [initial.agent, open]);
 
   const set = <K extends keyof FormData>(key: K, value: FormData[K]) =>
@@ -518,8 +529,12 @@ function AgentFormModal({
         name: form.name.trim(),
         role: form.role,
         instructions: isImageGen ? null : form.instructions.trim(),
-        topic: form.role === "redactor" ? form.topic.trim() : null,
+        topic: (form.role === "redactor" || form.role === "explorador") ? form.topic.trim() : null,
+        // Sólo el Redactor lee el pool de RSS: para el Explorador este ajuste
+        // no significa nada y guardarlo en true sería mentirle al usuario.
         requireNewsContext: form.role === "redactor" ? form.requireNewsContext : false,
+        // El generador de imágenes no publica notas: no tiene sección.
+        defaultTag: isImageGen ? null : form.defaultTag || null,
         enabled: form.enabled,
         schedules: isImageGen
           ? []
@@ -609,6 +624,8 @@ function AgentFormModal({
                     ? t("ag.rol.director")
                     : form.role === "image-generator"
                     ? t("ag.rol.imagen")
+                    : form.role === "explorador"
+                    ? t("ag.rol.explorador")
                     : t("ag.rol.redactor")
                 }
               >
@@ -616,7 +633,7 @@ function AgentFormModal({
                 <SingleSelect
                   value={form.role}
                   onChange={(val: string | number) =>
-                    set("role", String(val) as "director" | "redactor" | "image-generator")
+                    set("role", String(val) as "director" | "redactor" | "image-generator" | "explorador")
                   }
                 >
                   <SingleSelectOption value="redactor" startIcon={<Feather />}>
@@ -624,6 +641,9 @@ function AgentFormModal({
                   </SingleSelectOption>
                   <SingleSelectOption value="director" startIcon={<Magic />}>
                     Director
+                  </SingleSelectOption>
+                  <SingleSelectOption value="explorador" startIcon={<Feather />}>
+                    {t("ag.explorador")}
                   </SingleSelectOption>
                   {verticals.agentRoles.map((r) => (
                     <SingleSelectOption key={r.value} value={r.value} startIcon={<Magic />}>
@@ -647,9 +667,13 @@ function AgentFormModal({
                 <Field.Hint />
               </Field.Root>
 
-              {form.role === "redactor" ? (
-                <Field.Root hint={t("ag.tema.hint")}>
-                  <Field.Label>Tema del redactor</Field.Label>
+              {(form.role === "redactor" || form.role === "explorador") ? (
+                <Field.Root
+                  hint={form.role === "explorador" ? t("ag.area.hint") : t("ag.tema.hint")}
+                >
+                  <Field.Label>
+                    {form.role === "explorador" ? t("ag.area.label") : t("ag.tema.label")}
+                  </Field.Label>
                   <Textarea
                     rows={4}
                     placeholder={t("ag.tema.placeholder")}
@@ -658,6 +682,24 @@ function AgentFormModal({
                       set("topic", e.target.value)
                     }
                   />
+                  <Field.Hint />
+                </Field.Root>
+              ) : null}
+
+              {form.role !== "image-generator" ? (
+                <Field.Root hint={t("ag.etiqueta.hint")}>
+                  <Field.Label>{t("ag.etiqueta.label")}</Field.Label>
+                  <SingleSelect
+                    value={form.defaultTag}
+                    onChange={(v: string) => set("defaultTag", String(v ?? ""))}
+                  >
+                    <SingleSelectOption value="">{t("ag.etiqueta.ninguna")}</SingleSelectOption>
+                    {etiquetas.map((e) => (
+                      <SingleSelectOption key={e.documentId} value={e.documentId}>
+                        {e.name}
+                      </SingleSelectOption>
+                    ))}
+                  </SingleSelect>
                   <Field.Hint />
                 </Field.Root>
               ) : null}
@@ -814,7 +856,7 @@ function AgentFormModal({
                   <Field.Root required hint={instructionsHint}>
                     <Field.Label>{instructionsLabel}</Field.Label>
                     <Textarea
-                      rows={form.role === "redactor" ? 10 : 14}
+                      rows={(form.role === "redactor" || form.role === "explorador") ? 10 : 14}
                       placeholder={
                         form.role === "director"
                           ? t("ag.director.placeholder")
@@ -1008,7 +1050,6 @@ function RoleSection({
   title,
   description,
   accent,
-  count,
   countLabel,
   canCreate,
   onCreate,
@@ -1018,7 +1059,6 @@ function RoleSection({
   title: string;
   description: string;
   accent: "primary" | "warning" | "success" | "secondary";
-  count: number;
   countLabel: string;
   canCreate: boolean;
   onCreate: () => void;
@@ -1078,7 +1118,7 @@ function RoleSection({
               </Typography>
               <Box>
                 <Typography variant="pi" textColor="neutral500">
-                  {count} {countLabel}
+                  {countLabel}
                 </Typography>
               </Box>
             </Box>
@@ -1262,6 +1302,7 @@ export default function AgentsPage() {
   const director = agents.find((a) => a.role === "director") ?? null;
   const imageGenerator = agents.find((a) => a.role === "image-generator") ?? null;
   const redactors = agents.filter((a) => a.role === "redactor");
+  const exploradores = agents.filter((a) => a.role === "explorador");
 
   // Backfill English translations for every published Spanish post that lacks
   // one. Fire-and-forget on the server (sequential, respects rate limits);
@@ -1309,13 +1350,13 @@ export default function AgentsPage() {
     <PageContainer>
       <PageHeader
         icon={<Magic width="1.4rem" height="1.4rem" />}
-        title="AI Agents"
+        title={t("ag.titulo")}
         subtitle={t("ag.subtitulo")}
         actions={
           <Flex gap={2}>
             {/* Audit ya no está en el menú lateral; este es su único acceso visible. */}
             <Button variant="tertiary" startIcon={<Eye />} onClick={() => navigate("/audit")}>
-              Audit
+              {t("ag.audit")}
             </Button>
             <Button
               variant="secondary"
@@ -1348,8 +1389,7 @@ export default function AgentsPage() {
             title="Director"
             description={t("ag.director.desc")}
             accent="primary"
-            count={director ? 1 : 0}
-            countLabel={t("ag.de1Configurado")}
+            countLabel={t("ag.de1Configurado", { n: director ? 1 : 0 })}
             canCreate={!director}
             onCreate={openCreate}
           >
@@ -1378,8 +1418,7 @@ export default function AgentsPage() {
             title={t("ag.generadorImagenes")}
             description={t("ag.imagen.desc")}
             accent="warning"
-            count={imageGenerator ? 1 : 0}
-            countLabel={t("ag.de1Configurado")}
+            countLabel={t("ag.de1Configurado", { n: imageGenerator ? 1 : 0 })}
             canCreate={!imageGenerator}
             onCreate={openCreate}
           >
@@ -1408,7 +1447,6 @@ export default function AgentsPage() {
             title={t("ag.redactores")}
             description={t("ag.redactores.desc")}
             accent="success"
-            count={redactors.length}
             countLabel={t("ag.redactoresConfigurados", { n: redactors.length })}
             canCreate
             onCreate={openCreate}
@@ -1432,6 +1470,40 @@ export default function AgentsPage() {
                 icon={<Feather aria-hidden />}
                 message={t("ag.redactores.vacio")}
                 actionLabel={t("ag.crear", { que: t("ag.redactor") })}
+                onAction={openCreate}
+              />
+            )}
+          </RoleSection>
+
+          {/* Exploradores */}
+          <RoleSection
+            icon={<Feather aria-hidden />}
+            title={t("ag.exploradores")}
+            description={t("ag.exploradores.desc")}
+            accent="secondary"
+            countLabel={t("ag.redactoresConfigurados", { n: exploradores.length })}
+            canCreate
+            onCreate={openCreate}
+          >
+            {exploradores.length > 0 ? (
+              <Flex direction="column" alignItems="stretch" gap={3}>
+                {exploradores.map((a) => (
+                  <AgentItem
+                    key={a.documentId}
+                    agent={a}
+                    onEdit={() => openEdit(a)}
+                    onDelete={() => setDeleteTarget(a)}
+                    onRunNow={() => openRunNow(a)}
+                    onToggleEnabled={(next) => handleToggleEnabled(a, next)}
+                    toggling={togglingId === a.documentId}
+                  />
+                ))}
+              </Flex>
+            ) : (
+              <EmptySectionState
+                icon={<Feather aria-hidden />}
+                message={t("ag.exploradores.vacio")}
+                actionLabel={t("ag.crear", { que: t("ag.explorador") })}
                 onAction={openCreate}
               />
             )}

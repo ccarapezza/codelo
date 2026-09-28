@@ -103,15 +103,17 @@ export default factories.createCoreController(UID, ({ strapi }) => ({
    */
   async discover(ctx) {
     if (!(await requireAdmin(ctx, strapi))) return;
-    const { query, max, lang } = ctx.request.body as {
+    const { query, max, lang, country } = ctx.request.body as {
       query?: string;
       max?: number;
       lang?: string | null;
+      country?: string | null;
     };
     if (!query || !query.trim()) return ctx.badRequest("query es obligatorio");
     ctx.body = await discoverFeeds(strapi, query, {
       max: Math.min(Math.max(Number(max) || 12, 1), 25),
       lang: typeof lang === "string" ? lang : null,
+      country: typeof country === "string" ? country : null,
     });
   },
 

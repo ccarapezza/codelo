@@ -9,6 +9,13 @@ export type GeneratedPost = {
   title: string;
   excerpt: string;
   content: string;
+  /**
+   * Índices 1-based, sobre el bloque de contexto numerado, de las noticias que
+   * el Redactor dice haber usado. Opcional: en modo asignado no hay bloque
+   * numerado, y un modelo puede no devolverlo. Sirve para guardar como
+   * evidencia la fuente REAL y no el pool entero — ver `buildSourceContext`.
+   */
+  sourceIndexes?: number[];
 };
 
 export function getOpenAIClient(apiKey: string): OpenAI {
@@ -62,10 +69,21 @@ async function callJson(
     throw new Error("OpenAI response missing required fields (title, content)");
   }
 
+  // Defensivo: el modelo puede mandar strings, floats, índices fuera de rango o
+  // nada. Lo que no sea un entero positivo se descarta acá, y el llamador cae
+  // al pool completo como antes.
+  const crudos: unknown[] = Array.isArray(parsed.sourceIndexes) ? parsed.sourceIndexes : [];
+  const sourceIndexes: number[] = [
+    ...new Set(
+      crudos.map((n) => Math.trunc(Number(n))).filter((n) => Number.isFinite(n) && n >= 1),
+    ),
+  ];
+
   return {
     title: stripInlineMarkdown(String(parsed.title)),
     excerpt: stripInlineMarkdown(String(parsed.excerpt ?? "")),
     content: String(parsed.content).trim(),
+    ...(sourceIndexes.length > 0 ? { sourceIndexes } : {}),
   };
 }
 
@@ -83,7 +101,13 @@ export async function generatePost(
 // in the editable imageSystemInstructions field) guarantees the no-faces /
 // no-logos likeness rule can never be removed by an admin edit.
 const SAFETY_SUFFIX =
-  "Hard constraint: NO recognizable real faces — hide identity from behind, at distance, backlit or cropped by the frame, NEVER by removing a head or showing detached limbs. End with: No text, no watermarks, no logos.";
+  "Hard constraint: NO recognizable real faces — hide identity from behind, at distance, backlit or cropped by the frame, NEVER by removing a head or showing detached limbs. " +
+  // Citar el titular hacía que el modelo de imagen lo dibujara como cartel:
+  // la descripción abría con «For the editorial cover image of "<titular>"» y
+  // la portada salía con el título impreso encima, mal escrito.
+  "NEVER quote or restate the article headline in your description — not even in quotation marks, not as context. " +
+  "Describe ONLY what is physically in the frame. " +
+  "End with: No text, no watermarks, no logos.";
 
 // The domain-specific image system instructions and the THEME → SCENE CUES guide
 // now live in the editable `prompt-setting` single type (defaults in
@@ -801,6 +825,26 @@ export interface ReviewPostInput {
    * revisor cae al contexto reconstruido como antes.
    */
   writerSources?: string;
+  /**
+   * Fecha de la revisión en ISO (YYYY-MM-DD). Se inyecta en el prompt porque
+   * el modelo no tiene reloj: sin esto leía "hasta fin de año" y "hasta finales
+   * de 2026" como una contradicción, y rechazaba notas correctas. Es un
+   * parámetro y no un `new Date()` adentro para que el prompt sea comparable
+   * en los tests.
+   */
+  today?: string;
+  /**
+   * Los apuntes de la investigación del Explorador, cuando la nota vino de ahí.
+   *
+   * Van en su PROPIO bloque y no disfrazados del resumen de una fuente. Se
+   * probó lo otro: los apuntes se metían enteros en `writerSources[0].summary`
+   * y las demás fuentes quedaban con resumen vacío, así que el revisor veía
+   * una fuente que decía todo y tres que no decían nada. Rechazó cuatro notas
+   * seguidas por «ningún dato lo respalda» con las cuatro cifras presentes en
+   * ese bloque (24/09/2026: 9.850 ha de Torrontés, 16.360 de Bonarda, $9.776
+   * el kilo de carne, $1.823 el de vacío).
+   */
+  researchNotes?: string;
 }
 
 /**
@@ -815,9 +859,16 @@ export function buildReviewSystemPrompt(s: PromptSettings, input: ReviewPostInpu
     s;
   const { directorInstructions, newsContext } = input;
   const writerSources = input.writerSources ?? "";
+  const hoy = input.today ?? new Date().toISOString().slice(0, 10);
   return [
     "You are a strict editor-in-chief whose ONLY job is to prevent hallucinated news from being published.",
     "Hallucinations almost always come from titles that distort or invent facts, even when the body is reasonable.",
+    "",
+    `## TODAY IS ${hoy}`,
+    "",
+    "Resolve EVERY relative time expression against that date before judging it: 'this year', 'the end of the year',",
+    "'the current campaign', 'next month'. A title saying 'until the end of the year' and a body saying 'until the end",
+    `of ${hoy.slice(0, 4)}' state THE SAME FACT — that is not a contradiction and is not grounds for rejection.`,
     "",
     "## STEP 1 — TITLE VALIDATION (mandatory, do this FIRST)",
     "",
@@ -846,6 +897,28 @@ export function buildReviewSystemPrompt(s: PromptSettings, input: ReviewPostInpu
     "If a title claim is supported IN SUBSTANCE by the writer's sources but its wording is stronger, broader or more specific than the source's, do NOT reject: REWRITE the title so it matches what the source actually says, and approve.",
     "Reject a claim ONLY when it is ABSENT from every source, or CONTRADICTS one. 'The source words it differently' is a rewrite, not a rejection.",
     "",
+    // El revisor rechazaba donde su propia regla de arriba manda reescribir.
+    // Visto dos veces en verticales distintos: "Producir biocombustibles es
+    // clave para el futuro" (la fuente lo decía, atribuido) y "la variedad
+    // emblemática de Argentina" (un adjetivo, no un hecho). El motivo es el
+    // orden de lectura: el STEP 1 abre con una lista de RECHAZÁ, y el modelo
+    // se compromete antes de llegar al 1.5. Esta sección invierte la carga.
+    "## STEP 1.6 — ARREGLAR PRIMERO, RECHAZAR ÚLTIMO (mandatory)",
+    "",
+    "Rejecting costs the site an article. Rewriting costs you one sentence. So:",
+    "",
+    "  1. Is the problem confined to the TITLE, with a sound body? → REWRITE the title and APPROVE.",
+    "  2. Is the claim supported in substance but worded too strongly? → SOFTEN it and APPROVE.",
+    "  3. Only if the BODY itself asserts something no source supports, or something a source",
+    "     contradicts, do you REJECT.",
+    "",
+    "An evaluative word in a headline is NOT a factual claim and is NEVER grounds for rejection:",
+    "'emblematic', 'key', 'historic', 'leading', 'beloved'. These are editorial voice. If one",
+    "overstates what the sources support, tone it down in your rewrite — do not reject over it.",
+    "",
+    "Before you reject, answer this to yourself: 'could I make this publishable by changing only",
+    "the title?' If the answer is yes, you are not allowed to reject.",
+    "",
     "## STEP 2 — BODY FACT-CHECK",
     "",
     `REJECT if the body contains a SPECIFIC claim about an already-occurred event (${fabricationProneFacts})`,
@@ -865,12 +938,12 @@ export function buildReviewSystemPrompt(s: PromptSettings, input: ReviewPostInpu
     "## STEP 3 — REFINE (only if everything passes)",
     "",
     "Apply the editorial guidelines. Improve clarity, voice, and structure. Keep all facts accurate.",
-    "You MAY rewrite the title to be safer/more literal if the current one is borderline — but never by drifting closer to a source headline's wording, and you should still REJECT if it's actually wrong.",
+    "You SHOULD rewrite the title whenever it is borderline — that is the expected outcome, not a last resort — but never by drifting closer to a source headline's wording. Reject only when the body, not the title, is the problem.",
     "",
     "## Output",
     `Return STRICT JSON with one of these two schemas:`,
     `- Approved: { "rejected": false, "title": string, "excerpt": string, "content": string (HTML allowed) }`,
-    `- Rejected: { "rejected": true, "reason": string (in ${writingLanguage}, cite the specific title-claim that fails and which source contradicts it OR confirms no source mentions it) }`,
+    `- Rejected: { "rejected": true, "reason": string (in ${writingLanguage}: name the specific claim IN THE BODY that fails, say which source contradicts it or that no source carries it, AND state why rewriting the title would not have been enough) }`,
     "",
     "## Editorial guidelines:",
     directorInstructions,
@@ -879,6 +952,15 @@ export function buildReviewSystemPrompt(s: PromptSettings, input: ReviewPostInpu
     // segundo es material de época que puede no tener nada que ver. Cuando
     // estaban mezclados, el revisor trataba la ausencia de una noticia en el
     // relleno como prueba de invención y rechazaba notas bien fundadas.
+    ...(input.researchNotes?.trim()
+      ? [
+          "## RESEARCH NOTES — the writer gathered these facts from the sources below, with their attribution.",
+          "This is PRIMARY evidence for this draft: a figure, date or name that appears here IS sourced.",
+          "Do not reject a claim that appears in these notes.",
+          input.researchNotes.trim(),
+          "",
+        ]
+      : []),
     "## SOURCES THE WRITER ACTUALLY USED — this is the evidence for THIS draft. Judge it against these.",
     writerSources ||
       "(not recorded for this draft — it predates source tracking. Fall back to the context below, and give the draft the benefit of the doubt on sourcing.)",

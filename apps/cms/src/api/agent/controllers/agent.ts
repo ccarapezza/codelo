@@ -82,7 +82,9 @@ type ScheduleInput = {
 
 type AgentInput = {
   name?: string;
-  role?: "director" | "redactor" | "image-generator";
+  role?: "director" | "redactor" | "image-generator" | "explorador";
+  /** documentId de la etiqueta, o null para sacarla. */
+  defaultTag?: string | null;
   instructions?: string | null;
   topic?: string | null;
   requireNewsContext?: boolean;
@@ -113,6 +115,13 @@ function pickEditable(body: AgentInput): AgentInput {
   if ("topic" in body) data.topic = body.topic ?? null;
   if (typeof body.requireNewsContext === "boolean") data.requireNewsContext = body.requireNewsContext;
   if (typeof body.enabled === "boolean") data.enabled = body.enabled;
+  // La etiqueta con la que se publican TODAS las notas de este agente. El
+  // motor ya la leía (`agent.defaultTag` → `post.tags`), pero no había forma
+  // de asignarla: no estaba en el formulario, no la aceptaba esta ruta, y el
+  // content-type `agent` está oculto del Content Manager. El resultado era
+  // que el ítem «Etiquetas» del checklist se podía tachar creando tags y las
+  // notas de los agentes salían igual sin sección.
+  if ("defaultTag" in body) data.defaultTag = body.defaultTag ?? null;
   if ("imagePromptTemplate" in body) data.imagePromptTemplate = body.imagePromptTemplate ?? null;
   if ("imageSize" in body) data.imageSize = body.imageSize ?? null;
   if ("imageQuality" in body) data.imageQuality = body.imageQuality ?? null;
@@ -141,7 +150,7 @@ export default factories.createCoreController(UID, ({ strapi }) => ({
     ctx.body = {
       results: await strapi.documents(UID).findMany({
         sort: ["role:asc", "name:asc"],
-        populate: ["schedules"],
+        populate: ["schedules", "defaultTag"],
         limit: 100,
       }),
     };
@@ -155,7 +164,7 @@ export default factories.createCoreController(UID, ({ strapi }) => ({
     // `enabled` es required en el schema, así que en el alta hay que resolverlo.
     ctx.body = await strapi.documents(UID).create({
       data: toDocumentData({ ...data, enabled: data.enabled ?? true }),
-      populate: ["schedules"],
+      populate: ["schedules", "defaultTag"],
     });
   },
 
@@ -165,7 +174,7 @@ export default factories.createCoreController(UID, ({ strapi }) => ({
     ctx.body = await strapi.documents(UID).update({
       documentId,
       data: toDocumentData(pickEditable(ctx.request.body as AgentInput)),
-      populate: ["schedules"],
+      populate: ["schedules", "defaultTag"],
     });
   },
 
