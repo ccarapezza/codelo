@@ -302,6 +302,14 @@ clase B (quedarse con los dos lados):
 Lo de clase A va con la versión de Nib. Después: `pnpm exec strapi
 ts:generate-types`.
 
+⚠️ **Antes de commitear el merge, buscar borrados silenciosos.** En codelo, git
+quitó sin conflicto dos atributos de schema, una función y dos dependencias del
+vertical: estaban en archivos del motor que codelo no había tocado desde la base
+común, y Nib los sacó después. En fulbo el riesgo es menor —su base común con
+Nib (`663dc5e7`) ya no tenía nada del vertical—, pero el chequeo es barato:
+comparar los atributos y los valores de enum de cada `schema.json` contra
+`HEAD`, y revisar las líneas quitadas en `package.json`.
+
 ### 2. El contenido de fulbo en las costuras (`apps/cms/src/verticals/`)
 
 Los textos salen de `47e1054e`:
