@@ -55,9 +55,9 @@ function tonoDeMatch(pct: number): "success" | "warning" | "danger" {
   return "danger";
 }
 
-function ritmo(f: Discovered, t: ReturnType<typeof useT>): string | null {
+function ritmo(f: Discovered, t: ReturnType<typeof useT>, dias: number): string | null {
   if (f.velocity != null) return t("rss.desc.ritmo", { n: f.velocity.toFixed(1) });
-  if (f.freshItems != null) return t("rss.desc.frescos", { n: f.freshItems, dias: 7 });
+  if (f.freshItems != null) return t("rss.desc.frescos", { n: f.freshItems, dias });
   return null;
 }
 
@@ -74,7 +74,16 @@ function nombrePais(code: string, loc: string): string {
   }
 }
 
-function Resultado({ feed, onAdded }: { feed: Discovered; onAdded: () => void }) {
+function Resultado({
+  feed,
+  onAdded,
+  dias,
+}: {
+  feed: Discovered;
+  onAdded: () => void;
+  /** La ventana de ingesta con la que el servidor contó los frescos. */
+  dias: number;
+}) {
   const t = useT();
   const { post } = useFetchClient();
   const { toggleNotification } = useNotification();
@@ -97,7 +106,7 @@ function Resultado({ feed, onAdded }: { feed: Discovered; onAdded: () => void })
     }
   };
 
-  const cadencia = ritmo(feed, t);
+  const cadencia = ritmo(feed, t, dias);
 
   return (
     <Box padding={4} background="neutral0" hasRadius shadow="tableShadow">
@@ -180,7 +189,11 @@ export default function DiscoverModal({
   const [lang, setLang] = React.useState<string>("");
   const [pais, setPais] = React.useState<string>("");
   const [buscando, setBuscando] = React.useState(false);
-  const [resultado, setResultado] = React.useState<{ feeds: Discovered[]; query: string } | null>(
+  const [resultado, setResultado] = React.useState<{
+    feeds: Discovered[];
+    query: string;
+    windowDays?: number;
+  } | null>(
     null,
   );
 
@@ -197,7 +210,7 @@ export default function DiscoverModal({
     setBuscando(true);
     setResultado(null);
     try {
-      const { data } = await post<{ feeds: Discovered[]; query: string }>(DISCOVER_API, {
+      const { data } = await post<{ feeds: Discovered[]; query: string; windowDays?: number }>(DISCOVER_API, {
         query: q,
         lang: lang || null,
         country: pais || null,
@@ -283,7 +296,7 @@ export default function DiscoverModal({
             ) : null}
 
             {resultado?.feeds.map((f) => (
-              <Resultado key={f.url} feed={f} onAdded={onAdded} />
+              <Resultado key={f.url} feed={f} onAdded={onAdded} dias={resultado.windowDays ?? 7} />
             ))}
           </Flex>
         </Modal.Body>

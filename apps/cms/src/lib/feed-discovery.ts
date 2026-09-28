@@ -20,7 +20,12 @@
 // las otras dos vías.
 
 import type { Core } from "@strapi/strapi";
-import { extractKeywords, validateFeed, type FeedValidationResult } from "./rss-fetcher";
+import {
+  extractKeywords,
+  getIngestWindowDays,
+  validateFeed,
+  type FeedValidationResult,
+} from "./rss-fetcher";
 import { esUrlPublica } from "./url-guard";
 import { buscarMedios, esEdicionValida, type CodigoEdicion } from "./google-news";
 import * as project from "./project";
@@ -467,11 +472,14 @@ export async function discoverFeeds(
   strapi: Core.Strapi,
   query: string,
   opts: { max?: number; lang?: string | null; country?: string | null } = {},
-): Promise<{ query: string; feeds: DiscoveredFeed[]; sources: string[] }> {
+): Promise<{ query: string; feeds: DiscoveredFeed[]; sources: string[]; windowDays: number }> {
   const q = query.trim();
+  // La ventana de ingesta configurada: "frescos" en el listado cuenta con la
+  // misma que después usa el cron, y el panel la nombra.
+  const windowDays = await getIngestWindowDays(strapi);
   const max = opts.max ?? 12;
   const lang = opts.lang?.trim().toLowerCase() || null;
-  if (!q) return { query: q, feeds: [], sources: [] };
+  if (!q) return { query: q, feeds: [], sources: [], windowDays };
 
   const sources: string[] = [];
   const candidatos: FeedCandidate[] = [];
@@ -517,7 +525,7 @@ export async function discoverFeeds(
   // Feedly resultan muertos o caídos y si no, el listado queda corto.
   const aValidar = unicos.slice(0, max + 8);
   const validados = await mapLimit(aValidar, 5, async (c): Promise<DiscoveredFeed> => {
-    const r = await validateFeed(c.url, 8000, MUESTRA);
+    const r = await validateFeed(c.url, 8000, MUESTRA, windowDays);
     const base = { ...c, alreadyAdded: cargados.has(feedKey(c.url)) };
     if (!r.valid) {
       // El tsconfig del CMS tiene `strict: false`, y sin strictNullChecks TS no
@@ -575,5 +583,5 @@ export async function discoverFeeds(
     )
     .slice(0, max);
 
-  return { query: q, feeds, sources };
+  return { query: q, feeds, sources, windowDays };
 }

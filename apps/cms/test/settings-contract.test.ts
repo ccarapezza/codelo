@@ -50,9 +50,10 @@ describe("prompt-setting", () => {
 
   it("ningún valor neutro queda vacío salvo los que se omiten a propósito", () => {
     // `socialHandle` y `socialHashtags` vacíos son válidos: una instancia sin
-    // redes no imprime handle ni hashtags. El resto vacío sería un prompt a
-    // medias sin que nadie avise.
-    const opcionales = new Set(["socialHandle", "socialHashtags"]);
+    // redes no imprime handle ni hashtags. `brandGuardrails` vacío = sin reglas
+    // propias, valen las del motor. El resto vacío sería un prompt a medias sin
+    // que nadie avise.
+    const opcionales = new Set(["socialHandle", "socialHashtags", "brandGuardrails"]);
     for (const [k, v] of Object.entries(NEUTRAL_PROMPT_SETTINGS)) {
       if (opcionales.has(k)) continue;
       expect(v.trim(), `el default neutro de "${k}" está vacío`).not.toBe("");

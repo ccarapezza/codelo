@@ -28,6 +28,12 @@ export const ENGINE_SETTING_KEYS = [
    */
   "ingestWindowDays",
   /**
+   * Etiqueta para las notas creadas a mano cuando el editor no elige ninguna.
+   * Las de los agentes llevan la suya (`agent.defaultTag`); sin esto, las del
+   * editor salían sin sección y no aparecían en ninguna portada temática.
+   */
+  "defaultPostTagSlug",
+  /**
    * Identidad visual de las placas. Se derivan de BRAND_COLOR_KEYS, que es la
    * fuente de verdad: el test de contrato compara las dos listas contra el
    * schema.json para que no se pueda agregar un color en un lado solo.

@@ -44,6 +44,22 @@ export interface PromptSettings {
    * reproducir el trabajo de un medio rival. En el idioma de escritura.
    */
   officialSources: string;
+  /**
+   * Los ejemplos del deduplicador, en dos líneas: qué cuenta como el MISMO
+   * hecho y qué no. En inglés, como el prompt. Son del dominio —"el mismo
+   * resultado", "la misma norma publicada"— y con los ejemplos de otro tema el
+   * modelo aprende a confundir hechos distintos del propio: estaban escritos
+   * en el código, y un portal de deportes deduplicaba con ejemplos de
+   * licencias y proyectos de ley.
+   */
+  dedupExamples: string;
+  /**
+   * Viñetas propias para la guarda de marca del Director (STEP 2.5), que se
+   * suman a las cuatro del motor: medios concretos que no hay que citar, tipos
+   * de contenido ajeno que no hay que reproducir. Van completas, con su
+   * "  - ", en inglés. Vacío = sólo las del motor.
+   */
+  brandGuardrails: string;
 
   // ── Portadas ─────────────────────────────────────────────────────────────
   /** Domain rules for cover images: what they depict, palettes, forbidden elements. */
@@ -92,6 +108,13 @@ const BODY_STRUCTURE_GUIDE = [
   "- Format every direct quote or declaration as a Markdown blockquote (`> `), making clear who said it.",
   "- Bold (`**...**`) the key names, dates, figures and concrete facts so the piece is scannable; use italics (`*...*`) sparingly for technical or foreign terms.",
   "- Vary paragraph length and avoid a wall of uniform paragraphs.",
+].join("\n");
+
+// Qué es el mismo hecho y qué no, con ejemplos que sirven para cualquier tema:
+// una decisión, un fallo, un estudio, un anuncio.
+const DEDUP_EXAMPLES = [
+  "Same event = same subject AND the same concrete happening: e.g. the same published decision, the same ruling, the same study, the same announcement by the same organisation.",
+  "These are NOT duplicates: a proposal vs its later approval; two DIFFERENT organisations each doing the same kind of thing; the same background fact cited in two unrelated articles; an explainer about a procedure vs news of that procedure changing; a follow-up that adds genuinely new facts.",
 ].join("\n");
 
 const IMAGE_SYSTEM_INSTRUCTIONS = [
@@ -145,6 +168,8 @@ export const ENGINE_PROMPT_KEYS = [
   "analysisModeFraming",
   "bodyStructureGuide",
   "officialSources",
+  "dedupExamples",
+  "brandGuardrails",
   "imageSystemInstructions",
   "imageThemeGuide",
   "imageAnchorTaxonomy",
@@ -172,6 +197,8 @@ export const NEUTRAL_PROMPT_SETTINGS: PromptSettings = {
     "clearly framed as opinion or analysis. Never state a recent event as fact.",
   bodyStructureGuide: BODY_STRUCTURE_GUIDE,
   officialSources: "official bodies, laws, court rulings, regulators, peer-reviewed journals",
+  dedupExamples: DEDUP_EXAMPLES,
+  brandGuardrails: "",
 
   imageSystemInstructions: IMAGE_SYSTEM_INSTRUCTIONS,
   imageThemeGuide: IMAGE_THEME_GUIDE,

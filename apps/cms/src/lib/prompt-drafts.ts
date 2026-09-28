@@ -26,6 +26,11 @@ export const NEUTRAL_PROMPT_DRAFTS: Record<string, string> = {
   officialSources:
     "organismos oficiales, leyes, fallos judiciales, reguladores, revistas con revisión de pares",
 
+  dedupExamples: [
+    "Mismo hecho = mismo tema Y el mismo suceso concreto: por ejemplo, la misma decisión publicada, el mismo fallo, el mismo estudio, el mismo anuncio de la misma organización.",
+    "NO son duplicados: una propuesta y su aprobación posterior; dos organizaciones DISTINTAS haciendo cada una lo mismo; el mismo antecedente citado en dos notas sin relación; una nota que explica un trámite y la noticia de que ese trámite cambió; una continuación que aporta hechos nuevos de verdad.",
+  ].join("\n"),
+
   bodyStructureGuide: [
     "## FORMATO DEL CUERPO — Markdown rico y bien estructurado (nunca HTML)",
     "- Devolvé SÓLO Markdown de GitHub. Nunca uses etiquetas HTML (<p>, <strong>, <em>, <br>, etc.).",

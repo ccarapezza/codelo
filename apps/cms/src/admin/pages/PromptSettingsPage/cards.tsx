@@ -99,6 +99,22 @@ export const ENGINE_PROMPT_CARDS: PromptCard[] = [
         reference:
           "NOTE: an official source is NOT a rival outlet. Citing an official source ({esto}), a law or a court ruling is REQUIRED, not a violation.",
       },
+      {
+        key: "dedupExamples",
+        label: "prompts.dedup.label",
+        hint: "prompts.dedup.hint",
+        rows: 4,
+        reference:
+          "You are a news-desk de-duplication checker for {…}.\nDecide whether a CANDIDATE headline reports the SAME specific event as any EXISTING headline.\n{esto}\nReturn STRICT JSON: { \"duplicateIndex\": number } …",
+      },
+      {
+        key: "brandGuardrails",
+        label: "prompts.guardrails.label",
+        hint: "prompts.guardrails.hint",
+        rows: 4,
+        reference:
+          "## STEP 2.5 — BRAND GUARDRAIL (mandatory)\n… REJECT if ANY of these is true:\n  - (the engine's four rules: citing an outlet, reproducing its list, covering what media said, promotional copy)\n{esto}\nReword to report the underlying fact in your own voice with no outlet name…",
+      },
     ],
   },
   {

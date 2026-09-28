@@ -10,10 +10,15 @@ import { NEUTRAL_PROMPT_SETTINGS } from "../src/lib/prompt-defaults";
 import { NEUTRAL_PROMPT_DRAFTS } from "../src/lib/prompt-drafts";
 import { ENGINE_PROMPT_CARDS } from "../src/admin/pages/PromptSettingsPage/cards";
 
-/** Los campos de instrucción: los únicos que necesitan versión en castellano. */
+/**
+ * Los campos de instrucción: los únicos que necesitan versión en castellano.
+ *
+ * Salvo los que están vacíos por diseño (`brandGuardrails`: sin reglas propias,
+ * valen sólo las del motor). Un campo vacío no tiene nada que traducir.
+ */
 const DE_INSTRUCCION = ENGINE_PROMPT_CARDS.flatMap((c) =>
   c.fields.filter((f) => (f.lang ?? "prompt") === "prompt").map((f) => f.key),
-);
+).filter((k) => (NEUTRAL_PROMPT_SETTINGS[k] ?? "").trim() !== "");
 
 describe("borradores en castellano", () => {
   it("todo campo de instrucción tiene su versión en castellano", () => {

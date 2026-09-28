@@ -56,6 +56,7 @@ type Settings = {
   clarityProjectId: string;
   autoTranslate: boolean;
   ingestWindowDays: string;
+  defaultPostTagSlug: string;
   houseAdsEnabled: boolean;
   brandBg: string;
   brandTitle: string;
@@ -80,6 +81,7 @@ const EMPTY: Settings = {
   clarityProjectId: "",
   autoTranslate: true,
   ingestWindowDays: "7",
+  defaultPostTagSlug: "",
   houseAdsEnabled: false,
   // Los colores del motor, que son los que el render usa si no se guarda nada.
   // Están duplicados de NEUTRAL_BRAND_COLORS a propósito: importarlo desde acá
@@ -142,12 +144,14 @@ function CampoVertical({
   const modelos =
     campo.kind === "text-model" ? TEXT_MODELS : campo.kind === "image-model" ? IMAGE_MODELS : null;
   return (
-    <Field.Root hint={campo.hint}>
-      <Field.Label>{campo.label}</Field.Label>
+    // Pasan por t() como en Configuración editorial: un proyecto puede escribir
+    // texto literal (t() lo devuelve tal cual) o declarar claves `nib.*`.
+    <Field.Root hint={campo.hint ? t(campo.hint) : undefined}>
+      <Field.Label>{t(campo.label)}</Field.Label>
       {campo.kind === "toggle" ? (
         <Toggle
-          onLabel="Sí"
-          offLabel="No"
+          onLabel={t("comun.si")}
+          offLabel={t("comun.no")}
           checked={Boolean(valor)}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.checked)}
         />
@@ -223,6 +227,7 @@ function SettingsPage() {
           // Sin fila guardada el default es traducir, que es lo que hacía siempre.
           autoTranslate: data.autoTranslate !== false,
           ingestWindowDays: String(data.ingestWindowDays ?? 7),
+          defaultPostTagSlug: (data.defaultPostTagSlug as string) ?? "",
           houseAdsEnabled: Boolean(data.houseAdsEnabled),
           ...Object.fromEntries(
             BRAND_FIELDS.map((f) => [f.key, (data[f.key] as string) || EMPTY[f.key]]),
@@ -422,8 +427,8 @@ function SettingsPage() {
               <Field.Root hint={t("ajustes.traducir.hint")}>
                 <Field.Label>{t("ajustes.traducir.label")}</Field.Label>
                 <Toggle
-                  onLabel="Sí"
-                  offLabel="No"
+                  onLabel={t("comun.si")}
+                  offLabel={t("comun.no")}
                   checked={form.autoTranslate}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     set("autoTranslate", e.target.checked)
@@ -441,6 +446,18 @@ function SettingsPage() {
                   value={form.ingestWindowDays}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     set("ingestWindowDays", e.target.value)
+                  }
+                />
+                <Field.Hint />
+              </Field.Root>
+
+              <Field.Root hint={t("ajustes.tagDefecto.hint")}>
+                <Field.Label>{t("ajustes.tagDefecto.label")}</Field.Label>
+                <TextInput
+                  placeholder="actualidad"
+                  value={form.defaultPostTagSlug}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    set("defaultPostTagSlug", e.target.value.trim())
                   }
                 />
                 <Field.Hint />
@@ -656,8 +673,8 @@ function SettingsPage() {
                 <Field.Label>{t("ajustes.houseAds.label")}</Field.Label>
                 <Box paddingTop={1}>
                   <Toggle
-                    onLabel="Sí"
-                    offLabel="No"
+                    onLabel={t("comun.si")}
+                    offLabel={t("comun.no")}
                     checked={form.houseAdsEnabled}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                       set("houseAdsEnabled", e.target.checked)
@@ -677,9 +694,9 @@ function SettingsPage() {
           <div key={card.id} id={card.id}>
             <AccentCard
               icon={card.icon}
-              title={card.title}
+              title={t(card.title)}
               accent={card.accent}
-              description={card.description}
+              description={card.description ? t(card.description) : undefined}
             >
               <Flex direction="column" alignItems="stretch" gap={4}>
                 {card.fields.map((campo) => (

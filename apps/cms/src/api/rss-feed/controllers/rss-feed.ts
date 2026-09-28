@@ -1,6 +1,11 @@
 import { factories } from "@strapi/strapi";
 import { requireAdmin } from "../../../lib/admin-auth";
-import { fetchAndSaveNews, getRssLastRun, validateFeed } from "../../../lib/rss-fetcher";
+import {
+  fetchAndSaveNews,
+  getIngestWindowDays,
+  getRssLastRun,
+  validateFeed,
+} from "../../../lib/rss-fetcher";
 import { discoverFeeds } from "../../../lib/feed-discovery";
 
 const UID = "api::rss-feed.rss-feed";
@@ -108,7 +113,7 @@ export default factories.createCoreController(UID, ({ strapi }) => ({
     if (!(await requireAdmin(ctx, strapi))) return;
     const { url } = ctx.request.body as { url?: string };
     if (!url) return ctx.badRequest("url is required");
-    const result = await validateFeed(url);
+    const result = await validateFeed(url, 8000, 5, await getIngestWindowDays(strapi));
     ctx.body = result;
   },
 }));

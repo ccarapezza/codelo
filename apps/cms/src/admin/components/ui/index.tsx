@@ -275,7 +275,7 @@ export function SaveBar({
   saving,
   onSave,
   onDiscard,
-  saveLabel = "Guardar cambios",
+  saveLabel,
   edgeOffset = 40,
 }: {
   dirty: boolean;
@@ -352,7 +352,7 @@ export function SaveBar({
             </Button>
           ) : null}
           <Button onClick={onSave} loading={saving} disabled={!dirty} size="L">
-            {saveLabel}
+            {saveLabel ?? t("nota.guardarCambios")}
           </Button>
         </Flex>
       </Flex>

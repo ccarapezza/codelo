@@ -139,6 +139,8 @@ type ValidationState =
       language: string | null;
       totalItems: number;
       freshItems: number;
+      /** La ventana de ingesta con la que se contaron los frescos. */
+      windowDays: number;
       samples: Array<{ title: string; url: string; pubDate: string | null }>;
     };
 
@@ -188,6 +190,7 @@ function FeedFormModal({
         language?: string | null;
         totalItems?: number;
         freshItems?: number;
+        windowDays?: number;
         samples?: Array<{ title: string; url: string; pubDate: string | null }>;
       }>("/api/rss-feed/validate", { url: form.url.trim() });
 
@@ -199,6 +202,7 @@ function FeedFormModal({
           language: data.language ?? null,
           totalItems: data.totalItems ?? 0,
           freshItems: data.freshItems ?? 0,
+          windowDays: data.windowDays ?? 7,
           samples: data.samples ?? [],
         });
         // Auto-populate name field if empty using the feed title
@@ -317,9 +321,14 @@ function FeedFormModal({
                   </Typography>
                   <Box marginTop={1}>
                     <Typography variant="pi" textColor="neutral600">
-                      {validation.totalItems} items en total · {validation.freshItems} de las
-                      últimas 24h
-                      {validation.language ? ` · idioma: ${validation.language}` : ""}
+                      {t("rss.check.resumen", {
+                        total: validation.totalItems,
+                        frescos: validation.freshItems,
+                        dias: validation.windowDays,
+                      })}
+                      {validation.language
+                        ? ` · ${t("rss.check.idioma", { idioma: validation.language })}`
+                        : ""}
                     </Typography>
                   </Box>
                 </Box>

@@ -10,7 +10,12 @@ import {
   findDuplicateSubject,
   type GeneratedPost,
 } from "./openai";
-import { getRecentNewsForTopic, type NewsItem } from "./rss-fetcher";
+import {
+  getIngestWindowDays,
+  getRecentNewsForTopic,
+  ingestWindowLabel,
+  type NewsItem,
+} from "./rss-fetcher";
 import { findEchoedHeadline } from "./headline-similarity";
 import {
   getOpenRouterImageKey,
@@ -225,16 +230,20 @@ export async function runRedactor(
   const recentNews = isAssignedMode ? assignedItems! : rawNews.slice(0, 10);
 
   const hasContext = recentNews.length > 0;
+  // La ventana REAL del pool (la de ingesta, 7 días por defecto). El prompt
+  // decía "last 24h" fijo, y el modelo trataba como del día noticias que
+  // tenían una semana.
+  const dias = await getIngestWindowDays(strapi);
   if (!isAssignedMode && agent.topic && !hasContext) {
     strapi.log.info(
-      `[agent-runner] Redactor "${agent.name}": sin noticias de las últimas 24h que ` +
-        `matcheen su topic; no se genera nota en esta corrida.`,
+      `[agent-runner] Redactor "${agent.name}": sin noticias de los últimos ${dias} ` +
+        `día${dias === 1 ? "" : "s"} que matcheen su topic; no se genera nota en esta corrida.`,
     );
   }
 
   const sharedNewsContextBlock = !isAssignedMode && hasContext
     ? [
-        "\nVerified news context (last 24h) — base your article EXCLUSIVELY on these facts:",
+        `\nVerified news context (${ingestWindowLabel(dias)}) — base your article EXCLUSIVELY on these facts:`,
         ...recentNews.map(
           (n, i) =>
             `[${i + 1}] ${n.source} | ${n.title}\n${(n.summary ?? "").slice(0, 300)}`,
@@ -445,7 +454,7 @@ export async function runRedactor(
       model,
       generated.title,
       recentTitles,
-      promptSettings.domainDescription,
+      promptSettings,
     );
     if (duplicateOf) {
       strapi.log.warn(

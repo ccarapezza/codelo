@@ -192,6 +192,17 @@ export async function getIngestWindowDays(strapi: Core.Strapi): Promise<number> 
   return INGEST_WINDOW_DAYS;
 }
 
+/**
+ * Cómo se nombra la ventana en un prompt: "last 24h" con un día —el texto que
+ * el redactor tenía fijo— y "last N days" con cualquier otra.
+ *
+ * El prompt decía "last 24h" mientras la ventana real era de 7 días, así que
+ * el modelo trataba como del día noticias de una semana atrás.
+ */
+export function ingestWindowLabel(dias: number): string {
+  return dias === 1 ? "last 24h" : `last ${dias} days`;
+}
+
 /** Clave en el core store con el ISO de la última corrida completa del cron. */
 const RSS_LAST_RUN_KEY = project.coreStoreKey("rss-last-run");
 
@@ -221,7 +232,10 @@ export type FeedValidationResult =
       feedLink: string | null;
       language: string | null;
       totalItems: number;
+      /** Ítems dentro de la ventana de ingesta (`windowDays`). */
       freshItems: number;
+      /** La ventana con la que se contaron los frescos, para que el panel la nombre. */
+      windowDays: number;
       samples: Array<{ title: string; url: string; pubDate: string | null; summary: string }>;
     };
 
@@ -230,11 +244,15 @@ export type FeedValidationResult =
  * el botón "validar" de la pantalla de fuentes. El buscador de fuentes pide
  * más: con 5 titulares el porcentaje de match con el tema salta de 0 a 20 % de
  * a un item y no distingue un medio de nicho de uno generalista.
+ * @param windowDays la ventana de ingesta configurada (`getIngestWindowDays`):
+ * "frescos" tiene que querer decir lo mismo acá que en la ingesta, o el panel
+ * promete ítems que el cron después descarta.
  */
 export async function validateFeed(
   feedUrl: string,
   timeoutMs = 8000,
   sampleSize = 5,
+  windowDays = INGEST_WINDOW_DAYS,
 ): Promise<FeedValidationResult> {
   if (!feedUrl || !/^https?:\/\//i.test(feedUrl)) {
     return { valid: false, error: "URL inválida (debe empezar con http:// o https://)" };
@@ -296,7 +314,7 @@ export async function validateFeed(
   const feedLink = extractField(channelXml, "link") || null;
   const language = extractField(channelXml, "language") || null;
 
-  const freshItems = items.filter((i) => isRecentEnough(i, INGEST_WINDOW_DAYS)).length;
+  const freshItems = items.filter((i) => isRecentEnough(i, windowDays)).length;
   const samples = items.slice(0, sampleSize).map((i) => ({
     title: i.title,
     url: i.url,
@@ -311,6 +329,7 @@ export async function validateFeed(
     language,
     totalItems: items.length,
     freshItems,
+    windowDays,
     samples,
   };
 }

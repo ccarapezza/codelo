@@ -106,6 +106,10 @@
       ],
       "description": "Logo que imprimen las placas. Sin esto se usa el de assets/logo/. PNG con fondo transparente."
     },
+    "defaultPostTagSlug": {
+      "type": "string",
+      "description": "Slug de una etiqueta existente. Se le pone a las notas creadas a mano cuando el editor no elige ninguna. Sin default a propósito: la semilla escribe sólo lo vacío."
+    },
     "ingestWindowDays": {
       "type": "integer",
       "default": 7,

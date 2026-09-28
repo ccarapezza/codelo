@@ -67,7 +67,7 @@ export async function construirPrompts(
 
   return {
     dedup: await capture((c) =>
-      findDuplicateSubject(c, "m", I.TITLE, I.RECENT_TITLES, s.domainDescription),
+      findDuplicateSubject(c, "m", I.TITLE, I.RECENT_TITLES, s),
     ),
 
     translate: await capture((c) => translatePost(c, "m", I.DRAFT, s)),

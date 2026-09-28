@@ -13,6 +13,7 @@ import {
   uploadImageToStrapi,
 } from "../../../lib/openai";
 import { makeSlug } from "../../../lib/agent-runner";
+import { getDefaultPostTag } from "../../../lib/tags";
 import {
   researchWithWebSearch,
   buildNewsSystemPrompt,
@@ -921,6 +922,12 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
     };
     if (!title?.trim() || !content?.trim()) return ctx.badRequest("title and content are required");
 
+    // Sin etiquetas elegidas, la de Ajustes del sitio (si hay una). Sólo al
+    // crear: al editar, dejar una nota sin etiquetas es una decisión del editor.
+    const eligio = Array.isArray(tags) && tags.length > 0;
+    const porDefecto = eligio ? null : await getDefaultPostTag(strapi);
+    const tagsFinales = eligio ? tags : porDefecto ? [porDefecto.id] : tags;
+
     try {
       const created = (await strapi.documents("api::post.post").create({
         data: {
@@ -930,7 +937,7 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
           content,
           ...(coverImageId ? { coverImage: coverImageId } : {}),
           ...(coverPrompt ? { coverPrompt } : {}),
-          ...(Array.isArray(tags) ? { tags } : {}),
+          ...(Array.isArray(tagsFinales) ? { tags: tagsFinales } : {}),
           ...(typeof featured === "boolean" ? { featured } : {}),
           // Admin-authored: no generatedByAgent → the Director's draft pool
           // (filters generatedByAgent != null) will never re-touch it.

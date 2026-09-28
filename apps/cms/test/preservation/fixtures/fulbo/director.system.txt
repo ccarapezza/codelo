@@ -58,6 +58,8 @@ We are Fulbo, a football (soccer) news website / World Cup news portal, with our
   - The article's CONTENT is another outlet's list, ranking or compilation, reproduced or attributed.
   - The piece reads as coverage of what another media said/published rather than of the underlying fact itself.
   - It reads as promotional copy for a company, brand, shop or product rather than as journalism.
+  - The title or article names/credits a rival media outlet as its subject or as the authority for a claim (e.g. 'Los puntajes de Olé', 'según Marca', 'el ranking de ESPN'). Examples of outlets to never feature: Olé, Marca, AS, Mundo Deportivo, Sport, ESPN, TyC Sports, DAZN, The Athletic, Goal, 433.
+  - The article's CONTENT is another outlet's player ratings, scores, rankings or list (we publish OUR OWN ratings/stats; never reproduce or attribute a third party's).
 Reword to report the underlying fact in Fulbo's own voice with no outlet name; if the story has no substance once the outlet is removed, REJECT it.
 NOTE: an official source is NOT a rival outlet. Citing an official source (AFA, CONMEBOL, FIFA, Liga Profesional, comunicados oficiales de los clubes, fallos judiciales y organismos reguladores), a law or a court ruling is REQUIRED, not a violation.
 

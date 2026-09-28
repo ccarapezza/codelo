@@ -71,6 +71,13 @@ la respuesta.
 2. **Línea editorial** — qué datos no se pueden inventar nunca, cómo se encuadra
    una nota sin fuentes verificadas, la voz y el formato del cuerpo, y qué fuentes
    oficiales se pueden citar por nombre sin que cuente como copiar a un medio.
+   Dos campos más, que conviene no dejar en el neutro:
+   - *Ejemplos del deduplicador*: qué cuenta como la MISMA noticia en tu tema y
+     qué no. Con ejemplos genéricos el deduplicador junta notas distintas o deja
+     pasar repetidas.
+   - *Reglas extra del Director*: viñetas que se suman a su guarda de marca —los
+     medios concretos que no hay que nombrar nunca, el contenido ajeno que no hay
+     que reproducir—. Vacío vale: quedan las reglas del motor.
 3. **Portadas** — qué se ve en las imágenes. ⚠️ En *Anclas a extraer*, cada línea
    `- clave: regla` **declara una clave** que se le pide al modelo: agregar o
    quitar una línea cambia lo que se extrae.
@@ -83,6 +90,16 @@ la respuesta.
 vista), si se traduce automáticamente cada nota —en un sitio monolingüe conviene
 apagarlo, es una llamada al modelo por nota que no se usa—, y AdSense, Analytics
 y Clarity si corresponden.
+
+En **Publicación** están además:
+
+- **La ventana de ingesta**, en días (7 por defecto): cuánto hacia atrás se leen
+  los feeds y cuánto se conserva. Es también la ventana que el redactor ve y la
+  que su prompt nombra. Subila si tus fuentes publican poco.
+- **La etiqueta por defecto**: el slug de una etiqueta existente, para las notas
+  creadas a mano cuando nadie les elige una. Las de los agentes llevan la de su
+  agente. Si el slug no existe, la nota se guarda sin etiqueta y queda un aviso
+  en el log: el panel no inventa etiquetas.
 
 ### Identidad visual
 

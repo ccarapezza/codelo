@@ -409,12 +409,18 @@ export async function extractArticleAnchors(
  * where a Jaccard threshold is simultaneously too strict and too loose.
  */
 /** Exportado para poder compararlo sin red (test/preservation). */
-export function buildDedupSystemPrompt(domainDescription: string): string {
+/**
+ * Las dos líneas de ejemplos (qué es el mismo hecho y qué no) vienen del
+ * ajuste `dedupExamples`: son del dominio, y estaban escritas acá con los de un
+ * solo proyecto.
+ */
+export function buildDedupSystemPrompt(
+  s: Pick<PromptSettings, "domainDescription" | "dedupExamples">,
+): string {
   return [
-    `You are a news-desk de-duplication checker for ${domainDescription}.`,
+    `You are a news-desk de-duplication checker for ${s.domainDescription}.`,
     "Decide whether a CANDIDATE headline reports the SAME specific event as any EXISTING headline.",
-    "Same event = same subject AND the same concrete happening: e.g. the same published regulation, the same court ruling, the same study, the same licence granted to the same organisation.",
-    "These are NOT duplicates: a bill's INTRODUCTION vs its later SANCTION; two DIFFERENT organisations each obtaining their own licence or registry; the same law cited as background in two unrelated articles; an explainer about a procedure vs news of that procedure changing; a follow-up that adds genuinely new facts.",
+    s.dedupExamples,
     'Return STRICT JSON: { "duplicateIndex": number } — the 1-based index of the EXISTING headline that is the same event, or 0 if none match.',
   ].join("\n");
 }
@@ -424,10 +430,10 @@ export async function findDuplicateSubject(
   model: string,
   candidateTitle: string,
   recentTitles: string[],
-  domainDescription: string = DEFAULT_PROMPT_SETTINGS.domainDescription,
+  settings: Pick<PromptSettings, "domainDescription" | "dedupExamples"> = DEFAULT_PROMPT_SETTINGS,
 ): Promise<string | null> {
   if (recentTitles.length === 0) return null;
-  const system = buildDedupSystemPrompt(domainDescription);
+  const system = buildDedupSystemPrompt(settings);
   const list = recentTitles.map((t, i) => `${i + 1}. ${t}`).join("\n");
   try {
     const res = await client.chat.completions.create({
@@ -932,6 +938,9 @@ export function buildReviewSystemPrompt(s: PromptSettings, input: ReviewPostInpu
     "  - The article's CONTENT is another outlet's list, ranking or compilation, reproduced or attributed.",
     "  - The piece reads as coverage of what another media said/published rather than of the underlying fact itself.",
     "  - It reads as promotional copy for a company, brand, shop or product rather than as journalism.",
+    // Las viñetas propias del proyecto van después de las del motor. Se quita
+    // sólo el final: un `.trim()` se comería la sangría de la primera viñeta.
+    ...(s.brandGuardrails?.trim() ? [s.brandGuardrails.replace(/^\s*\n/, "").trimEnd()] : []),
     `Reword to report the underlying fact in ${brandName}'s own voice with no outlet name; if the story has no substance once the outlet is removed, REJECT it.`,
     `NOTE: an official source is NOT a rival outlet. Citing an official source (${officialSources}), a law or a court ruling is REQUIRED, not a violation.`,
     "",

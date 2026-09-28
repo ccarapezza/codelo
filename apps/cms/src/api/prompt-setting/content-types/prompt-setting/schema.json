@@ -43,6 +43,12 @@
     "officialSources": {
       "type": "text"
     },
+    "dedupExamples": {
+      "type": "text"
+    },
+    "brandGuardrails": {
+      "type": "text"
+    },
     "imageSystemInstructions": {
       "type": "text"
     },
