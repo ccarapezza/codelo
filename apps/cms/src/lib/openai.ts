@@ -1,6 +1,9 @@
 import OpenAI from "openai";
 import { generateOpenRouterImage } from "./openrouter-image";
 import { DEFAULT_PROMPT_SETTINGS, type PromptSettings } from "./prompt-defaults";
+import { ENGINE_POOLS, type CoverPools, type Mood, type Treatment } from "./cover-pools";
+import { verticalCoverPools } from "../verticals/cover-pools";
+import { applyAnchorEnrichers } from "./anchor-enrichment";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -118,81 +121,20 @@ const SAFETY_SUFFIX =
 // from a per-article seed so the same post regenerated twice yields identical
 // constraints, but different posts (different seeds) yield different combos.
 
-// OJO: acá no puede entrar ninguna composición partida. El pool se elige por
-// seed, así que una entrada tipo "split two-panel" le tocaba a 1 de cada 8 notas
-// y peleaba de frente con la HARD RULE de imagen única y con SINGLE_FRAME_SUFFIX
-// (openrouter-image.ts): el modelo obedecía a la composición y devolvía diptychs
-// con costura al medio. Toda composición nueva tiene que ser de un solo cuadro.
-const COMPOSITIONS = [
-  "macro close-up with shallow depth of field",
-  "aerial top-down flat lay",
-  "wide environmental shot with leading lines",
-  "through-window or doorway framed composition",
-  "centred symmetric composition with a single subject",
-  "diagonal low-angle perspective",
-  "backlit silhouette against a bright ground",
-  "close third-person over-the-shoulder view",
-] as const;
-
-// ─── Visual treatment (the anti-monotony dimension) ──────────────────────
-// Covers used to be uniformly photorealistic because photorealism was asserted
-// in three places at once: the system instructions, the user prompt, and a
-// STYLES pool whose every entry was a photographic style. The treatment is now
-// the thing the seed rotates, and it decides whether the cover is a photograph
-// at all. Roughly a third stay photographic — a news portal still needs
-// credible photo covers — and the rest are drawn, printed or diagrammatic.
-type TreatmentKind = "photo" | "art";
-interface Treatment {
-  kind: TreatmentKind;
-  value: string;
+/**
+ * El pool del vertical si declara uno con algo adentro; si no, el del motor.
+ * Un array vacío se ignora: `pool[seed % 0]` es `undefined` y la portada
+ * saldría sin tratamiento.
+ */
+function pool<K extends "compositions" | "treatments" | "moods">(k: K): CoverPools[K] {
+  const propio = verticalCoverPools[k];
+  return propio && propio.length > 0 ? (propio as CoverPools[K]) : ENGINE_POOLS[k];
 }
 
-const TREATMENTS: ReadonlyArray<Treatment> = [
-  { kind: "photo", value: "documentary photojournalism: natural light, unstaged, reportage framing" },
-  { kind: "photo", value: "modern minimalist editorial photography with generous negative space" },
-  { kind: "photo", value: "macro nature photography with scientific clarity and fine texture detail" },
-  { kind: "photo", value: "archival 1970s film photograph: visible grain, faded dyes, slight vignette" },
-  { kind: "art",   value: "19th-century naturalist plate: precise ink linework, hand-tinted watercolour washes, catalogue-sheet layout" },
-  { kind: "art",   value: "risograph print: two or three spot inks, visible misregistration, paper tooth showing through" },
-  { kind: "art",   value: "linocut relief print: bold carved strokes, stark high contrast, two-colour palette" },
-  { kind: "art",   value: "flat vector editorial illustration: geometric shapes, limited palette, poster-like clarity" },
-  { kind: "art",   value: "annotated technical diagram: cross-sections, callout leader lines, schematic clarity" },
-  { kind: "art",   value: "cut-paper collage: layered textured papers, hard-edged shapes, soft drop shadows" },
-  { kind: "art",   value: "ink wash brushwork: gestural strokes, controlled bleed, wide areas of empty paper" },
-  { kind: "art",   value: "engraved etching from an old journal: fine cross-hatching, sepia ink on cream stock" },
-];
-
-// A photograph's variable axis is light; a drawing's is ink, palette and mark-
-// making. Feeding "golden hour with long shadows" to a linocut just produces a
-// confused hybrid, so each treatment kind draws from its own pool.
-type MoodTone = "warm" | "cool" | "harsh" | "night" | "muted" | "vivid";
-const MOODS: ReadonlyArray<{ tone: MoodTone; value: string }> = [
-  { tone: "warm",  value: "golden hour warm light with long shadows" },
-  { tone: "cool",  value: "blue hour cold light, melancholy mood" },
-  { tone: "harsh", value: "harsh midday sun, high contrast" },
-  { tone: "night", value: "single hard light source at night, deep shadows" },
-  { tone: "muted", value: "overcast diffused light, desaturated palette" },
-  { tone: "warm",  value: "dusk amber light with dramatic clouds" },
-  { tone: "cool",  value: "dawn pale blue light, mist in the air" },
-  { tone: "vivid", value: "raking side light, saturated colours" },
-  { tone: "muted", value: "monochrome / duotone editorial treatment" },
-];
-
-/**
- * El pool de acabados de ilustración. Uno de ellos es el duotono de la casa, y
- * por eso se arma con la paleta de los ajustes en vez de traerla escrita: tenía
- * los colores de UN proyecto y se los aplicaba a todos.
- */
-const artRenders = (brandPalette: string): ReadonlyArray<{ tone: MoodTone; value: string }> => [
-  { tone: "warm",  value: "warm ochre and terracotta inks on cream stock" },
-  { tone: "cool",  value: "indigo and slate inks with cold negative space" },
-  { tone: "vivid", value: "two saturated spot colours overprinted where they overlap" },
-  { tone: "muted", value: "muted earth palette, heavy paper texture, soft edges" },
-  { tone: "harsh", value: "stark black ink on bare paper, no midtones" },
-  { tone: "warm",  value: `${brandPalette} duotone, matching the house palette` },
-  { tone: "cool",  value: "pale washes with a single accent colour" },
-  { tone: "muted", value: "sepia monochrome with fine hatching for shading" },
-];
+function acabados(brandPalette: string): readonly Mood[] {
+  const propios = verticalCoverPools.artRenders?.(brandPalette);
+  return propios && propios.length > 0 ? propios : ENGINE_POOLS.artRenders(brandPalette);
+}
 
 function hashSeed(s: string): number {
   // djb2 — fast, low collision for short strings.
@@ -240,12 +182,12 @@ export function resolvePromptConstraints(
   brandPalette: string = DEFAULT_PROMPT_SETTINGS.brandPalette,
 ): PromptConstraints {
   const seed = hashSeed(seedKey);
-  const treatment = pickFromPool(TREATMENTS, seed, 13);
+  const treatment = pickFromPool(pool("treatments"), seed, 13);
   // The mood pool follows the treatment: lighting for photographs, ink and
   // palette for everything drawn or printed.
-  const moodPool = treatment.kind === "photo" ? MOODS : artRenders(brandPalette);
+  const moodPool = treatment.kind === "photo" ? pool("moods") : acabados(brandPalette);
   return {
-    composition: pickFromPool(COMPOSITIONS, seed, 0),
+    composition: pickFromPool(pool("compositions"), seed, 0),
     // Offsets are coprime with each pool size to de-correlate the picks.
     mood: pickFromPool(moodPool, seed, 7).value,
     treatment,
@@ -503,9 +445,14 @@ function buildUserPrompt(
       );
     }
     // Se recorre lo que haya: las claves las decide la taxonomía, no este código.
-    const anchorLines = Object.entries(anchors)
-      .filter(([, v]) => Boolean(v))
-      .map(([k, v]) => `- ${anchorLabel(k)}: ${v}`);
+    // El vertical puede sumar líneas y descartar anclas (verticals/anchor-enrichers.ts).
+    const extra = applyAnchorEnrichers(anchors);
+    const anchorLines = [
+      ...Object.entries(anchors)
+        .filter(([k, v]) => Boolean(v) && !extra.drop.has(k))
+        .map(([k, v]) => `- ${anchorLabel(k)}: ${v}`),
+      ...extra.lines,
+    ];
     if (anchorLines.length > 0) {
       sections.push(`MUST FEATURE (anchors from this article):`, ...anchorLines, ``);
     }

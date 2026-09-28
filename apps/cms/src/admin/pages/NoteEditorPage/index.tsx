@@ -276,7 +276,7 @@ export default function NoteEditorPage() {
     <PageContainer>
       <PageHeader
         icon={isEdit ? <Pencil /> : <Feather />}
-        title={isEdit ? "Editar nota" : "Nueva nota"}
+        title={isEdit ? t("nota.editar") : t("nota.nueva")}
         subtitle={
           isEdit
             ? t("nota.sub.editar")

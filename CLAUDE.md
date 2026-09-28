@@ -64,6 +64,12 @@ y el panel la muestra sin etiqueta.
 spreadea `verticals/cron.ts`. Agregar una tarea propia no toca el archivo del
 motor.
 
+**Portadas.** Los pools del sorteo (encuadre, tratamiento, luz, acabado)
+están en `lib/cover-pools.ts` y un proyecto los reemplaza desde
+`verticals/cover-pools.ts`; lo que sabe de sus anclas lo suma con
+`verticals/anchor-enrichers.ts`. Todo camino que genera una portada pasa por
+`generateCoverForPost` (`lib/cover-pipeline.ts`): no escribir otra copia.
+
 **Web.** `globals.css` es el puente de tokens; `theme.css` los valores;
 `vertical.css` lo que no existe en un portal cualquiera. Los componentes usan
 siempre los mismos nombres de token, así que cambiar la identidad visual es

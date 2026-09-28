@@ -215,7 +215,7 @@ function NoteRow({
                 checked={note.featured}
                 onCheckedChange={(v: boolean) => onToggleFeatured(v)}
                 disabled={featuring}
-                aria-label={note.featured ? "Quitar del carrusel" : t("notas.agregarCarrusel")}
+                aria-label={note.featured ? t("notas.quitarCarrusel") : t("notas.agregarCarrusel")}
               />
             </Flex>
           ) : null}

@@ -50,8 +50,10 @@ Lo que el motor le pide al proyecto, todo con default vacío:
 | `verticals/prompt-fields.ts` | Campos de prompt propios de un módulo del proyecto |
 | `verticals/setting-fields.ts` | Ajustes del sitio propios (claves que el controller acepta) |
 | `verticals/rss-scope.ts` | Qué ítems del pool RSS son del tema |
+| `verticals/cover-pools.ts` | Pools propios para sortear las portadas (encuadres, tratamientos, luces, acabados). Cada uno REEMPLAZA entero al del motor; para sumar, partir de `ENGINE_POOLS` (`lib/cover-pools.ts`) |
+| `verticals/anchor-enrichers.ts` | Conocimiento propio sobre las anclas de una portada: sumar líneas a "MUST FEATURE" o descartar un ancla. Uno que lanza se ignora |
 | `verticals/brand.ts` | Tipografías de las placas y el logo por defecto. **Los colores ya no: van en el panel** (Sitio e integraciones → Identidad visual) |
-| `admin/verticals.ts` | Widgets, menú, rutas, identidad visual del panel (pisa la de Nib) y las tarjetas propias de las dos pantallas de configuración (`promptCards`, `settingCards`). Las etiquetas de esas tarjetas van como texto literal: `t()` devuelve tal cual lo que no sea una clave conocida, así que no hace falta armar catálogos. Para traducirlas, se declaran claves `nib.*` en `translations` de la costura |
+| `admin/verticals.ts` | Widgets, menú, rutas, identidad visual del panel (pisa la de Nib), los roles de agente propios (`agentRoles`: cada uno tiene su sección en Agentes, con editar, borrar y correr) y las tarjetas propias de las dos pantallas de configuración (`promptCards`, `settingCards`). Las etiquetas de esas tarjetas van como texto literal: `t()` devuelve tal cual lo que no sea una clave conocida, así que no hace falta armar catálogos. Para traducirlas, se declaran claves `nib.*` en `translations` de la costura |
 | `lib/site.ts` | Nombre, dominio, idiomas y navegación del sitio |
 | `app/[lang]/theme.css` | Los colores del sitio |
 | `components/vertical/index.ts` | Cuatro ranuras opcionales de la web |

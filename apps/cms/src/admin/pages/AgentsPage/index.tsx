@@ -43,6 +43,13 @@ const RUN_NOW_API = "/api/agent/run-now";
 const VERTICAL_ROLES: NonNullable<typeof verticals.agentRoles> =
   (verticals as Partial<typeof verticals>).agentRoles ?? [];
 
+/** El acento de una sección según el `badgeVariant` que declara el proyecto. */
+function acentoDe(variante: string): "primary" | "warning" | "success" | "secondary" {
+  return variante === "primary" || variante === "warning" || variante === "success"
+    ? variante
+    : "secondary";
+}
+
 // Estimated prices USD per image
 // gpt-image-1: quality = low / medium / high
 // dall-e-3:    quality = standard / hd  (1536/1024 sizes map to 1792/1024 automatically)
@@ -494,7 +501,8 @@ function AgentFormModal({
   open: boolean;
   onClose: () => void;
   onSaved: () => void;
-  initial: { agent: Agent | null };
+  /** `role`: con qué rol se abre el alta (el "+" de cada sección preselecciona el suyo). */
+  initial: { agent: Agent | null; role?: string };
 }) {
   const t = useT();
   const { get, post, put } = useFetchClient();
@@ -505,13 +513,17 @@ function AgentFormModal({
   const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
-    setForm(initial.agent ? agentToForm(initial.agent) : EMPTY_FORM);
+    setForm(
+      initial.agent
+        ? agentToForm(initial.agent)
+        : { ...EMPTY_FORM, role: initial.role ?? EMPTY_FORM.role },
+    );
     // Las etiquetas se listan al abrir el modal y no al montar la pantalla: es
     // el único lugar donde se usan.
     get<Array<{ documentId: string; name: string }>>("/api/news-generator/tags")
       .then((r) => setEtiquetas(r.data ?? []))
       .catch(() => setEtiquetas([]));
-  }, [initial.agent, open]);
+  }, [initial.agent, initial.role, open]);
 
   const set = <K extends keyof FormData>(key: K, value: FormData[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -574,15 +586,23 @@ function AgentFormModal({
     }
   };
 
+  // Un rol del proyecto no es un redactor: sus textos salen de su declaración
+  // en admin/verticals.ts o son genéricos, no los del redactor.
+  const rolPropio = VERTICAL_ROLES.find((r) => r.value === form.role);
+
   const instructionsLabel =
     form.role === "director"
-      ? "Instrucciones editoriales del Director"
-      : t("ag.tono.titulo");
+      ? t("ag.instrucciones.director")
+      : rolPropio
+        ? t("ag.instrucciones.label")
+        : t("ag.tono.titulo");
 
   const instructionsHint =
     form.role === "director"
       ? t("ag.director.hint")
-      : t("ag.redactor.hint");
+      : rolPropio
+        ? t("ag.instrucciones.hint")
+        : t("ag.redactor.hint");
 
   return (
     <Modal.Root open={open} onOpenChange={(v: boolean) => !v && onClose()}>
@@ -630,6 +650,8 @@ function AgentFormModal({
                     ? t("ag.rol.imagen")
                     : form.role === "explorador"
                     ? t("ag.rol.explorador")
+                    : rolPropio
+                    ? (rolPropio.description ? t(rolPropio.description) : undefined)
                     : t("ag.rol.redactor")
                 }
               >
@@ -651,7 +673,7 @@ function AgentFormModal({
                   </SingleSelectOption>
                   {VERTICAL_ROLES.map((r) => (
                     <SingleSelectOption key={r.value} value={r.value} startIcon={<Magic />}>
-                      {r.label}
+                      {t(r.label)}
                     </SingleSelectOption>
                   ))}
                   <SingleSelectOption value="image-generator" startIcon={<Magic />}>{t("ag.generadorImagenes")}</SingleSelectOption>
@@ -963,7 +985,7 @@ function AgentItem({
             </Typography>
           ) : null}
 
-          {agent.role === "redactor" && agent.topic ? (
+          {agent.role !== "image-generator" && agent.topic ? (
             <Box marginTop={1}>
               <Typography variant="pi" textColor="primary600">
                 {t("ag.temaLabel")} {agent.topic.slice(0, 60)}{agent.topic.length > 60 ? "…" : ""}
@@ -1210,6 +1232,7 @@ export default function AgentsPage() {
   const [loading, setLoading] = React.useState(true);
   const [modalOpen, setModalOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Agent | null>(null);
+  const [crearRol, setCrearRol] = React.useState<string | undefined>(undefined);
   const [deleteTarget, setDeleteTarget] = React.useState<Agent | null>(null);
   const [deleting, setDeleting] = React.useState(false);
   // documentId del agente cuyo toggle está en vuelo (deshabilita ese switch).
@@ -1337,8 +1360,11 @@ export default function AgentsPage() {
     }
   };
 
-  const openCreate = () => {
+  // Recibe el rol a preseleccionar. Se llama siempre con una flecha: pasada
+  // directo a un onClick recibiría el evento como "rol".
+  const openCreate = (rol?: string) => {
     setEditing(null);
+    setCrearRol(rol);
     setModalOpen(true);
   };
 
@@ -1371,7 +1397,7 @@ export default function AgentsPage() {
             >
               {t("ag.traducirFaltantes")}
             </Button>
-            <Button startIcon={<PlusCircle />} onClick={openCreate}>{t("ag.nuevo")}</Button>
+            <Button startIcon={<PlusCircle />} onClick={() => openCreate()}>{t("ag.nuevo")}</Button>
           </Flex>
         }
       />
@@ -1397,7 +1423,7 @@ export default function AgentsPage() {
             accent="primary"
             countLabel={t("ag.de1Configurado", { n: director ? 1 : 0 })}
             canCreate={!director}
-            onCreate={openCreate}
+            onCreate={() => openCreate("director")}
           >
             {director ? (
               <AgentItem
@@ -1413,7 +1439,7 @@ export default function AgentsPage() {
                 icon={<Magic aria-hidden />}
                 message={t("ag.director.vacio")}
                 actionLabel={t("ag.crear", { que: t("ag.director") })}
-                onAction={openCreate}
+                onAction={() => openCreate("director")}
               />
             )}
           </RoleSection>
@@ -1426,7 +1452,7 @@ export default function AgentsPage() {
             accent="warning"
             countLabel={t("ag.de1Configurado", { n: imageGenerator ? 1 : 0 })}
             canCreate={!imageGenerator}
-            onCreate={openCreate}
+            onCreate={() => openCreate("image-generator")}
           >
             {imageGenerator ? (
               <AgentItem
@@ -1442,7 +1468,7 @@ export default function AgentsPage() {
                 icon={<Magic aria-hidden />}
                 message={t("ag.imagen.vacio")}
                 actionLabel={t("ag.crear", { que: t("ag.generadorImagenes") })}
-                onAction={openCreate}
+                onAction={() => openCreate("image-generator")}
               />
             )}
           </RoleSection>
@@ -1455,7 +1481,7 @@ export default function AgentsPage() {
             accent="success"
             countLabel={t("ag.redactoresConfigurados", { n: redactors.length })}
             canCreate
-            onCreate={openCreate}
+            onCreate={() => openCreate("redactor")}
           >
             {redactors.length > 0 ? (
               <Flex direction="column" alignItems="stretch" gap={3}>
@@ -1476,7 +1502,7 @@ export default function AgentsPage() {
                 icon={<Feather aria-hidden />}
                 message={t("ag.redactores.vacio")}
                 actionLabel={t("ag.crear", { que: t("ag.redactor") })}
-                onAction={openCreate}
+                onAction={() => openCreate("redactor")}
               />
             )}
           </RoleSection>
@@ -1489,7 +1515,7 @@ export default function AgentsPage() {
             accent="secondary"
             countLabel={t("ag.redactoresConfigurados", { n: exploradores.length })}
             canCreate
-            onCreate={openCreate}
+            onCreate={() => openCreate("explorador")}
           >
             {exploradores.length > 0 ? (
               <Flex direction="column" alignItems="stretch" gap={3}>
@@ -1510,11 +1536,51 @@ export default function AgentsPage() {
                 icon={<Feather aria-hidden />}
                 message={t("ag.exploradores.vacio")}
                 actionLabel={t("ag.crear", { que: t("ag.explorador") })}
-                onAction={openCreate}
+                onAction={() => openCreate("explorador")}
               />
             )}
           </RoleSection>
 
+          {/* Los roles que suma el proyecto (admin/verticals.ts), con el mismo
+              tablero que los del motor: editar, borrar, correr, activar. */}
+          {VERTICAL_ROLES.map((r) => {
+            const propios = agents.filter((a) => a.role === r.value);
+            return (
+              <RoleSection
+                key={r.value}
+                icon={<Feather aria-hidden />}
+                title={t(r.label)}
+                description={r.description ? t(r.description) : ""}
+                accent={acentoDe(r.badgeVariant)}
+                countLabel={t("ag.redactoresConfigurados", { n: propios.length })}
+                canCreate
+                onCreate={() => openCreate(r.value)}
+              >
+                {propios.length > 0 ? (
+                  <Flex direction="column" alignItems="stretch" gap={3}>
+                    {propios.map((a) => (
+                      <AgentItem
+                        key={a.documentId}
+                        agent={a}
+                        onEdit={() => openEdit(a)}
+                        onDelete={() => setDeleteTarget(a)}
+                        onRunNow={() => openRunNow(a)}
+                        onToggleEnabled={(next) => handleToggleEnabled(a, next)}
+                        toggling={togglingId === a.documentId}
+                      />
+                    ))}
+                  </Flex>
+                ) : (
+                  <EmptySectionState
+                    icon={<Feather aria-hidden />}
+                    message={t("ag.rol.vacio", { rol: t(r.label) })}
+                    actionLabel={t("ag.crear", { que: t(r.label) })}
+                    onAction={() => openCreate(r.value)}
+                  />
+                )}
+              </RoleSection>
+            );
+          })}
         </Box>
       )}
 
@@ -1523,7 +1589,7 @@ export default function AgentsPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSaved={loadAgents}
-        initial={{ agent: editing }}
+        initial={{ agent: editing, role: crearRol }}
       />
 
       {/* Delete confirmation */}
@@ -1563,9 +1629,9 @@ export default function AgentsPage() {
           <Dialog.Body>
             <Flex direction="column" gap={4} padding={2}>
               <Typography textAlign="center" textColor="neutral600">
-                {runNowTarget?.role === "redactor"
-                  ? t("ag.cuantasNotas")
-                  : t("ag.cuantosBorradores")}
+                {runNowTarget?.role === "director"
+                  ? t("ag.cuantosBorradores")
+                  : t("ag.cuantasNotas")}
               </Typography>
               <Flex justifyContent="center">
                 <Box style={{ width: 160 }}>

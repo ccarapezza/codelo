@@ -139,7 +139,7 @@ export default function DeckEditor({
   return (
     <Flex direction="column" alignItems="stretch" gap={4}>
       <AccentCard
-        title={isCarousel ? `Carrusel — ${slides.length} placas` : "Historia — 1080×1920"}
+        title={isCarousel ? t("ss.deck.tituloCarrusel", { n: slides.length }) : t("ss.deck.tituloHistoria")}
         description={t("ss.deck.ayuda")}
         accent="success"
         actions={
