@@ -58,6 +58,11 @@ Lo que el motor le pide al proyecto, todo con default vacío:
 | `app/[lang]/theme.css` | Los colores del sitio |
 | `components/vertical/index.ts` | Cuatro ranuras opcionales de la web |
 
+`scripts/check-neutral.sh` es del motor y va idéntico en cada proyecto. Lo que
+el proyecto tiene fuera de las costuras con nombre —content-types propios,
+scripts, una home propia— se excluye en `scripts/check-neutral.ignore` (un
+patrón de `grep -E` por línea), que es del proyecto.
+
 ### Lo que el motor le presta a un vertical
 
 Un runner propio (un rol de `agent-roles.ts`) o un cron propio no tiene que
