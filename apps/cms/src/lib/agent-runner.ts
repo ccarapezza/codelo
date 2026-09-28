@@ -898,13 +898,6 @@ export async function runDueAgents(strapi: Core.Strapi): Promise<void> {
 }
 
 /**
- * Títulos de los últimos 7 días, publicados y borradores.
- *
- * El Redactor tiene su propia copia adentro (cerrada sobre `strapi` y su
- * ventana); ésta es para el Explorador, que necesita lo mismo antes de elegir
- * tema: sin la lista propone siempre lo más obvio del área y el sitio repite.
- */
-/**
  * Recorta en el último salto de línea antes del tope.
  *
  * Los apuntes del Explorador son una lista de hechos, uno por línea con su
@@ -920,6 +913,13 @@ function recortarEnLinea(texto: string, tope: number): string {
   return (ultimaLinea > tope * 0.5 ? corte.slice(0, ultimaLinea) : corte).trim();
 }
 
+/**
+ * Títulos de los últimos 7 días, publicados y borradores.
+ *
+ * El Redactor tiene su propia copia adentro (cerrada sobre `strapi` y su
+ * ventana); ésta es para el Explorador, que necesita lo mismo antes de elegir
+ * tema: sin la lista propone siempre lo más obvio del área y el sitio repite.
+ */
 async function titulosRecientes(strapi: Core.Strapi): Promise<string[]> {
   const desde = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const consulta = (status: "draft" | "published") =>

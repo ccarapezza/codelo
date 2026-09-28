@@ -1,7 +1,7 @@
-# Multi-stage build for codelo-cms (Strapi 5 production).
+# Multi-stage build for nib-cms (Strapi 5 production).
 # Build context = monorepo root.
 #
-#   docker build -f apps/cms/Dockerfile -t codelo/cms .
+#   docker build -f apps/cms/Dockerfile -t nib/cms .
 
 FROM node:22-alpine AS base
 RUN corepack enable && corepack prepare pnpm@9.12.0 --activate && \

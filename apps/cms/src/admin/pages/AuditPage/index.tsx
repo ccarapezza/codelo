@@ -36,7 +36,7 @@ const ADMIN_API = "/api/agent-action/admin-list";
 type AuditItem = {
   id: number;
   documentId: string;
-  agentRole: "director" | "redactor" | "image-generator" | "system";
+  agentRole: "director" | "redactor" | "explorador" | "image-generator" | "system" | (string & {});
   agentName: string | null;
   agentDocumentId: string | null;
   action: string;
@@ -60,11 +60,15 @@ type ListResponse = {
 const CORE_ROLES = [
   { value: "director", label: "Director", badgeVariant: "primary" },
   { value: "redactor", label: "Redactor", badgeVariant: "secondary" },
+  { value: "explorador", label: "Explorador", badgeVariant: "alternative" },
   { value: "image-generator", label: "Generador IMG", badgeVariant: "success" },
   { value: "system", label: "Sistema", badgeVariant: "neutral" },
 ];
 
-const ALL_ROLES = [...CORE_ROLES, ...verticals.agentRoles];
+// La costura se lee defensiva, como en Ajustes y Configuración editorial: un
+// proyecto con un `admin/verticals.ts` anterior a `agentRoles` no la exporta, y
+// un spread de `undefined` tira la pantalla entera.
+const ALL_ROLES = [...CORE_ROLES, ...((verticals as Partial<typeof verticals>).agentRoles ?? [])];
 
 const ROLE_LABEL: Record<string, string> = Object.fromEntries(
   ALL_ROLES.map((r) => [r.value, r.label]),
@@ -87,6 +91,7 @@ const ACTION_LABEL: Record<string, string> = {
   agent_failed: "Error",
   redactor_idle: "audit.sinFuentes",
   director_idle: "audit.sinDrafts",
+  explorador_idle: "audit.sinInvestigacion",
 };
 
 const ACTION_COLOR: Record<string, "success" | "danger" | "neutral" | "warning"> = {
@@ -102,6 +107,7 @@ const ACTION_COLOR: Record<string, "success" | "danger" | "neutral" | "warning">
   agent_failed: "danger",
   redactor_idle: "neutral",
   director_idle: "neutral",
+  explorador_idle: "neutral",
 };
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
@@ -403,6 +409,7 @@ export default function AuditPage() {
               <SingleSelectOption value="agent_failed">Error</SingleSelectOption>
               <SingleSelectOption value="redactor_idle">{t("audit.sinFuentes")}</SingleSelectOption>
               <SingleSelectOption value="director_idle">{t("audit.sinDrafts")}</SingleSelectOption>
+              <SingleSelectOption value="explorador_idle">{t("audit.sinInvestigacion")}</SingleSelectOption>
             </SingleSelect>
           </Field.Root>
         </Box>

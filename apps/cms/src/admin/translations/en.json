@@ -138,6 +138,7 @@
   "audit.refrescar": "Refresh",
   "audit.sinDrafts": "No drafts",
   "audit.sinFuentes": "No sources",
+  "audit.sinInvestigacion": "No research",
   "audit.sinTitulo": "(untitled)",
   "audit.subtitulo": "A trail of every action the Directors, Writers and Image Generators run. Read only.",
   "audit.titulo": "Audit · AI agent actions",

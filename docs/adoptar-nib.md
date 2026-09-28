@@ -44,7 +44,7 @@ Lo que el motor le pide al proyecto, todo con default vacío:
 | Costura | Qué define |
 | --- | --- |
 | `verticals/cron.ts` | Tareas programadas propias |
-| `verticals/agent-roles.ts` | Roles de agente además de los tres del motor |
+| `verticals/agent-roles.ts` | Roles de agente además de los cuatro del motor (director, redactor, explorador, image-generator) |
 | `verticals/director-filters.ts` | Borradores que el Director no debe revisar |
 | `verticals/seed.ts` | La configuración editorial inicial, para cargarla una vez en la base |
 | `verticals/prompt-fields.ts` | Campos de prompt propios de un módulo del proyecto |
@@ -78,6 +78,8 @@ migración en vez de correrla.
 
 **Un rol de agente nuevo va en tres lugares.** El runner en
 `verticals/agent-roles.ts`, la etiqueta en `admin/verticals.ts`, y el valor en
-el enum de los `schema.json` de `agent` y `agent-action` — Postgres respalda el
-enum con un CHECK, así que si falta, el arranque falla en cuanto exista una fila
-con ese rol.
+el enum de los `schema.json` de `agent` y `agent-action`. Postgres no respalda
+el enum —Strapi 5.54 no crea CHECK—, pero `strapi.documents()` sí lo valida:
+si falta, el alta del agente se rechaza. La auditoría escribe por
+`strapi.db.query`, que no valida, así que ahí las filas entran igual y el panel
+las muestra sin etiqueta.

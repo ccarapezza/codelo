@@ -14,7 +14,7 @@ if (!apiKey) {
 
 const model = process.argv[2] || "google/gemini-2.5-flash-image";
 const prompt =
-  "Wide cinematic editorial photograph of a football stadium at golden hour, " +
+  "Wide cinematic editorial photograph of an empty reading room at golden hour, " +
   "dramatic lighting, no text, no logos. Magazine cover style.";
 
 console.log(`Requesting image from ${model} via OpenRouter...`);
@@ -24,8 +24,10 @@ const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
   headers: {
     Authorization: `Bearer ${apiKey}`,
     "Content-Type": "application/json",
-    "HTTP-Referer": "https://cogollosdeloeste.com.ar",
-    "X-Title": "codelo-cms",
+    // Los mismos encabezados que manda el motor (openRouterHeaders en lib/project.ts):
+    // OpenRouter atribuye el consumo por aplicación con ellos.
+    ...(process.env.SITE_PUBLIC_URL ? { "HTTP-Referer": process.env.SITE_PUBLIC_URL } : {}),
+    "X-Title": `${process.env.PROJECT_SLUG ?? "nib"}-cms`,
   },
   body: JSON.stringify({
     model,

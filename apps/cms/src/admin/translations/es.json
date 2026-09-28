@@ -138,6 +138,7 @@
   "audit.refrescar": "Refrescar",
   "audit.sinDrafts": "Sin drafts",
   "audit.sinFuentes": "Sin fuentes",
+  "audit.sinInvestigacion": "Sin investigación",
   "audit.sinTitulo": "(sin título)",
   "audit.subtitulo": "Trazabilidad de cada acción que ejecutan los Directores, Redactores y Generadores de Imágenes. Solo lectura — append-only.",
   "audit.titulo": "Auditoría · Acciones de Agentes IA",

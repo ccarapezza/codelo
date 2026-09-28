@@ -51,7 +51,8 @@ export const routes: Array<{ path: string; Component: () => Promise<unknown> }> 
  * Roles de agente que suma este vertical, para el selector y las etiquetas de
  * la auditoría. El runner vive en src/verticals/agent-roles.ts, y el valor
  * tiene que existir además en el enum de los schema.json de `agent` y
- * `agent-action`: Postgres respalda el enum con un CHECK.
+ * `agent-action`: no hay CHECK en Postgres, pero `strapi.documents()` valida
+ * el enum y rechaza el alta de un agente con un rol que no esté ahí.
  */
 export const agentRoles: Array<{
   value: string;

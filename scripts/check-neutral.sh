@@ -7,15 +7,24 @@
 #
 # La única excepción es apps/cms/test/preservation/, donde el texto real está
 # congelado a propósito para demostrar que el refactor no cambia comportamiento.
+#
+# Los scripts, el README y el Dockerfile entran al scan porque viajan con el
+# motor igual que el código: un README que decía "# fulbo-cms" y un script de
+# prueba que pedía "a football stadium at golden hour" le llegaban a toda
+# instancia nueva. Y los términos van también en inglés: los prompts están
+# escritos en inglés y ahí es donde más se esconde un resto.
 set -euo pipefail
 
 TERMINOS='cannabis|cáñamo|canamo|cannábic|reprocann|ariccame|inase|boletín oficial'
 TERMINOS+='|futbol|fútbol|jugador|arquero|conmebol|cogollos|codelo|fulbo'
+TERMINOS+='|football|soccer|stadium|jersey|fifa|world cup'
 
 hits=$(grep -rniE "$TERMINOS" \
-  apps/cms/src apps/cms/config apps/web/app apps/web/components apps/web/lib \
-  deploy .env.example 2>/dev/null \
+  apps/cms/src apps/cms/config apps/cms/scripts apps/cms/README.md apps/cms/Dockerfile \
+  apps/web/app apps/web/components apps/web/lib \
+  deploy scripts .env.example 2>/dev/null \
   | grep -vE 'apps/cms/src/verticals/|apps/cms/src/admin/verticals|apps/web/(app/\[lang\]/\(vertical\)|components/vertical|lib/vertical|lib/site\.ts)' \
+  | grep -v '^scripts/check-neutral\.sh:' \
   || true)
 
 if [[ -n "$hits" ]]; then

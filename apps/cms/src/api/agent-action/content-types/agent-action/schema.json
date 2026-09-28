@@ -5,7 +5,7 @@
     "singularName": "agent-action",
     "pluralName": "agent-actions",
     "displayName": "Agent Action (audit)",
-    "description": "Append-only log of every action taken by an AI agent (Director, Redactor, Image Generator). Read-only audit trail."
+    "description": "Append-only log of every action taken by an AI agent (Director, Redactor, Explorador, Image Generator). Read-only audit trail."
   },
   "options": {
     "draftAndPublish": false
@@ -25,6 +25,7 @@
         "director",
         "redactor",
         "image-generator",
+        "explorador",
         "system"
       ],
       "required": true
@@ -52,6 +53,7 @@
         "agent_failed",
         "redactor_idle",
         "director_idle",
+        "explorador_idle",
         "studio_portada",
         "studio_carrusel",
         "studio_historia",

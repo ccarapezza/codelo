@@ -34,6 +34,15 @@ const UPDATE_API = "/api/agent/admin-update";
 const DELETE_API = "/api/agent/admin-delete";
 const RUN_NOW_API = "/api/agent/run-now";
 
+/**
+ * Roles que agrega el proyecto (admin/verticals.ts). Se lee a la defensiva,
+ * como en Ajustes: un proyecto con una costura anterior a `agentRoles` no la
+ * exporta, y un `.map` sobre `undefined` deja la pantalla en blanco. Son sólo
+ * datos: las etiquetas vienen como texto literal del proyecto.
+ */
+const VERTICAL_ROLES: NonNullable<typeof verticals.agentRoles> =
+  (verticals as Partial<typeof verticals>).agentRoles ?? [];
+
 // Estimated prices USD per image
 // gpt-image-1: quality = low / medium / high
 // dall-e-3:    quality = standard / hd  (1536/1024 sizes map to 1792/1024 automatically)
@@ -645,7 +654,7 @@ function AgentFormModal({
                   <SingleSelectOption value="explorador" startIcon={<Feather />}>
                     {t("ag.explorador")}
                   </SingleSelectOption>
-                  {verticals.agentRoles.map((r) => (
+                  {VERTICAL_ROLES.map((r) => (
                     <SingleSelectOption key={r.value} value={r.value} startIcon={<Magic />}>
                       {r.label}
                     </SingleSelectOption>

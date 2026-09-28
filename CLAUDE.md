@@ -49,11 +49,16 @@ prompt, el test dice exactamente cuál cambió; si el cambio es deliberado se
 recaptura con `CAPTURE=1` y el diff de los fixtures es lo que se revisa. Nunca
 recapturar para que un test deje de molestar.
 
-**Agentes.** Tres roles en el motor: redactor, director, image-generator. El
-runner despacha por nombre y busca en `verticals/agent-roles.ts` lo que no
-reconoce. Un rol nuevo va en TRES lugares: el runner, la etiqueta del panel
-(`admin/verticals.ts`) y el enum de los `schema.json` de `agent` y
-`agent-action` — Postgres respalda el enum con un CHECK.
+**Agentes.** Cuatro roles en el motor: redactor, director, explorador (elige
+un tema dentro de su área, lo investiga en la web y escribe por el camino del
+redactor) e image-generator. El runner despacha por nombre y busca en
+`verticals/agent-roles.ts` lo que no reconoce. Un rol nuevo va en TRES lugares:
+el runner, la etiqueta del panel (`admin/verticals.ts`) y el enum de los
+`schema.json` de `agent` y `agent-action`. Postgres no respalda el enum
+—Strapi 5.54 no crea CHECK—; lo valida `strapi.documents()`, que rechaza el
+alta de un agente con un rol fuera del enum. La auditoría escribe por
+`strapi.db.query`, que no valida: una fila con un rol sin registrar entra igual
+y el panel la muestra sin etiqueta.
 
 **Crons.** `config/cron-tasks.ts` tiene los dos del motor (agentes y RSS) y
 spreadea `verticals/cron.ts`. Agregar una tarea propia no toca el archivo del
