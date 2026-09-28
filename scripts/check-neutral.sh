@@ -38,7 +38,7 @@ hits=$(grep -rniE "$TERMINOS" \
   apps/web/app apps/web/components apps/web/lib \
   deploy scripts .env.example 2>/dev/null \
   | grep -vE 'apps/cms/src/verticals/|apps/cms/src/admin/verticals|apps/web/(app/\[lang\]/\(vertical\)|components/vertical|lib/vertical|lib/site\.ts)' \
-  | grep -v '^scripts/check-neutral\.sh:' \
+  | grep -vE '^scripts/check-neutral\.(sh|ignore):' \
   | filtrar_proyecto \
   || true)
 
