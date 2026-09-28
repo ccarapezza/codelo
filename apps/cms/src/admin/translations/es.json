@@ -327,6 +327,7 @@
   "nota.aMano": "A mano",
   "nota.aMano.desc": "Abrí el formulario vacío y escribí la nota vos.",
   "nota.aplicarCambio": "Aplicar cambio",
+  "nota.aviso.calco": "El título calca el titular de una fuente («{titular}»). Reescribilo con palabras propias antes de crear la nota.",
   "nota.bajada": "Bajada / excerpt",
   "nota.buscar.hint": "Buscar fuentes (si el cambio necesita datos nuevos)",
   "nota.buscar.label": "Buscar fuentes al refinar",

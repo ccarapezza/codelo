@@ -581,6 +581,30 @@ export function isEditoriallyRelevant(item: { title: string; summary?: string | 
 }
 
 /**
+ * El pool del redactor en modo libre: lo relevante para el sitio, y si nada lo
+ * es, el pool entero.
+ *
+ * Es un filtro DISTINTO del ranking por tema de `getRecentNewsForTopic`: aquel
+ * mide cuánto se parece un ítem al tema del agente; este, si el ítem es del
+ * sitio. Una palabra del tema ("precio", "temporada") matchea también notas de
+ * un generalista que no tienen nada que ver, y por volumen llenan el pool. Sin
+ * alcance declarado (`verticals/rss-scope.ts` vacío) deja pasar todo, así que
+ * no cambia nada hasta que el proyecto lo complete.
+ *
+ * El respaldo al pool entero es deliberado: mejor escribir con lo que hay que
+ * dejar al redactor sin material por un alcance demasiado estrecho. `fellBack`
+ * avisa que pasó, para que quede en el log.
+ */
+export function selectFreePool<T extends { title: string; summary?: string | null }>(
+  rawNews: readonly T[],
+  limit = 10,
+): { items: T[]; fellBack: boolean } {
+  const relevantes = rawNews.filter(isEditoriallyRelevant);
+  const fellBack = relevantes.length === 0 && rawNews.length > 0;
+  return { items: (fellBack ? rawNews : relevantes).slice(0, limit), fellBack };
+}
+
+/**
  * Palabras que NO sirven para buscar: aparecen en casi cualquier titular.
  *
  * El filtro de abajo es un `$or` sobre todas las palabras del query, así que

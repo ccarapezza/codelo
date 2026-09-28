@@ -49,6 +49,11 @@ prompt, el test dice exactamente cuál cambió; si el cambio es deliberado se
 recaptura con `CAPTURE=1` y el diff de los fixtures es lo que se revisa. Nunca
 recapturar para que un test deje de molestar.
 
+El orden es: decir ANTES qué fixtures se van a mover (en el commit, en el PR),
+recapturar, y confirmar que el diff muestra sólo esas. Si aparece otra, el
+error está en el código, no en la fixture. La captura nunca borra: una fixture
+que sobra se borra a mano.
+
 **Agentes.** Cuatro roles en el motor: redactor, director, explorador (elige
 un tema dentro de su área, lo investiga en la web y escribe por el camino del
 redactor) e image-generator. El runner despacha por nombre y busca en

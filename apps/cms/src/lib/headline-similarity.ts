@@ -60,6 +60,24 @@ export function headlineTooSimilar(candidate: string, source: string): boolean {
   return jaccard >= 0.55 || containment >= 0.8;
 }
 
+/**
+ * Las reglas de originalidad del título, tal como las lee el modelo. Las usan
+ * el redactor y el generador manual: el generador no las tenía, y un editor
+ * con búsqueda web recibía titulares copiados de la fuente que encontró.
+ */
+export const TITLE_ORIGINALITY_RULES: readonly string[] = [
+  "- The title must be an ORIGINAL headline written in your own words. NEVER copy or closely paraphrase a source's headline: cover the same fact with different wording AND different structure. Reproducing another outlet's headline is plagiarism and grounds for rejection.",
+  "- The excerpt must also be written fresh in your own words — never lifted from the source's headline or lede.",
+];
+
+/**
+ * El pedido de reescritura cuando un título salió calcado: se agrega al user
+ * prompt del reintento. El mismo para el redactor y el generador manual.
+ */
+export function echoFeedback(previousTitle: string, echoed: string): string {
+  return `IMPORTANT: your previous title "${previousTitle}" nearly copies the source headline "${echoed}". That is plagiarism. Write a COMPLETELY different headline — same facts, but your own wording and structure (change the opening words, the syntax, the angle). Rewrite the excerpt in your own words too.`;
+}
+
 /** Devuelve el titular fuente calcado, o null si el título es original. */
 export function findEchoedHeadline(
   candidate: string,

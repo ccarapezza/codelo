@@ -14,7 +14,7 @@ const listas = {
 };
 vi.mock("../verticals/rss-scope", () => listas);
 
-const { isEditoriallyRelevant } = await import("./rss-fetcher");
+const { isEditoriallyRelevant, selectFreePool } = await import("./rss-fetcher");
 
 function setListas(next: Partial<typeof listas>) {
   listas.scope = next.scope ?? [];
@@ -75,5 +75,35 @@ describe("isEditoriallyRelevant", () => {
     expect(
       isEditoriallyRelevant({ title: "Nueva resolución", summary: "en el marco de la Ley 27.350" }),
     ).toBe(true);
+  });
+});
+
+describe("selectFreePool (el pool del redactor en modo libre)", () => {
+  const item = (title: string) => ({ title, summary: "" });
+  const POOL = [item("Nueva matrícula para el sector"), item("El dólar hoy"), item("Clima del fin de semana")];
+
+  it("sin alcance declarado es el pool tal cual, recortado al límite", () => {
+    const r = selectFreePool(POOL, 2);
+    expect(r.items.map((i) => i.title)).toEqual(["Nueva matrícula para el sector", "El dólar hoy"]);
+    expect(r.fellBack).toBe(false);
+  });
+
+  it("con alcance, deja sólo lo relevante", () => {
+    setListas({ scope: ["matrícula"] });
+    const r = selectFreePool(POOL);
+    expect(r.items.map((i) => i.title)).toEqual(["Nueva matrícula para el sector"]);
+    expect(r.fellBack).toBe(false);
+  });
+
+  it("si nada es relevante, cae al pool completo y lo avisa", () => {
+    setListas({ scope: ["cosecha"] });
+    const r = selectFreePool(POOL);
+    expect(r.items).toHaveLength(3);
+    expect(r.fellBack).toBe(true);
+  });
+
+  it("un pool vacío no es un respaldo", () => {
+    setListas({ scope: ["cosecha"] });
+    expect(selectFreePool([])).toEqual({ items: [], fellBack: false });
   });
 });

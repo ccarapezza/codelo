@@ -8,6 +8,7 @@
 import type OpenAI from "openai";
 import { stripInlineMarkdown, type GeneratedPost } from "./openai";
 import type { PromptSettings } from "./prompt-defaults";
+import { TITLE_ORIGINALITY_RULES } from "./headline-similarity";
 
 export interface ResearchResult {
   /** Plain-text briefing of current facts, fed into the article generation. */
@@ -88,6 +89,7 @@ export function buildNewsSystemPrompt(s: PromptSettings): string {
     "",
     "## TITLE RULES",
     "- One single concrete, literal fact. No clickbait. It must not contradict the body.",
+    ...TITLE_ORIGINALITY_RULES,
     "",
     s.bodyStructureGuide,
     "",

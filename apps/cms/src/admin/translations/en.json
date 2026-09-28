@@ -327,6 +327,7 @@
   "nota.aMano": "By hand",
   "nota.aMano.desc": "Open an empty form and write the article yourself.",
   "nota.aplicarCambio": "Apply change",
+  "nota.aviso.calco": "The title echoes a source headline (“{titular}”). Rewrite it in your own words before creating the note.",
   "nota.bajada": "Excerpt",
   "nota.buscar.hint": "Look for sources (if the change needs new data)",
   "nota.buscar.label": "Look for sources when refining",

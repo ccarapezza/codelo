@@ -16,9 +16,10 @@ import {
   getIngestWindowDays,
   getRecentNewsForTopic,
   ingestWindowLabel,
+  selectFreePool,
   type NewsItem,
 } from "./rss-fetcher";
-import { findEchoedHeadline } from "./headline-similarity";
+import { echoFeedback, findEchoedHeadline, TITLE_ORIGINALITY_RULES } from "./headline-similarity";
 import {
   getOpenRouterImageKey,
   getOpenAIImageKey,
@@ -216,10 +217,18 @@ export async function runRedactor(
   const rawNews = !isAssignedMode && agent.topic
     ? await getRecentNewsForTopic(strapi, agent.topic, 50)
     : [];
-  // `getRecentNewsForTopic` already ranks by how well each item matches the
-  // agent's topic keywords, so the top slice IS the relevant slice — there is
-  // no second relevance filter to apply here.
-  const recentNews = isAssignedMode ? assignedItems! : rawNews.slice(0, 10);
+  // `getRecentNewsForTopic` ordena por parecido con el tema del AGENTE; el
+  // alcance editorial del SITIO (verticals/rss-scope.ts) es otro filtro: una
+  // palabra del tema matchea también notas de un generalista que no son del
+  // sitio. Sin alcance declarado pasa todo, como antes.
+  const libre = isAssignedMode ? null : selectFreePool(rawNews, 10);
+  if (libre?.fellBack) {
+    strapi.log.warn(
+      `[agent-runner] Redactor "${agent.name}": ningún ítem del pool matchea el alcance ` +
+        `editorial; se usa el pool completo (${rawNews.length} ítems).`,
+    );
+  }
+  const recentNews = isAssignedMode ? assignedItems! : libre!.items;
 
   const hasContext = recentNews.length > 0;
   // La ventana REAL del pool (la de ingesta, 7 días por defecto). El prompt
@@ -257,8 +266,7 @@ export async function runRedactor(
         "- The title MUST NOT contradict the body of the article. If the body says 'X wants to continue', the title cannot say 'X will step down'.",
         "- The title MUST NOT contradict the source. If the source headline says 'the ruling recognises the right', the title cannot imply it was denied.",
         "- Prefer factual, neutral titles over sensationalist clickbait.",
-        "- The title must be an ORIGINAL headline written in your own words. NEVER copy or closely paraphrase a source's headline: cover the same fact with different wording AND different structure. Reproducing another outlet's headline is plagiarism and grounds for rejection.",
-        "- The excerpt must also be written fresh in your own words — never lifted from the source's headline or lede.",
+        ...TITLE_ORIGINALITY_RULES,
         "- If the title names a person or organisation, the named action (decision, statement, appointment) must be literally about THAT subject in the source.",
         "",
         "## SELF-CHECK before returning",
@@ -416,7 +424,7 @@ export async function runRedactor(
         client,
         model,
         systemPrompt,
-        `${userPrompt}\n\nIMPORTANT: your previous title "${generated.title}" nearly copies the source headline "${echoed}". That is plagiarism. Write a COMPLETELY different headline — same facts, but your own wording and structure (change the opening words, the syntax, the angle). Rewrite the excerpt in your own words too.`,
+        `${userPrompt}\n\n${echoFeedback(generated.title, echoed)}`,
       );
     }
     const stillEchoed = findEchoedHeadline(generated.title, sourceHeadlines);

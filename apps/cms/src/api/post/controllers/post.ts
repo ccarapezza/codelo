@@ -13,6 +13,7 @@ import {
 import { generateCoverForPost, type ImageGeneratorAgentDoc } from "../../../lib/cover-pipeline";
 import { makeSlug } from "../../../lib/agent-runner";
 import { getDefaultPostTag } from "../../../lib/tags";
+import { echoFeedback, findEchoedHeadline } from "../../../lib/headline-similarity";
 import {
   researchWithWebSearch,
   buildNewsSystemPrompt,
@@ -683,13 +684,37 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
 
     try {
       const research = webSearch ? await researchWithWebSearch(client, model, prompt) : null;
-      const generated = await generatePost(
-        client,
-        model,
-        buildNewsSystemPrompt(settings),
-        buildGenerateUserPrompt(settings, prompt, research),
-      );
-      ctx.body = { ...generated, sources: research?.sources ?? [] };
+      const system = buildNewsSystemPrompt(settings);
+      const userPrompt = buildGenerateUserPrompt(settings, prompt, research);
+      let generated = await generatePost(client, model, system, userPrompt);
+
+      // La misma compuerta anti-calco que el redactor. Con búsqueda web el
+      // modelo tiene titulares de medios delante, y el editor recibía el de la
+      // fuente apenas retocado. Sin búsqueda no hay fuentes y no hace nada.
+      const sourceHeadlines = (research?.sources ?? []).map((s) => s.title).filter(Boolean);
+      for (let retry = 0; retry < 2; retry++) {
+        const echoed = findEchoedHeadline(generated.title, sourceHeadlines);
+        if (!echoed) break;
+        strapi.log.warn(
+          `[post] newsGenerate: título calcado de la fuente ("${generated.title}" ≈ "${echoed}"); ` +
+            `regenerando (${retry + 1}/2)`,
+        );
+        generated = await generatePost(
+          client,
+          model,
+          system,
+          `${userPrompt}\n\n${echoFeedback(generated.title, echoed)}`,
+        );
+      }
+      // Si sigue calcado, la nota se entrega igual —la escribe un editor, no un
+      // agente— pero con el aviso. Estructurado y no en castellano: el texto lo
+      // pone el panel en el idioma de quien lo usa.
+      const stillEchoed = findEchoedHeadline(generated.title, sourceHeadlines);
+      ctx.body = {
+        ...generated,
+        sources: research?.sources ?? [],
+        titleWarning: stillEchoed ? { echoedHeadline: stillEchoed } : null,
+      };
     } catch (err) {
       strapi.log.error("[post] newsGenerate failed:", err);
       return ctx.internalServerError("Failed to generate article.");

@@ -57,7 +57,12 @@ export default function NewsGeneratorPage() {
       const { data } = await post(GENERATE, { prompt, webSearch });
       setNote({ title: data.title, excerpt: data.excerpt ?? "", content: data.content });
       setSources(Array.isArray(data.sources) ? data.sources : []);
-      toggleNotification({ type: "success", message: t("gen.ok.generada") });
+      const calcado = data.titleWarning?.echoedHeadline as string | undefined;
+      if (calcado) {
+        toggleNotification({ type: "warning", message: t("nota.aviso.calco", { titular: calcado }) });
+      } else {
+        toggleNotification({ type: "success", message: t("gen.ok.generada") });
+      }
     } catch {
       toggleNotification({ type: "danger", message: t("gen.err.generar") });
     } finally {

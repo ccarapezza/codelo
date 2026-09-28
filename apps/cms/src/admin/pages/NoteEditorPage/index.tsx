@@ -135,7 +135,14 @@ export default function NoteEditorPage() {
       setDraft(d => ({ ...d, slug: slugFromTitle(d.title) }));
       setSlugTouched(false);
       setFormReady(true);
-      toggleNotification({ type: "success", message: t("nota.ok.generada") });
+      // El servidor ya reintentó dos veces; si el título sigue calcando el de
+      // una fuente, se avisa en vez de felicitar: hay que reescribirlo a mano.
+      const calcado = data.titleWarning?.echoedHeadline as string | undefined;
+      if (calcado) {
+        toggleNotification({ type: "warning", message: t("nota.aviso.calco", { titular: calcado }) });
+      } else {
+        toggleNotification({ type: "success", message: t("nota.ok.generada") });
+      }
     } catch {
       toggleNotification({ type: "danger", message: t("nota.err.generar") });
     } finally {
