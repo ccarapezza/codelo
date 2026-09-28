@@ -11,7 +11,7 @@ export default function JobProgress({ job }: { job: JobState }) {
   return (
     <AccentCard
       title={t("comun.generando")}
-      description={`Costo estimado: ~$${job.estimatedCostUsd.toFixed(3)} USD`}
+      description={t("ss.costoEstimado", { usd: job.estimatedCostUsd.toFixed(3) })}
       accent={job.status === "failed" ? "danger" : "primary"}
     >
       <Flex direction="column" alignItems="stretch" gap={3}>

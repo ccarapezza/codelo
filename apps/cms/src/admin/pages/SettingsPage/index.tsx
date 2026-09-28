@@ -326,7 +326,7 @@ function SettingsPage() {
       <SelectDropdownHeightFix />
       <PageHeader
         icon={<Cog width="1.4rem" height="1.4rem" />}
-        title="Site Settings"
+        title={t("menu.ajustes")}
         subtitle={t("ajustes.subtitulo")}
       />
 
@@ -587,8 +587,8 @@ function SettingsPage() {
 
               <Flex gap={3} alignItems="flex-start">
                 <Box flex="1">
-                  <Field.Root hint="Sidebar izquierdo (visible en pantallas ≥1536px).">
-                    <Field.Label>Sidebar izquierdo</Field.Label>
+                  <Field.Root hint={t("ajustes.adsense.izq.hint")}>
+                    <Field.Label>{t("ajustes.adsense.izq")}</Field.Label>
                     <TextInput
                       placeholder="0000000001"
                       value={form.adsenseSidebarLeftSlot}
@@ -600,8 +600,8 @@ function SettingsPage() {
                   </Field.Root>
                 </Box>
                 <Box flex="1">
-                  <Field.Root hint="Sidebar derecho.">
-                    <Field.Label>Sidebar derecho</Field.Label>
+                  <Field.Root hint={t("ajustes.adsense.der.hint")}>
+                    <Field.Label>{t("ajustes.adsense.der")}</Field.Label>
                     <TextInput
                       placeholder="0000000002"
                       value={form.adsenseSidebarRightSlot}
@@ -845,8 +845,8 @@ function ConsumoDeIA() {
                     </Typography>
                     <Typography variant="pi" textColor="neutral500" style={{ flexShrink: 0 }}>
                       {typeof m.images === "number"
-                        ? `${compacto(m.images)} imágenes`
-                        : `${compacto(m.tokensIn)} ent · ${compacto(m.tokensOut)} sal`}
+                        ? t("ajustes.uso.imagenes", { n: compacto(m.images) })
+                        : t("ajustes.uso.tokens", { ent: compacto(m.tokensIn), sal: compacto(m.tokensOut) })}
                       {typeof m.requests === "number" ? ` · ${compacto(m.requests)} req` : ""}
                     </Typography>
                   </Flex>

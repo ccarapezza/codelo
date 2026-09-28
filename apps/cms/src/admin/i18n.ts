@@ -36,6 +36,18 @@ export function useT() {
   };
 }
 
+/**
+ * El locale para fechas y números, según el idioma del panel.
+ *
+ * Las fechas estaban clavadas en "es-AR": con el panel en inglés, la tabla de
+ * auditoría decía "28 sept". El castellano sigue saliendo como en Argentina,
+ * que es como se escribió el panel.
+ */
+export function useLocaleFechas(): string {
+  const { locale } = useIntl();
+  return locale.startsWith("es") ? "es-AR" : locale;
+}
+
 /** Los mensajes listos para `config.translations`, con el prefijo puesto. */
 export function catalogoConPrefijo(mensajes: Record<string, string>): Record<string, string> {
   return Object.fromEntries(Object.entries(mensajes).map(([k, v]) => [PREFIJO + k, v]));

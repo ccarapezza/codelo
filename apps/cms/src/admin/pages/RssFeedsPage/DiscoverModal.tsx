@@ -21,7 +21,7 @@ import {
 } from "@strapi/design-system";
 import { Check, Plus, Search } from "@strapi/icons";
 import { useFetchClient, useNotification } from "@strapi/strapi/admin";
-import { useT } from "../../i18n";
+import { useLocaleFechas, useT } from "../../i18n";
 
 const DISCOVER_API = "/api/rss-feed/discover";
 const CREATE_API = "/api/rss-feed/admin-create";
@@ -55,10 +55,23 @@ function tonoDeMatch(pct: number): "success" | "warning" | "danger" {
   return "danger";
 }
 
-function ritmo(f: Discovered): string | null {
-  if (f.velocity != null) return `${f.velocity.toFixed(1)} posts/semana`;
-  if (f.freshItems != null) return `${f.freshItems} en los últimos 7 días`;
+function ritmo(f: Discovered, t: ReturnType<typeof useT>): string | null {
+  if (f.velocity != null) return t("rss.desc.ritmo", { n: f.velocity.toFixed(1) });
+  if (f.freshItems != null) return t("rss.desc.frescos", { n: f.freshItems, dias: 7 });
   return null;
+}
+
+/**
+ * El nombre del país en el idioma del panel, con `Intl.DisplayNames`: la lista
+ * de ediciones trae los nombres en castellano y es la misma que usa el
+ * servidor, así que no se traduce ahí.
+ */
+function nombrePais(code: string, loc: string): string {
+  try {
+    return new Intl.DisplayNames([loc], { type: "region" }).of(code) ?? code;
+  } catch {
+    return code;
+  }
 }
 
 function Resultado({ feed, onAdded }: { feed: Discovered; onAdded: () => void }) {
@@ -73,7 +86,7 @@ function Resultado({ feed, onAdded }: { feed: Discovered; onAdded: () => void })
     try {
       await post(CREATE_API, { name: feed.title.slice(0, 120), url: feed.url, enabled: true });
       setAgregado(true);
-      toggleNotification({ type: "success", message: `"${feed.title}" agregado como fuente.` });
+      toggleNotification({ type: "success", message: t("rss.desc.agregado", { titulo: feed.title }) });
       onAdded();
     } catch (e) {
       const msg = (e as { response?: { data?: { error?: { message?: string } } } })?.response?.data
@@ -84,7 +97,7 @@ function Resultado({ feed, onAdded }: { feed: Discovered; onAdded: () => void })
     }
   };
 
-  const cadencia = ritmo(feed);
+  const cadencia = ritmo(feed, t);
 
   return (
     <Box padding={4} background="neutral0" hasRadius shadow="tableShadow">
@@ -109,7 +122,7 @@ function Resultado({ feed, onAdded }: { feed: Discovered; onAdded: () => void })
           <Flex gap={2} paddingTop={3} wrap="wrap">
             {feed.topicMatch ? (
               <Badge backgroundColor={`${tonoDeMatch(feed.topicMatch.pct)}100`}>
-                {feed.topicMatch.pct}% habla del tema
+                {t("rss.desc.match", { pct: feed.topicMatch.pct })}
               </Badge>
             ) : null}
             {cadencia ? <Badge>{cadencia}</Badge> : null}
@@ -156,6 +169,7 @@ export default function DiscoverModal({
   onAdded: () => void;
 }) {
   const t = useT();
+  const loc = useLocaleFechas();
   const { post } = useFetchClient();
   const { toggleNotification } = useNotification();
   const [query, setQuery] = React.useState("");
@@ -209,7 +223,7 @@ export default function DiscoverModal({
               <Flex gap={2} alignItems="flex-start">
                 <Box style={{ flex: 1 }}>
                   <TextInput
-                    placeholder="seguros"
+                    placeholder={t("rss.desc.placeholder")}
                     value={query}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
                     onKeyDown={(e: React.KeyboardEvent) => {
@@ -226,18 +240,19 @@ export default function DiscoverModal({
                     <SingleSelectOption value="">{t("rss.pais.cualquiera")}</SingleSelectOption>
                     {EDICIONES.map((e) => (
                       <SingleSelectOption key={e.code} value={e.code}>
-                        {e.label}
+                        {nombrePais(e.code, loc)}
+                        {e.hl.startsWith("en") ? ` ${t("rss.pais.enIngles")}` : ""}
                       </SingleSelectOption>
                     ))}
                   </SingleSelect>
                 </Box>
                 <Box style={{ width: "13rem" }}>
                   <SingleSelect
-                    aria-label="Idioma"
+                    aria-label={t("rss.idioma.label")}
                     value={lang}
                     onChange={(v: string) => setLang(v ?? "")}
                   >
-                    <SingleSelectOption value="">Cualquiera</SingleSelectOption>
+                    <SingleSelectOption value="">{t("rss.idioma.cualquiera")}</SingleSelectOption>
                     <SingleSelectOption value="es">{t("rss.idioma.es")}</SingleSelectOption>
                     <SingleSelectOption value="en">{t("rss.idioma.en")}</SingleSelectOption>
                     <SingleSelectOption value="pt">{t("rss.idioma.pt")}</SingleSelectOption>
@@ -262,9 +277,7 @@ export default function DiscoverModal({
             {resultado && resultado.feeds.length === 0 ? (
               <Box padding={6} background="neutral100" hasRadius>
                 <Typography textColor="neutral700">
-                  No se encontró ninguna fuente viva para “{resultado.query}”. Probá con un término
-                  más amplio —los directorios buscan literal y se cuelgan con las frases—, soltá el
-                  filtro de idioma, o pegá directamente el dominio del medio.
+                  {t("rss.desc.sinResultados", { query: resultado.query })}
                 </Typography>
               </Box>
             ) : null}

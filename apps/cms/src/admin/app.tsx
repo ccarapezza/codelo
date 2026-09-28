@@ -262,6 +262,12 @@ export default {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (app.getPlugin("content-manager") as any).apis.addEditViewSidePanel([SocialStudioPanel]);
 
+    // Las etiquetas del menú van con ids `nib.menu.*`, que son claves de los
+    // catálogos (con el prefijo que pone `catalogoConPrefijo`). Tenían ids
+    // sueltos —`notas.plugin.name`— que no estaban en ningún catálogo, así que
+    // react-intl caía siempre al `defaultMessage` y el menú quedaba en
+    // castellano con el panel en inglés.
+    //
     // ── Producción: el día a día ─────────────────────────────────────────
     // Notas va primero porque es el tablero: lo que los agentes dejaron listo
     // para revisar y publicar. Es la pantalla a la que se entra, no una más.
@@ -270,7 +276,7 @@ export default {
       icon: BulletList,
       position: POS.notas,
       intlLabel: {
-        id: "notas.plugin.name",
+        id: "nib.menu.notas",
         defaultMessage: "Notas",
       },
       permissions: [],
@@ -282,7 +288,7 @@ export default {
       icon: Magic,
       position: POS.agentes,
       intlLabel: {
-        id: "ai-agents.plugin.name",
+        id: "nib.menu.agentes",
         defaultMessage: "Agentes IA",
       },
       permissions: [],
@@ -294,7 +300,7 @@ export default {
       icon: PaintBrush,
       position: POS.socialStudio,
       intlLabel: {
-        id: "social-studio.plugin.name",
+        id: "nib.menu.socialStudio",
         defaultMessage: "Social Studio",
       },
       permissions: [],
@@ -307,7 +313,7 @@ export default {
       icon: Cast,
       position: POS.fuentes,
       intlLabel: {
-        id: "rss-feeds.plugin.name",
+        id: "nib.menu.fuentes",
         defaultMessage: "Fuentes RSS",
       },
       permissions: [],
@@ -324,7 +330,7 @@ export default {
       icon: Command,
       position: POS.prompts,
       intlLabel: {
-        id: "prompt-settings.plugin.name",
+        id: "nib.menu.prompts",
         defaultMessage: "Prompts IA",
       },
       permissions: [{ action: ADMIN_PERMISSIONS.promptSettings, subject: null }],
@@ -336,7 +342,7 @@ export default {
       icon: SlidersHorizontal,
       position: POS.ajustes,
       intlLabel: {
-        id: "site-settings.plugin.name",
+        id: "nib.menu.ajustes",
         defaultMessage: "Ajustes del sitio",
       },
       permissions: [{ action: ADMIN_PERMISSIONS.siteSettings, subject: null }],

@@ -23,7 +23,7 @@ import { useNavigate } from "react-router-dom";
 import * as verticals from "../../verticals";
 import { PageContainer, PageHeader, Hairline } from "../../components/ui";
 import { useIsMobile } from "../../hooks/useIsMobile";
-import { useT } from "../../i18n";
+import { useLocaleFechas, useT } from "../../i18n";
 
 // CRUD por la API propia y no por la del Content Manager: el content-type está
 // oculto ahí a propósito (editar un agente a mano rompe cosas), y esa marca hace
@@ -55,24 +55,28 @@ const IMAGE_PRICING: Record<string, Record<string, string>> = {
   "512x512":   { low: "$0.007", medium: "N/A",    high: "N/A",    standard: "N/A",    hd: "N/A"    },
 };
 
+// Las etiquetas son claves (o nombres técnicos, que `t()` devuelve tal cual):
+// se traducen al renderizar, nunca acá.
 const QUALITY_OPTIONS = [
-  { value: "low",      label: "Baja",          model: "gpt-image-1" },
-  { value: "medium",   label: "Media",         model: "gpt-image-1" },
-  { value: "high",     label: "Alta",          model: "gpt-image-1" },
+  { value: "low",      label: "ag.calidad.baja",  model: "gpt-image-1" },
+  { value: "medium",   label: "ag.calidad.media", model: "gpt-image-1" },
+  { value: "high",     label: "ag.calidad.alta",  model: "gpt-image-1" },
   { value: "standard", label: "Standard",      model: "dall-e-3"    },
   { value: "hd",       label: "HD",            model: "dall-e-3"    },
 ] as const;
 
 // ─── Day constants ────────────────────────────────────────────────────────────
 
+// Iniciales de cada día, como CLAVES: "L M X J V S D" en castellano no son las
+// del inglés ("M T W T F S S").
 const DAYS = [
-  { key: "MON", label: "L" },
-  { key: "TUE", label: "M" },
-  { key: "WED", label: "X" },
-  { key: "THU", label: "J" },
-  { key: "FRI", label: "V" },
-  { key: "SAT", label: "S" },
-  { key: "SUN", label: "D" },
+  { key: "MON", label: "ag.dia.lun" },
+  { key: "TUE", label: "ag.dia.mar" },
+  { key: "WED", label: "ag.dia.mie" },
+  { key: "THU", label: "ag.dia.jue" },
+  { key: "FRI", label: "ag.dia.vie" },
+  { key: "SAT", label: "ag.dia.sab" },
+  { key: "SUN", label: "ag.dia.dom" },
 ] as const;
 
 type DayKey = (typeof DAYS)[number]["key"];
@@ -145,23 +149,19 @@ function convertTime(time: string, fromTz: string, toTz: string): string | null 
   return `${String(out.hour).padStart(2, "0")}:${String(out.minute).padStart(2, "0")}`;
 }
 
-function formatScheduleSummary(s: ScheduleEntry): string {
-  const t = useT();
+// Recibe `t` en vez de llamar a `useT()`: es una función común que se invoca
+// dentro de un `.map`, y un hook ahí adentro funcionaba de casualidad.
+function formatScheduleSummary(s: ScheduleEntry, t: ReturnType<typeof useT>): string {
   const order: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
   const sorted = [...(s.days ?? [])].sort(
     (a, b) => order.indexOf(a as DayKey) - order.indexOf(b as DayKey),
   );
-  const dayMap: Record<DayKey, string> = {
-    MON: "L", TUE: "M", WED: "X", THU: "J", FRI: "V", SAT: "S", SUN: "D",
-  };
-  const daysStr =
-    sorted.length === 0
-      ? t("ag.todosLosDias")
-      : sorted.map((d) => dayMap[d as DayKey]).join("");
+  const inicial = (d: string) => t(DAYS.find((x) => x.key === d)?.label ?? d);
+  const daysStr = sorted.length === 0 ? t("ag.todosLosDias") : sorted.map(inicial).join("");
   const tz = s.timezone || DEFAULT_SCHEDULE_TZ;
   const local = tz !== BROWSER_TZ ? convertTime(s.time, tz, BROWSER_TZ) : null;
   const timeStr = local ? `${s.time} (${local} local)` : s.time;
-  return `${daysStr} · ${timeStr} · ${s.notesCount} nota${s.notesCount !== 1 ? "s" : ""}`;
+  return `${daysStr} · ${timeStr} · ${t("ag.nNotas", { n: s.notesCount })}`;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -258,6 +258,13 @@ function agentToForm(a: Agent): FormData {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
+/**
+ * Botón de selección chico: los días de un horario.
+ *
+ * Con los tokens del tema y no con hex. Tenía clavado el violeta de Strapi
+ * (#4945ff sobre #f0f0ff), que no es la paleta de Nib y no cambia con el modo
+ * oscuro: en oscuro quedaba un recuadro lila claro sobre fondo casi negro.
+ */
 function DayChip({
   label,
   selected,
@@ -268,16 +275,20 @@ function DayChip({
   onClick: () => void;
 }) {
   return (
-    <button
+    <Box
+      tag="button"
       type="button"
       onClick={onClick}
+      background={selected ? "primary100" : "neutral0"}
+      borderColor={selected ? "primary600" : "neutral200"}
+      borderStyle="solid"
+      borderWidth={selected ? "2px" : "1px"}
+      color={selected ? "primary600" : "neutral600"}
+      hasRadius
       style={{
-        width: 28,
+        minWidth: 28,
         height: 28,
-        borderRadius: 4,
-        border: selected ? "2px solid #4945ff" : "1px solid #dcdce4",
-        background: selected ? "#f0f0ff" : "transparent",
-        color: selected ? "#4945ff" : "#666687",
+        padding: "0 8px",
         fontWeight: selected ? 700 : 400,
         fontSize: 12,
         cursor: "pointer",
@@ -287,7 +298,7 @@ function DayChip({
       }}
     >
       {label}
-    </button>
+    </Box>
   );
 }
 
@@ -299,6 +310,7 @@ function RecurringScheduleEditor({
   onChange: (s: ScheduleEntry[]) => void;
 }) {
   const t = useT();
+  const loc = useLocaleFechas();
   const addEntry = () => onChange([...schedules, EMPTY_SCHEDULE()]);
   const removeEntry = (idx: number) => onChange(schedules.filter((_, i) => i !== idx));
 
@@ -326,7 +338,7 @@ function RecurringScheduleEditor({
       <Flex justifyContent="space-between" alignItems="center" paddingBottom={2}>
         <Typography variant="sigma" textColor="neutral600">{t("ag.horarios.titulo")}</Typography>
         <Button size="S" startIcon={<Plus />} variant="tertiary" onClick={addEntry}>
-          Agregar horario
+          {t("ag.horario.agregar")}
         </Button>
       </Flex>
 
@@ -361,32 +373,15 @@ function RecurringScheduleEditor({
                   <Box>
                     <Typography variant="pi" textColor="neutral600">{t("ag.dias")}</Typography>
                     <Flex gap={1} marginTop={1} alignItems="center">
-                      <button
-                        type="button"
+                      <DayChip
+                        label={t("ag.dias.todos")}
+                        selected={(s.days ?? []).length === 0}
                         onClick={() => toggleAllDays(idx)}
-                        style={{
-                          height: 28,
-                          padding: "0 8px",
-                          borderRadius: 4,
-                          border:
-                            (s.days ?? []).length === 0
-                              ? "2px solid #4945ff"
-                              : "1px solid #dcdce4",
-                          background:
-                            (s.days ?? []).length === 0 ? "#f0f0ff" : "transparent",
-                          color:
-                            (s.days ?? []).length === 0 ? "#4945ff" : "#666687",
-                          fontWeight: (s.days ?? []).length === 0 ? 700 : 400,
-                          fontSize: 11,
-                          cursor: "pointer",
-                        }}
-                      >
-                        Todos
-                      </button>
+                      />
                       {DAYS.map((d) => (
                         <DayChip
                           key={d.key}
-                          label={d.label}
+                          label={t(d.label)}
                           selected={(s.days ?? []).includes(d.key)}
                           onClick={() => toggleDay(idx, d.key)}
                         />
@@ -404,7 +399,7 @@ function RecurringScheduleEditor({
                         <Flex gap={4} alignItems="flex-end">
                           <Box style={{ width: 120 }}>
                             <Field.Root>
-                              <Field.Label>Hora</Field.Label>
+                              <Field.Label>{t("ag.horario.hora")}</Field.Label>
                               <TextInput
                                 type="time"
                                 value={s.time}
@@ -416,7 +411,7 @@ function RecurringScheduleEditor({
                           </Box>
                           <Box style={{ width: 240 }}>
                             <Field.Root>
-                              <Field.Label>Zona horaria</Field.Label>
+                              <Field.Label>{t("ag.horario.zona")}</Field.Label>
                               <SingleSelect
                                 value={tz}
                                 onChange={(v: string | number) =>
@@ -425,7 +420,7 @@ function RecurringScheduleEditor({
                               >
                                 {tzOptions(tz).map((z) => (
                                   <SingleSelectOption key={z} value={z}>
-                                    {z === BROWSER_TZ ? `${z} (tu zona)` : z}
+                                    {z === BROWSER_TZ ? t("ag.horario.tuZona", { zona: z }) : z}
                                   </SingleSelectOption>
                                 ))}
                               </SingleSelect>
@@ -448,7 +443,7 @@ function RecurringScheduleEditor({
                             <Switch
                               checked={s.enabled}
                               onCheckedChange={(v: boolean) => update(idx, "enabled", v)}
-                              aria-label="Activar horario"
+                              aria-label={t("ag.horario.activar")}
                             />
                             <Typography variant="pi" textColor="neutral500">
                               {s.enabled ? t("ag.activo") : t("ag.inactivo")}
@@ -457,7 +452,7 @@ function RecurringScheduleEditor({
                         </Flex>
                         {local ? (
                           <Typography variant="pi" textColor="primary600">
-                            🕑 {s.time} en {tz} = {local} en tu hora local ({BROWSER_TZ})
+                            🕑 {t("ag.horario.equivale", { hora: s.time, tz, local, tzLocal: BROWSER_TZ })}
                           </Typography>
                         ) : null}
                       </>
@@ -467,13 +462,13 @@ function RecurringScheduleEditor({
                   {/* Last run info */}
                   {s.lastRunAt ? (
                     <Typography variant="pi" textColor="neutral400">
-                      Último run: {new Date(s.lastRunAt).toLocaleString("es-AR")}
+                      {t("ag.ultimoRun", { cuando: new Date(s.lastRunAt).toLocaleString(loc) })}
                     </Typography>
                   ) : null}
                 </Flex>
 
                 <IconButton
-                  label="Eliminar horario"
+                  label={t("ag.horario.eliminar")}
                   variant="ghost"
                   onClick={() => removeEntry(idx)}
                 >
@@ -608,7 +603,7 @@ function AgentFormModal({
       >
         <Modal.Header>
           <Modal.Title>
-            {initial.agent ? `Editar agente: ${initial.agent.name}` : "Nuevo agente"}
+            {initial.agent ? t("ag.editarX", { nombre: initial.agent.name }) : t("ag.nuevo")}
           </Modal.Title>
         </Modal.Header>
 
@@ -646,10 +641,10 @@ function AgentFormModal({
                   }
                 >
                   <SingleSelectOption value="redactor" startIcon={<Feather />}>
-                    Redactor
+                    {t("ag.redactor")}
                   </SingleSelectOption>
                   <SingleSelectOption value="director" startIcon={<Magic />}>
-                    Director
+                    {t("ag.director")}
                   </SingleSelectOption>
                   <SingleSelectOption value="explorador" startIcon={<Feather />}>
                     {t("ag.explorador")}
@@ -665,7 +660,7 @@ function AgentFormModal({
               </Field.Root>
 
               <Field.Root required hint={t("ag.nombre.hint")}>
-                <Field.Label>Nombre del agente / Autor</Field.Label>
+                <Field.Label>{t("ag.nombre.label")}</Field.Label>
                 <TextInput
                   placeholder={t("ag.nombre.placeholder")}
                   value={form.name}
@@ -718,13 +713,11 @@ function AgentFormModal({
                   <Flex justifyContent="space-between" alignItems="center" gap={3}>
                     <Box>
                       <Typography variant="omega" fontWeight="semiBold">
-                        Exigir fuentes
+                        {t("ag.exigirFuentes")}
                       </Typography>
                       <Box>
                         <Typography variant="pi" textColor="neutral500">
-                          Si no hay noticias que matcheen el tema, no escribe nada. Sin
-                          fuentes el modelo redacta de memoria e inventa datos.
-                          Recomendado en legales y salud.
+                          {t("ag.exigirFuentes.hint")}
                         </Typography>
                       </Box>
                     </Box>
@@ -745,7 +738,7 @@ function AgentFormModal({
                       value={form.imageSize}
                       onChange={(val: string | number) => set("imageSize", String(val))}
                     >
-                      <SingleSelectOption value="1024x1024">1024×1024 (cuadrada)</SingleSelectOption>
+                      <SingleSelectOption value="1024x1024">{t("ag.tamano.cuadrada")}</SingleSelectOption>
                       <SingleSelectOption value="1536x1024">1536×1024 (landscape)</SingleSelectOption>
                       <SingleSelectOption value="1024x1536">1024×1536 (portrait)</SingleSelectOption>
                       <SingleSelectOption value="1792x1024">1792×1024 (wide)</SingleSelectOption>
@@ -755,14 +748,14 @@ function AgentFormModal({
                   </Field.Root>
 
                   <Field.Root required>
-                    <Field.Label>Calidad</Field.Label>
+                    <Field.Label>{t("ag.calidad")}</Field.Label>
                     <SingleSelect
                       value={form.imageQuality}
                       onChange={(val: string | number) => set("imageQuality", String(val))}
                     >
-                      <SingleSelectOption value="low">Baja — gpt-image-1</SingleSelectOption>
-                      <SingleSelectOption value="medium">Media — gpt-image-1</SingleSelectOption>
-                      <SingleSelectOption value="high">Alta — gpt-image-1</SingleSelectOption>
+                      <SingleSelectOption value="low">{t("ag.calidad.baja")} — gpt-image-1</SingleSelectOption>
+                      <SingleSelectOption value="medium">{t("ag.calidad.media")} — gpt-image-1</SingleSelectOption>
+                      <SingleSelectOption value="high">{t("ag.calidad.alta")} — gpt-image-1</SingleSelectOption>
                       <SingleSelectOption value="standard">Standard — dall-e-3</SingleSelectOption>
                       <SingleSelectOption value="hd">HD — dall-e-3</SingleSelectOption>
                     </SingleSelect>
@@ -790,15 +783,16 @@ function AgentFormModal({
                               direction="column"
                               alignItems="center"
                               gap={1}
-                              style={{
-                                padding: "6px 10px",
-                                borderRadius: 4,
-                                background: isSelected ? "#f0f0ff" : "transparent",
-                                border: isSelected ? "1px solid #4945ff" : "1px solid transparent",
-                              }}
+                              // Tokens del tema: tenía clavado el violeta de Strapi.
+                              background={isSelected ? "primary100" : undefined}
+                              borderColor={isSelected ? "primary600" : "transparent"}
+                              borderStyle="solid"
+                              borderWidth="1px"
+                              hasRadius
+                              style={{ padding: "6px 10px" }}
                             >
                               <Typography variant="pi" textColor={isSelected ? "primary600" : "neutral500"} fontWeight={isSelected ? "bold" : "normal"}>
-                                {label}
+                                {t(label)}
                               </Typography>
                               <Typography variant="pi" textColor="neutral400" style={{ fontSize: 10 }}>
                                 {model}
@@ -830,7 +824,7 @@ function AgentFormModal({
                 <Flex justifyContent="space-between" alignItems="center" gap={3}>
                   <Box style={{ flex: 1, minWidth: 0 }}>
                     <Typography variant="omega" fontWeight="bold">
-                      Agente activo
+                      {t("ag.agenteActivo")}
                     </Typography>
                     <Box>
                       <Typography variant="pi" textColor="neutral500">{t("ag.habilitado.hint")}</Typography>
@@ -839,7 +833,7 @@ function AgentFormModal({
                   <Switch
                     checked={form.enabled}
                     onCheckedChange={(v: boolean) => set("enabled", v)}
-                    aria-label="Activar agente"
+                    aria-label={t("ag.activarAgente")}
                   />
                 </Flex>
               </Box>
@@ -894,7 +888,7 @@ function AgentFormModal({
             <Button variant="tertiary">{t("comun.cancelar")}</Button>
           </Modal.Close>
           <Button onClick={handleSave} loading={saving}>
-            {initial.agent ? "Guardar cambios" : "Crear agente"}
+            {initial.agent ? t("nota.guardarCambios") : t("ag.crearAgente")}
           </Button>
         </Modal.Footer>
       </Modal.Content>
@@ -920,6 +914,7 @@ function AgentItem({
   toggling: boolean;
 }) {
   const t = useT();
+  const loc = useLocaleFechas();
   const activeSchedules = (agent.schedules ?? []).filter((s) => s.enabled);
   const isMobile = useIsMobile();
 
@@ -971,7 +966,7 @@ function AgentItem({
           {agent.role === "redactor" && agent.topic ? (
             <Box marginTop={1}>
               <Typography variant="pi" textColor="primary600">
-                Tema: {agent.topic.slice(0, 60)}{agent.topic.length > 60 ? "…" : ""}
+                {t("ag.temaLabel")} {agent.topic.slice(0, 60)}{agent.topic.length > 60 ? "…" : ""}
               </Typography>
             </Box>
           ) : null}
@@ -985,7 +980,7 @@ function AgentItem({
                 {agent.imageQuality ?? "low"}
               </Badge>
               <Typography variant="pi" textColor="neutral400">
-                {agent.imagePromptTemplate ? "Prompt personalizado" : t("ag.promptDefecto")}
+                {agent.imagePromptTemplate ? t("ag.promptPropio") : t("ag.promptDefecto")}
               </Typography>
             </Flex>
           ) : (
@@ -994,7 +989,7 @@ function AgentItem({
                 <Flex direction="column" gap={1}>
                   {activeSchedules.map((s, i) => (
                     <Typography key={i} variant="pi" textColor="neutral500">
-                      🕐 {formatScheduleSummary(s)}
+                      🕐 {formatScheduleSummary(s, t)}
                     </Typography>
                   ))}
                 </Flex>
@@ -1004,7 +999,7 @@ function AgentItem({
               {agent.lastRunAt ? (
                 <Box marginTop={1}>
                   <Typography variant="pi" textColor="neutral400">
-                    Último run: {new Date(agent.lastRunAt).toLocaleString("es-AR")}
+                    {t("ag.ultimoRun", { cuando: new Date(agent.lastRunAt).toLocaleString(loc) })}
                   </Typography>
                 </Box>
               ) : null}
@@ -1026,17 +1021,17 @@ function AgentItem({
               variant="pi"
               textColor={agent.enabled ? "success600" : "neutral500"}
             >
-              {agent.enabled ? "Activo" : "Inactivo"}
+              {agent.enabled ? t("ag.activo") : t("ag.inactivo")}
             </Typography>
             <Switch
               checked={agent.enabled}
               onCheckedChange={(v: boolean) => onToggleEnabled(v)}
               disabled={toggling}
-              aria-label={agent.enabled ? `Desactivar ${agent.name}` : `Activar ${agent.name}`}
+              aria-label={agent.enabled ? t("ag.desactivarX", { nombre: agent.name }) : t("ag.activarX", { nombre: agent.name })}
             />
           </Flex>
           {agent.role !== "image-generator" ? (
-            <IconButton label="Ejecutar ahora" variant="ghost" onClick={onRunNow}>
+            <IconButton label={t("ag.ejecutarAhora")} variant="ghost" onClick={onRunNow}>
               <Play />
             </IconButton>
           ) : null}
@@ -1248,7 +1243,7 @@ export default function AgentsPage() {
     setDeleting(true);
     try {
       await del(`${DELETE_API}/${deleteTarget.documentId}`);
-      toggleNotification({ type: "success", message: "Agente eliminado." });
+      toggleNotification({ type: "success", message: t("ag.ok.eliminado") });
       setDeleteTarget(null);
       loadAgents();
     } catch {
@@ -1280,7 +1275,9 @@ export default function AgentsPage() {
       );
       toggleNotification({
         type: "danger",
-        message: `No se pudo ${next ? "activar" : "desactivar"} "${agent.name}".`,
+        message: next
+          ? t("ag.err.activar", { nombre: agent.name })
+          : t("ag.err.desactivar", { nombre: agent.name }),
       });
     } finally {
       setTogglingId(null);
@@ -1297,7 +1294,7 @@ export default function AgentsPage() {
       });
       toggleNotification({
         type: "success",
-        message: `Agente "${runNowTarget.name}" ejecutado con ${runNowCount} nota${runNowCount !== 1 ? "s" : ""}.`,
+        message: t("ag.ok.ejecutado", { nombre: runNowTarget.name, n: runNowCount }),
       });
       setRunNowTarget(null);
       loadAgents();
@@ -1381,7 +1378,7 @@ export default function AgentsPage() {
 
       {loading ? (
         <Flex justifyContent="center" padding={10}>
-          <Loader>Cargando agentes...</Loader>
+          <Loader>{t("ag.cargando")}</Loader>
         </Flex>
       ) : (
         <Box
@@ -1395,7 +1392,7 @@ export default function AgentsPage() {
           {/* Director */}
           <RoleSection
             icon={<Magic aria-hidden />}
-            title="Director"
+            title={t("ag.director")}
             description={t("ag.director.desc")}
             accent="primary"
             countLabel={t("ag.de1Configurado", { n: director ? 1 : 0 })}
@@ -1535,12 +1532,12 @@ export default function AgentsPage() {
         onOpenChange={(v: boolean) => !v && setDeleteTarget(null)}
       >
         <Dialog.Content>
-          <Dialog.Header>Eliminar agente</Dialog.Header>
+          <Dialog.Header>{t("ag.eliminar.titulo")}</Dialog.Header>
           <Dialog.Body>
             <Typography textAlign="center">
-              ¿Estás seguro de que querés eliminar el agente{" "}
-              <Typography fontWeight="bold">{deleteTarget?.name}</Typography>?
-              Esta acción no se puede deshacer.
+              {t("ag.eliminar.pregunta")}{" "}
+              <Typography fontWeight="bold">{deleteTarget?.name}</Typography>
+              {t("ag.eliminar.irreversible")}
             </Typography>
           </Dialog.Body>
           <Dialog.Footer>
@@ -1561,7 +1558,7 @@ export default function AgentsPage() {
       >
         <Dialog.Content>
           <Dialog.Header>
-            Ejecutar ahora: {runNowTarget?.name}
+            {t("ag.ejecutarAhora.titulo", { nombre: runNowTarget?.name ?? "" })}
           </Dialog.Header>
           <Dialog.Body>
             <Flex direction="column" gap={4} padding={2}>
@@ -1594,7 +1591,7 @@ export default function AgentsPage() {
                 onClick={handleRunNow}
                 loading={running}
               >
-                Ejecutar
+                {t("ag.ejecutar")}
               </Button>
             </Dialog.Action>
           </Dialog.Footer>

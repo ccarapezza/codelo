@@ -36,7 +36,7 @@ export default function ReelEditor({
     setSaving(true);
     try {
       const { data } = await post("/api/social-studio/save", { format: "reel", jobId });
-      toggleNotification({ type: "success", message: "Reel guardado en Medios." });
+      toggleNotification({ type: "success", message: t("ss.ok.reel") });
       onSaved((data as { url: string | null }).url ?? null);
     } catch (err) {
       toggleNotification({
@@ -50,7 +50,7 @@ export default function ReelEditor({
 
   return (
     <AccentCard
-      title={`Reel — ${result.seconds}s · 1080×1920`}
+      title={t("ss.reel.titulo", { s: result.seconds })}
       description={t("ss.reel.ayuda")}
       accent="success"
       actions={
@@ -60,7 +60,7 @@ export default function ReelEditor({
           disabled={!dirty}
           onClick={() => onRecompose({ type: result.overlay.type, fields }, result.clipFileId)}
         >
-          Recomponer (gratis)
+          {t("ss.recomponer")}
         </Button>
       }
     >
@@ -78,13 +78,13 @@ export default function ReelEditor({
           )}
         </Box>
         <Box style={{ flex: 1, minWidth: 260 }}>
-          <GroupLabel>Overlay · {result.overlay.type === "countdown" ? "Countdown" : t("comun.titulo")}</GroupLabel>
+          <GroupLabel>{t("ss.overlay")} · {result.overlay.type === "countdown" ? t("ss.countdown") : t("comun.titulo")}</GroupLabel>
           <Flex direction="column" alignItems="stretch" gap={3} marginTop={2}>
             {OVERLAY_FIELDS[result.overlay.type].map((f) => (
               <Field.Root key={f.key}>
-                <Field.Label>{f.label}</Field.Label>
+                <Field.Label>{t(f.label)}</Field.Label>
                 <TextInput
-                  placeholder={f.placeholder}
+                  placeholder={f.placeholder ? t(f.placeholder) : undefined}
                   value={fields[f.key] ?? ""}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     setFields((prev) => ({ ...prev, [f.key]: e.target.value }));
@@ -106,10 +106,10 @@ export default function ReelEditor({
                   a.remove();
                 }}
               >
-                Descargar video
+                {t("ss.descargarVideo")}
               </Button>
               <Button size="L" variant="secondary" startIcon={<Check />} loading={saving} onClick={save}>
-                Guardar en Medios
+                {t("ss.guardarMedios")}
               </Button>
             </Flex>
           </Flex>

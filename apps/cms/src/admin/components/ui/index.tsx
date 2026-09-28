@@ -348,7 +348,7 @@ export function SaveBar({
         <Flex gap={2}>
           {onDiscard ? (
             <Button variant="tertiary" onClick={onDiscard} disabled={!dirty || saving} size="L">
-              Descartar
+              {t("ui.descartar")}
             </Button>
           ) : null}
           <Button onClick={onSave} loading={saving} disabled={!dirty} size="L">

@@ -36,13 +36,13 @@ export default function BackgroundPickerModal({
       <Modal.Content>
         <Modal.Header>
           <Typography variant="omega" fontWeight="bold">
-            {type === "video" ? t("ss.fondos.clips") : "Fondos generados"} — AI Backgrounds
+            {type === "video" ? t("ss.fondos.clips") : t("ss.fondos.imagenes")} — AI Backgrounds
           </Typography>
         </Modal.Header>
         <Modal.Body>
           {files === null ? (
             <Flex justifyContent="center" padding={6}>
-              <Loader>Cargando fondos…</Loader>
+              <Loader>{t("ss.fondos.cargando")}</Loader>
             </Flex>
           ) : files.length === 0 ? (
             <EmptyState

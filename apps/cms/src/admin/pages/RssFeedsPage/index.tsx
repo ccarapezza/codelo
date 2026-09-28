@@ -27,7 +27,7 @@ import {
 import { PageContainer, PageHeader, EmptyState } from "../../components/ui";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import DiscoverModal from "./DiscoverModal";
-import { useT } from "../../i18n";
+import { useLocaleFechas, useT } from "../../i18n";
 
 // CRUD por la API propia y no por la del Content Manager: el content-type está
 // oculto ahí a propósito (editarlo a mano rompe cosas), y esa marca hace que
@@ -57,7 +57,6 @@ type RssFeed = {
 type IngestStatus = {
   cronEnabled: boolean;
   rule: string | null;
-  label: string | null;
   lastRunAt: string | null;
 };
 
@@ -73,9 +72,11 @@ function feedToForm(feed: RssFeed): FormData {
   return { name: feed.name, url: feed.url, enabled: feed.enabled };
 }
 
-function formatDate(iso: string | null): string {
-  if (!iso) return "Nunca";
-  return new Date(iso).toLocaleString("es-AR", {
+type T = ReturnType<typeof useT>;
+
+function formatDate(iso: string | null, t: T, loc: string): string {
+  if (!iso) return t("rss.nunca");
+  return new Date(iso).toLocaleString(loc, {
     day: "2-digit", month: "2-digit", year: "numeric",
     hour: "2-digit", minute: "2-digit",
   });
@@ -83,18 +84,35 @@ function formatDate(iso: string | null): string {
 
 // Misma escala que AuditPage: la fecha exacta arriba y el "hace X" abajo, que
 // es lo que se lee de un vistazo para detectar un feed que dejó de traer nada.
-function relativeTime(iso: string | null): string | null {
+/**
+ * La regla del cron, en palabras. Vivía en el servidor y llegaba armada en
+ * castellano ("cada 30 minutos"); acá se traduce con el idioma del panel. Sólo
+ * cubre los patrones de config/cron-tasks.ts: cualquier otra regla se muestra
+ * cruda en vez de inventarle una lectura.
+ */
+function describirRegla(rule: string, t: T): string {
+  const cadaN = rule.match(/^\*\/(\d+) \* \* \* \*$/);
+  if (cadaN) return t("rss.cron.cadaN", { n: Number(cadaN[1]) });
+  if (rule === "* * * * *") return t("rss.cron.cadaMinuto");
+  const diaria = rule.match(/^(\d+) (\d+) \* \* \*$/);
+  if (diaria) {
+    return t("rss.cron.diaria", { hora: `${diaria[2].padStart(2, "0")}:${diaria[1].padStart(2, "0")}` });
+  }
+  return rule;
+}
+
+function relativeTime(iso: string | null, t: T): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   const sec = Math.round((Date.now() - d.getTime()) / 1000);
-  if (sec < 60) return `hace ${sec}s`;
+  if (sec < 60) return t("audit.hace", { cuanto: `${sec}s` });
   const min = Math.round(sec / 60);
-  if (min < 60) return `hace ${min}m`;
+  if (min < 60) return t("audit.hace", { cuanto: `${min}m` });
   const hr = Math.round(min / 60);
-  if (hr < 24) return `hace ${hr}h`;
+  if (hr < 24) return t("audit.hace", { cuanto: `${hr}h` });
   const days = Math.round(hr / 24);
-  if (days < 7) return `hace ${days}d`;
-  return `hace ${Math.round(days / 7)} sem`;
+  if (days < 7) return t("audit.hace", { cuanto: `${days}d` });
+  return t("rss.haceSemanas", { n: Math.round(days / 7) });
 }
 
 /** Recorta la URL a lo informativo: dominio + path, sin esquema ni www. */
@@ -211,7 +229,7 @@ function FeedFormModal({
       } else {
         await post(CREATE_API, payload);
       }
-      toggleNotification({ type: "success", message: "Feed guardado." });
+      toggleNotification({ type: "success", message: t("rss.ok.guardado") });
       onSaved();
       onClose();
     } catch (err: unknown) {
@@ -242,7 +260,7 @@ function FeedFormModal({
               />
             </Field.Root>
             <Field.Root required hint={t("rss.url.hint")}>
-              <Field.Label>URL del feed</Field.Label>
+              <Field.Label>{t("rss.url.label")}</Field.Label>
               <Flex gap={2} alignItems="flex-start">
                 <Box style={{ flex: 1 }}>
                   <TextInput
@@ -333,7 +351,7 @@ function FeedFormModal({
               <Switch
                 checked={form.enabled}
                 onCheckedChange={(v: boolean) => set("enabled", v)}
-                aria-label="Habilitar feed"
+                aria-label={t("rss.habilitar")}
               />
             </Flex>
           </Flex>
@@ -366,7 +384,8 @@ function FeedRow({
   fetching: boolean;
 }) {
   const t = useT();
-  const relative = relativeTime(feed.lastFetchedAt);
+  const loc = useLocaleFechas();
+  const relative = relativeTime(feed.lastFetchedAt, t);
   // Dos dimensiones distintas: "Inactivo" es una decisión (alguien lo apagó),
   // "Error" es un síntoma (está prendido pero no responde). Mezclarlas en un
   // solo booleano era justamente lo que ocultaba a los feeds muertos.
@@ -379,7 +398,7 @@ function FeedRow({
           backgroundColor={!feed.enabled ? "neutral150" : failing ? "danger100" : "success100"}
           textColor={!feed.enabled ? "neutral600" : failing ? "danger700" : "success700"}
         >
-          {!feed.enabled ? "Inactivo" : failing ? "Error" : "Activo"}
+          {!feed.enabled ? t("ag.inactivo") : failing ? t("audit.acc.error") : t("ag.activo")}
         </Badge>
       </Td>
       <Td>
@@ -427,13 +446,13 @@ function FeedRow({
       <Td>
         <Box>
           <Typography variant="pi" textColor={failing ? "danger600" : "neutral800"}>
-            {formatDate(feed.lastFetchedAt)}
+            {formatDate(feed.lastFetchedAt, t, loc)}
           </Typography>
         </Box>
         {relative ? (
           <Box>
             <Typography variant="pi" textColor={failing ? "danger600" : "neutral500"}>
-              {failing ? `${relative} · sin actualizar` : relative}
+              {failing ? t("rss.sinActualizar", { cuando: relative }) : relative}
             </Typography>
           </Box>
         ) : null}
@@ -441,7 +460,7 @@ function FeedRow({
       <Td>
         <Flex gap={1}>
           <IconButton
-            label={fetching ? "Fetcheando…" : "Fetch ahora"}
+            label={fetching ? t("rss.fetcheando") : t("rss.fetchAhora")}
             variant="ghost"
             onClick={onFetchNow}
             disabled={fetching}
@@ -476,7 +495,8 @@ function FeedCard({
   fetching: boolean;
 }) {
   const t = useT();
-  const relative = relativeTime(feed.lastFetchedAt);
+  const loc = useLocaleFechas();
+  const relative = relativeTime(feed.lastFetchedAt, t);
   const failing = feed.enabled && Boolean(feed.lastError);
   return (
     <Box
@@ -501,7 +521,7 @@ function FeedCard({
           backgroundColor={!feed.enabled ? "neutral150" : failing ? "danger100" : "success100"}
           textColor={!feed.enabled ? "neutral600" : failing ? "danger700" : "success700"}
         >
-          {!feed.enabled ? "Inactivo" : failing ? "Error" : "Activo"}
+          {!feed.enabled ? t("ag.inactivo") : failing ? t("audit.acc.error") : t("ag.activo")}
         </Badge>
       </Flex>
 
@@ -523,16 +543,16 @@ function FeedCard({
 
       <Flex gap={2} wrap="wrap" marginTop={2}>
         <Typography variant="pi" textColor="neutral600">
-          {feed.lastItemCount == null ? "— items" : `${feed.lastItemCount} items`}
+          {t("rss.nItems", { n: feed.lastItemCount == null ? "—" : feed.lastItemCount })}
         </Typography>
         <Typography variant="pi" textColor={failing ? "danger600" : "neutral500"}>
-          · {formatDate(feed.lastFetchedAt)}
-          {relative ? ` (${failing ? `${relative} · sin actualizar` : relative})` : ""}
+          · {formatDate(feed.lastFetchedAt, t, loc)}
+          {relative ? ` (${failing ? t("rss.sinActualizar", { cuando: relative }) : relative})` : ""}
         </Typography>
       </Flex>
 
       <Flex gap={1} marginTop={3}>
-        <IconButton label={fetching ? "Fetcheando…" : "Fetch ahora"} variant="ghost" onClick={onFetchNow} disabled={fetching}>
+        <IconButton label={fetching ? t("rss.fetcheando") : t("rss.fetchAhora")} variant="ghost" onClick={onFetchNow} disabled={fetching}>
           <Play />
         </IconButton>
         <IconButton label={t("comun.editar")} variant="ghost" onClick={onEdit}>
@@ -592,7 +612,7 @@ export default function RssFeedsPage() {
     if (!deleteTarget) return;
     try {
       await del(`${DELETE_API}/${deleteTarget.documentId}`);
-      toggleNotification({ type: "success", message: "Feed eliminado." });
+      toggleNotification({ type: "success", message: t("rss.ok.eliminado") });
       setDeleteTarget(null);
       loadFeeds();
     } catch {
@@ -604,10 +624,10 @@ export default function RssFeedsPage() {
     setFetchingId(feed.documentId);
     try {
       await post(FETCH_NOW_API, { documentId: feed.documentId });
-      toggleNotification({ type: "success", message: `Feed "${feed.name}" fetcheado correctamente.` });
+      toggleNotification({ type: "success", message: t("rss.ok.fetch", { nombre: feed.name }) });
       loadFeeds();
     } catch {
-      toggleNotification({ type: "danger", message: `Error al fetchear "${feed.name}".` });
+      toggleNotification({ type: "danger", message: t("rss.err.fetch", { nombre: feed.name }) });
     } finally {
       setFetchingId(null);
     }
@@ -639,7 +659,7 @@ export default function RssFeedsPage() {
       {/* Content */}
       {loading ? (
         <Flex justifyContent="center" padding={8}>
-          <Loader>Cargando feeds…</Loader>
+          <Loader>{t("rss.cargando")}</Loader>
         </Flex>
       ) : feeds.length === 0 ? (
         <EmptyState
@@ -651,7 +671,7 @@ export default function RssFeedsPage() {
                 startIcon={<Search />}
                 onClick={() => setDiscoverOpen(true)}
               >
-                Buscar fuentes
+                {t("rss.buscarFuentes")}
               </Button>
               <Button
                 variant="secondary"
@@ -665,12 +685,14 @@ export default function RssFeedsPage() {
         <>
           <Flex marginBottom={2} gap={1} wrap="wrap" alignItems="center">
             <Typography variant="pi" textColor="neutral600">
-              {feeds.length} {feeds.length === 1 ? "fuente" : "fuentes"} ·{" "}
-              {feeds.filter((f) => f.enabled).length} activas
+              {t("rss.resumenFuentes", {
+                n: feeds.length,
+                activas: feeds.filter((f) => f.enabled).length,
+              })}
             </Typography>
             {failingCount > 0 ? (
               <Typography variant="pi" textColor="danger600" fontWeight="bold">
-                · {failingCount} con error
+                · {t("rss.conError", { n: failingCount })}
               </Typography>
             ) : null}
             {/* La cadencia sale del backend (regla real del cron), no de una
@@ -678,9 +700,11 @@ export default function RssFeedsPage() {
             {status ? (
               <Typography variant="pi" textColor={status.cronEnabled ? "neutral600" : "danger600"}>
                 {status.cronEnabled
-                  ? `· ingesta automática ${status.label ?? "programada"}${
+                  ? `· ${t("rss.ingestaAuto", {
+                      cuando: status.rule ? describirRegla(status.rule, t) : t("rss.programada"),
+                    })}${
                       status.lastRunAt
-                        ? ` · última corrida ${relativeTime(status.lastRunAt)}`
+                        ? ` · ${t("rss.ultimaCorrida", { cuando: relativeTime(status.lastRunAt, t) ?? "" })}`
                         : " " + t("rss.sinCorridas")
                     }`
                   : t("rss.cronOff")}
@@ -706,22 +730,22 @@ export default function RssFeedsPage() {
                 <Thead>
                   <Tr>
                     <Th>
-                      <Typography variant="sigma">Estado</Typography>
+                      <Typography variant="sigma">{t("rss.col.estado")}</Typography>
                     </Th>
                     <Th>
-                      <Typography variant="sigma">Nombre</Typography>
+                      <Typography variant="sigma">{t("rss.col.nombre")}</Typography>
                     </Th>
                     <Th>
-                      <Typography variant="sigma">URL</Typography>
+                      <Typography variant="sigma">{t("rss.col.url")}</Typography>
                     </Th>
                     <Th>
-                      <Typography variant="sigma">Items</Typography>
+                      <Typography variant="sigma">{t("rss.col.items")}</Typography>
                     </Th>
                     <Th>
                       <Typography variant="sigma">{t("rss.ultimoFetch")}</Typography>
                     </Th>
                     <Th>
-                      <Typography variant="sigma">Acciones</Typography>
+                      <Typography variant="sigma">{t("rss.col.acciones")}</Typography>
                     </Th>
                   </Tr>
                 </Thead>

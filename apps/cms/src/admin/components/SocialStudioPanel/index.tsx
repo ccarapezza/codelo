@@ -42,7 +42,7 @@ export default function SocialStudioPanel({ model, documentId }: SidePanelProps)
     setLoading(true);
     try {
       await post("/api/post/generate-cover", { documentId });
-      toggleNotification({ type: "success", message: "Generando portada en segundo plano…" });
+      toggleNotification({ type: "success", message: t("panel.generandoPortada") });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : t("panel.err.portada");
       toggleNotification({ type: "danger", message: msg });
@@ -52,7 +52,7 @@ export default function SocialStudioPanel({ model, documentId }: SidePanelProps)
   }
 
   return {
-    title: "Contenido IA",
+    title: t("panel.titulo"),
     content: (
       <Flex direction="column" gap={2} paddingTop={2}>
         <Button
@@ -63,7 +63,7 @@ export default function SocialStudioPanel({ model, documentId }: SidePanelProps)
           disabled={agentAvailable !== true}
           fullWidth
         >
-          Generar portada (IA)
+          {t("panel.generarPortada")}
         </Button>
         {agentAvailable === false ? (
           <Typography variant="pi" textColor="neutral500" textAlign="center">{t("panel.sinAgente")}</Typography>
@@ -77,7 +77,7 @@ export default function SocialStudioPanel({ model, documentId }: SidePanelProps)
           fullWidth
           onClick={() => navigate(`/social-studio?post=${documentId}`)}
         >
-          Abrir Social Studio
+          {t("panel.abrirStudio")}
         </Button>
         <Typography variant="pi" textColor="neutral500" textAlign="center">{t("panel.studio.desc")}</Typography>
       </Flex>

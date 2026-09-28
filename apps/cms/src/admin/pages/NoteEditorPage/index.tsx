@@ -157,7 +157,7 @@ export default function NoteEditorPage() {
         excerpt: data.excerpt ?? d.excerpt,
         content: data.content ?? d.content,
       }));
-      toggleNotification({ type: "success", message: "Nota actualizada." });
+      toggleNotification({ type: "success", message: t("nota.ok.actualizada") });
     } catch {
       toggleNotification({ type: "danger", message: t("nota.err.refinar") });
     } finally {
@@ -178,7 +178,7 @@ export default function NoteEditorPage() {
         cover: { mediaId: data.mediaId, url: data.url },
         coverPrompt: data.prompt,
       }));
-      toggleNotification({ type: "success", message: "Imagen generada." });
+      toggleNotification({ type: "success", message: t("nota.ok.imagen") });
     } catch {
       toggleNotification({ type: "danger", message: t("nota.err.imagen") });
     } finally {
@@ -197,7 +197,7 @@ export default function NoteEditorPage() {
         cover: { mediaId: data.mediaId, url: data.url },
         coverPrompt: undefined,
       }));
-      toggleNotification({ type: "success", message: "Imagen subida." });
+      toggleNotification({ type: "success", message: t("nota.ok.subida") });
     } catch {
       toggleNotification({ type: "danger", message: t("nota.err.subir") });
     } finally {
@@ -233,7 +233,7 @@ export default function NoteEditorPage() {
           tags: draft.tags,
           featured: draft.featured,
         });
-        toggleNotification({ type: "success", message: "Cambios guardados." });
+        toggleNotification({ type: "success", message: t("nota.ok.guardados") });
       } else {
         await post(SAVE, {
           title: draft.title,
@@ -285,7 +285,7 @@ export default function NoteEditorPage() {
         accent="primary"
         actions={
           <Button variant="tertiary" startIcon={<ArrowLeft />} onClick={() => navigate("/notas")}>
-            Volver a Notas
+            {t("nota.volver")}
           </Button>
         }
       />
@@ -305,7 +305,7 @@ export default function NoteEditorPage() {
               active={mode === "manual"}
               onClick={goManual}
               icon={<Pencil />}
-              title="A mano"
+              title={t("nota.aMano")}
               text={t("nota.aMano.desc")}
             />
           </Flex>
@@ -317,7 +317,7 @@ export default function NoteEditorPage() {
         <Box marginBottom={6}>
           <AccentCard title={t("nota.pedido.label")} icon={<Sparkle />} accent="primary">
             <Field.Root hint={t("nota.pedido.hint")}>
-              <Field.Label>Pedido</Field.Label>
+              <Field.Label>{t("nota.pedido")}</Field.Label>
               <Textarea
                 rows={4}
                 placeholder={t("nota.pedido.placeholder")}
@@ -332,10 +332,10 @@ export default function NoteEditorPage() {
                 <Switch
                   checked={webSearch}
                   onCheckedChange={(v: boolean) => setWebSearch(v)}
-                  aria-label="Buscar fuentes en internet"
+                  aria-label={t("nota.buscarWeb")}
                 />
                 <Typography variant="omega" textColor="neutral700">
-                  Buscar fuentes en internet
+                  {t("nota.buscarWeb")}
                 </Typography>
               </Flex>
               <Button
@@ -345,7 +345,7 @@ export default function NoteEditorPage() {
                 startIcon={<Magic />}
                 size="L"
               >
-                {generating ? t("comun.generando") : "Generar borrador"}
+                {generating ? t("comun.generando") : t("nota.generarBorrador")}
               </Button>
             </Flex>
           </AccentCard>
@@ -405,7 +405,7 @@ export default function NoteEditorPage() {
                     disabled={saving || !canSave}
                     size="L"
                   >
-                    Guardar cambios
+                    {t("nota.guardarCambios")}
                   </Button>
                 ) : (
                   <>
@@ -415,7 +415,7 @@ export default function NoteEditorPage() {
                       loading={saving}
                       disabled={saving || !canSave}
                     >
-                      Guardar borrador
+                      {t("nota.guardarBorrador")}
                     </Button>
                     <Button
                       onClick={() => handleSave(true)}
@@ -423,7 +423,7 @@ export default function NoteEditorPage() {
                       disabled={saving || !canSave || !hasCover}
                       size="L"
                     >
-                      Publicar ahora
+                      {t("nota.publicarAhora")}
                     </Button>
                   </>
                 )}

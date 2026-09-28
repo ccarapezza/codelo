@@ -38,11 +38,12 @@ import {
 } from "./types";
 import { useT } from "../../i18n";
 
+// Títulos y descripciones son claves: se traducen al renderizar.
 const FORMAT_META: Array<{ key: StudioFormat; title: string; description: string }> = [
-  { key: "portada", title: "Portada", description: "ss.formato.portada" },
-  { key: "carrusel", title: "Carrusel", description: "3–7 placas 1080×1350" },
-  { key: "historia", title: "Historia", description: "1 placa 1080×1920" },
-  { key: "reel", title: "Reel", description: "ss.formato.video" },
+  { key: "portada", title: "ss.formato.portada.titulo", description: "ss.formato.portada" },
+  { key: "carrusel", title: "ss.formato.carrusel.titulo", description: "ss.formato.carrusel" },
+  { key: "historia", title: "ss.formato.historia.titulo", description: "ss.formato.historia" },
+  { key: "reel", title: "ss.formato.reel.titulo", description: "ss.formato.video" },
 ];
 
 type PostHit = { documentId: string; title: string };
@@ -215,7 +216,7 @@ export default function SocialStudioPage() {
     return (
       <PageContainer>
         <Flex justifyContent="center" alignItems="center" minHeight="50vh">
-          <Loader>Cargando Social Studio…</Loader>
+          <Loader>{t("ss.cargando")}</Loader>
         </Flex>
       </PageContainer>
     );
@@ -235,12 +236,12 @@ export default function SocialStudioPage() {
 
   // ----- bloques reutilizados en el layout -----
   const fuenteCard = (
-    <AccentCard icon={<PaperPlane />} title="Fuente" accent="primary">
+    <AccentCard icon={<PaperPlane />} title={t("ss.fuente")} accent="primary">
       <Flex direction="column" alignItems="stretch" gap={3}>
         <Flex gap={2}>
           <Button variant={state.sourceMode === "post" ? "default" : "tertiary"} onClick={() => set("sourceMode", "post")}>{t("ss.desdeNota")}</Button>
           <Button variant={state.sourceMode === "prompt" ? "default" : "tertiary"} onClick={() => set("sourceMode", "prompt")}>
-            Prompt propio
+            {t("ss.promptPropio")}
           </Button>
         </Flex>
 
@@ -251,7 +252,7 @@ export default function SocialStudioPage() {
                 {state.post.title}
               </Typography>
               <Button variant="tertiary" startIcon={<Cross />} onClick={() => set("post", null)}>
-                Cambiar
+                {t("ss.cambiar")}
               </Button>
             </Flex>
           ) : (
@@ -262,7 +263,7 @@ export default function SocialStudioPage() {
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
               />
               {searching ? (
-                <Typography variant="pi" textColor="neutral500">Buscando…</Typography>
+                <Typography variant="pi" textColor="neutral500">{t("ss.buscando")}</Typography>
               ) : (
                 <Box style={{ maxHeight: 168, overflowY: "auto" }}>
                   <Flex direction="column" alignItems="stretch" gap={1}>
@@ -305,7 +306,7 @@ export default function SocialStudioPage() {
       <Flex direction="column" alignItems="stretch" gap={2}>
         {plan.lines.map((l, i) => (
           <Flex key={i} justifyContent="space-between" gap={3}>
-            <Typography variant="pi" textColor="neutral600">{l.label}</Typography>
+            <Typography variant="pi" textColor="neutral600">{t(l.label, l.params)}</Typography>
             <Typography variant="pi" fontWeight="bold" textColor={l.usd === 0 ? "success600" : "neutral800"}>
               {l.usd === 0 ? "$0.00" : `~$${l.usd.toFixed(3)}`}
             </Typography>
@@ -363,7 +364,7 @@ export default function SocialStudioPage() {
                 fontWeight={selected ? "bold" : "regular"}
                 textColor={selected ? "primary700" : "neutral700"}
               >
-                {f.title}
+                {t(f.title)}
               </Typography>
             </Box>
           </button>
@@ -377,13 +378,13 @@ export default function SocialStudioPage() {
       <Flex direction="column" alignItems="stretch" gap={4}>
         {state.format === "historia" ? (
           <Field.Root hint={t("ss.historia.nota")}>
-            <Field.Label>Salida</Field.Label>
+            <Field.Label>{t("ss.salida")}</Field.Label>
             <Flex gap={2}>
               <Button
                 variant={state.historiaOutput === "image" ? "default" : "tertiary"}
                 onClick={() => set("historiaOutput", "image")}
               >
-                Imagen
+                {t("ss.salida.imagen")}
               </Button>
               <Button
                 variant={state.historiaOutput === "video" ? "default" : "tertiary"}
@@ -403,7 +404,7 @@ export default function SocialStudioPage() {
             <SingleSelect value={state.template} onChange={(v: string | number) => set("template", String(v) as StudioState["template"])}>
               <SingleSelectOption value="cover">{t("ss.template.cover")}</SingleSelectOption>
               <SingleSelectOption value="stat">{t("ss.template.stat")}</SingleSelectOption>
-              <SingleSelectOption value="quote">Quote (frase textual)</SingleSelectOption>
+              <SingleSelectOption value="quote">{t("ss.template.quote")}</SingleSelectOption>
               <SingleSelectOption value="countdown">Countdown</SingleSelectOption>
             </SingleSelect>
           </Field.Root>
@@ -441,12 +442,12 @@ export default function SocialStudioPage() {
                       <img src={state.bgFile.url} style={{ width: 36, height: 64, objectFit: "cover", borderRadius: 4 }} />
                       <Typography variant="pi" textColor="neutral600" ellipsis>{state.bgFile.name}</Typography>
                     </Flex>
-                    <Button variant="tertiary" startIcon={<Cross />} onClick={() => set("bgFile", null)}>Quitar</Button>
+                    <Button variant="tertiary" startIcon={<Cross />} onClick={() => set("bgFile", null)}>{t("ss.quitar")}</Button>
                   </Flex>
                 ) : (
                   <Flex gap={2}>
                     <Button variant="secondary" startIcon={<Images />} onClick={() => setPickerOpen("image")}>
-                      Usar fondo existente ($0)
+                      {t("ss.usarFondo")}
                     </Button>
                   </Flex>
                 )}
@@ -461,7 +462,7 @@ export default function SocialStudioPage() {
               <SingleSelect value={state.videoModel} onChange={(v: string | number) => set("videoModel", String(v))}>
                 {Object.entries(config.videoModels).map(([id, m]) => (
                   <SingleSelectOption key={id} value={id}>
-                    {`${m.label} — $${m.pricePerSec}/s · máx ${m.maxSeconds}s${m.audio ? " · audio" : ""}`}
+                    {`${m.label} — $${m.pricePerSec}/s · ${t("ss.maxSeg", { n: m.maxSeconds })}${m.audio ? " · audio" : ""}`}
                   </SingleSelectOption>
                 ))}
               </SingleSelect>
@@ -482,7 +483,7 @@ export default function SocialStudioPage() {
             {state.format === "reel" ? (
               <>
                 <Field.Root>
-                  <Field.Label>Overlay</Field.Label>
+                  <Field.Label>{t("ss.overlay")}</Field.Label>
                   <SingleSelect value={state.overlayType} onChange={(v: string | number) => set("overlayType", String(v) as StudioState["overlayType"])}>
                     <SingleSelectOption value="title">{t("ss.overlay.titulo")}</SingleSelectOption>
                     <SingleSelectOption value="countdown">{t("ss.overlay.countdown")}</SingleSelectOption>
@@ -491,9 +492,9 @@ export default function SocialStudioPage() {
 
                 {OVERLAY_FIELDS[state.overlayType].map((f) => (
                   <Field.Root key={f.key}>
-                    <Field.Label>{f.label}</Field.Label>
+                    <Field.Label>{t(f.label)}</Field.Label>
                     <TextInput
-                      placeholder={f.placeholder}
+                      placeholder={f.placeholder ? t(f.placeholder) : undefined}
                       value={state.overlayFields[f.key] ?? ""}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => set("overlayFields", { ...state.overlayFields, [f.key]: e.target.value })}
                     />
@@ -509,18 +510,18 @@ export default function SocialStudioPage() {
             {state.clipFile ? (
               <Flex gap={2} alignItems="center" justifyContent="space-between">
                 <Typography variant="pi" textColor="neutral600" ellipsis>{state.clipFile.name}</Typography>
-                <Button variant="tertiary" startIcon={<Cross />} onClick={() => set("clipFile", null)}>Quitar</Button>
+                <Button variant="tertiary" startIcon={<Cross />} onClick={() => set("clipFile", null)}>{t("ss.quitar")}</Button>
               </Flex>
             ) : (
               <>
                 <Field.Root hint={t("ss.clipFondo.hint")}>
-                  <Field.Label>Prompt del clip</Field.Label>
+                  <Field.Label>{t("ss.promptClip")}</Field.Label>
                   <Textarea value={state.videoPrompt} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => set("videoPrompt", e.target.value)} />
                   <Field.Hint />
                 </Field.Root>
                 <Flex gap={2}>
                   <Button variant="secondary" startIcon={<Play />} onClick={() => setPickerOpen("video")}>
-                    Usar clip existente ($0)
+                    {t("ss.usarClip")}
                   </Button>
                 </Flex>
               </>
@@ -600,13 +601,13 @@ export default function SocialStudioPage() {
 
           <Flex gap={4} alignItems="center">
             <Flex direction="column" alignItems="flex-end" gap={0}>
-              <Typography variant="pi" textColor="neutral500">Total estimado</Typography>
+              <Typography variant="pi" textColor="neutral500">{t("ss.totalEstimado")}</Typography>
               <Typography variant="omega" fontWeight="bold" textColor={plan.totalUsd === 0 ? "success600" : "warning600"}>
                 ~${plan.totalUsd.toFixed(3)} USD
               </Typography>
             </Flex>
             <Button size="L" startIcon={<Magic />} disabled={!canGenerate} loading={launching} onClick={() => launch()}>
-              Generar
+              {t("ss.generar")}
             </Button>
           </Flex>
         </Flex>
@@ -685,12 +686,12 @@ function PortadaView({ result, postDocumentId }: { result: PortadaResult; postDo
   };
 
   return (
-    <AccentCard title="Portada generada" description={t("ss.imagenEnMedios")} accent="success">
+    <AccentCard title={t("gen.portadaGenerada")} description={t("ss.imagenEnMedios")} accent="success">
       <Flex gap={5} alignItems="flex-start" wrap="wrap">
         {/* eslint-disable-next-line jsx-a11y/alt-text */}
         <img src={result.url} style={{ width: 320, maxWidth: "100%", borderRadius: 8, display: "block" }} />
         <Flex direction="column" alignItems="stretch" gap={3} style={{ flex: 1, minWidth: 240 }}>
-          <Typography variant="pi" textColor="neutral600">Prompt: {result.imagePrompt}</Typography>
+          <Typography variant="pi" textColor="neutral600">{t("ss.promptX", { prompt: result.imagePrompt })}</Typography>
           {postDocumentId ? (
             <Button size="L" startIcon={<Check />} loading={saving} disabled={applied} onClick={apply}>
               {applied ? t("ss.aplicada") : t("ss.usarComoPortada")}

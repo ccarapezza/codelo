@@ -3,19 +3,6 @@ import { requireAdmin } from "../../../lib/admin-auth";
 import { fetchAndSaveNews, getRssLastRun, validateFeed } from "../../../lib/rss-fetcher";
 import { discoverFeeds } from "../../../lib/feed-discovery";
 
-// Traduce las reglas de cron que usamos a algo legible. Sólo cubre los patrones
-// que existen en config/cron-tasks.ts; cualquier otra cosa se muestra cruda en
-// vez de inventarle una interpretación (una regla mal traducida en la UI es
-// peor que la regla a secas).
-function describeCronRule(rule: string): string {
-  const everyNMinutes = rule.match(/^\*\/(\d+) \* \* \* \*$/);
-  if (everyNMinutes) return `cada ${everyNMinutes[1]} minutos`;
-  if (rule === "* * * * *") return "cada minuto";
-  const dailyAt = rule.match(/^(\d+) (\d+) \* \* \*$/);
-  if (dailyAt) return `todos los días a las ${dailyAt[2].padStart(2, "0")}:${dailyAt[1].padStart(2, "0")}`;
-  return rule;
-}
-
 const UID = "api::rss-feed.rss-feed";
 
 // Campos editables desde la pantalla. El resto (lastFetchedAt, lastError,
@@ -79,8 +66,8 @@ export default factories.createCoreController(UID, ({ strapi }) => ({
       // CRON_ENABLED=false apaga TODOS los crons: sin esto la página diría
       // "cada 30 minutos" en un entorno donde no corre nunca.
       cronEnabled: Boolean(strapi.config.get("server.cron.enabled")),
+      // La regla va cruda: el panel la pone en palabras en su idioma.
       rule: rule ?? null,
-      label: rule ? describeCronRule(rule) : null,
       lastRunAt: await getRssLastRun(strapi),
     };
   },

@@ -97,7 +97,7 @@ export function NoteForm({
   return (
     <Flex direction="column" gap={6} alignItems="stretch">
       {/* Contenido */}
-      <AccentCard title="Contenido" icon={<Pencil />} accent="secondary">
+      <AccentCard title={t("nota.contenido")} icon={<Pencil />} accent="secondary">
         <Flex direction="column" gap={4} alignItems="stretch">
           <Field.Root>
             <Field.Label>{t("comun.titulo")}</Field.Label>
@@ -108,7 +108,7 @@ export function NoteForm({
           </Field.Root>
 
           <Field.Root hint={t("nota.slug.hint")}>
-            <Field.Label>Slug</Field.Label>
+            <Field.Label>{t("nota.slug")}</Field.Label>
             <TextInput
               value={draft.slug}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
@@ -120,7 +120,7 @@ export function NoteForm({
           </Field.Root>
 
           <Field.Root>
-            <Field.Label>Bajada / excerpt</Field.Label>
+            <Field.Label>{t("nota.bajada")}</Field.Label>
             <Textarea
               rows={2}
               value={draft.excerpt}
@@ -130,8 +130,8 @@ export function NoteForm({
             />
           </Field.Root>
 
-          <Field.Root hint="Cuerpo en Markdown.">
-            <Field.Label>Cuerpo</Field.Label>
+          <Field.Root hint={t("nota.cuerpo.hint")}>
+            <Field.Label>{t("nota.cuerpo")}</Field.Label>
             <Textarea
               rows={16}
               value={draft.content}
@@ -143,17 +143,18 @@ export function NoteForm({
           </Field.Root>
 
           <Field.Root hint={t("nota.tags.hint")}>
-            <Field.Label>Etiquetas</Field.Label>
+            <Field.Label>{t("nota.etiquetas")}</Field.Label>
             <MultiSelect
               value={draft.tags.map(String)}
               onChange={(vals: string[]) => set("tags", vals.map(Number))}
               placeholder={t("nota.tags.placeholder")}
               withTags
             >
-              {tagOptions.map(t => (
-                <MultiSelectOption key={t.id} value={String(t.id)}>
-                  {t.name}
-                  {t.kind ? ` · ${t.kind}` : ""}
+              {/* `tag` y no `t`: con `t` la variable tapaba a la función de traducción. */}
+              {tagOptions.map(tag => (
+                <MultiSelectOption key={tag.id} value={String(tag.id)}>
+                  {tag.name}
+                  {tag.kind ? ` · ${tag.kind}` : ""}
                 </MultiSelectOption>
               ))}
             </MultiSelect>
@@ -196,7 +197,7 @@ export function NoteForm({
               setInstruction("");
             }}
           >
-            {refining ? "Mejorando…" : "Aplicar cambio"}
+            {refining ? t("nota.mejorando") : t("nota.aplicarCambio")}
           </Button>
         </Flex>
       </AccentCard>
@@ -207,7 +208,7 @@ export function NoteForm({
           <Box marginBottom={4}>
             <img
               src={draft.cover.url}
-              alt="Portada"
+              alt={t("nota.portada")}
               style={{ maxWidth: "100%", maxHeight: 260, borderRadius: 8, display: "block" }}
             />
             <Box marginTop={2}>
@@ -217,7 +218,7 @@ export function NoteForm({
                 startIcon={<Trash />}
                 onClick={() => set("cover", null)}
               >
-                Quitar imagen
+                {t("nota.quitarImagen")}
               </Button>
             </Box>
             <Hairline marginY={3} />

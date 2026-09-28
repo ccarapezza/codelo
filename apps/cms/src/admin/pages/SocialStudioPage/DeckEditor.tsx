@@ -150,7 +150,7 @@ export default function DeckEditor({
             disabled={!dirty}
             onClick={rerender}
           >
-            Actualizar vista previa
+            {t("ss.deck.actualizar")}
           </Button>
         }
       >
@@ -178,12 +178,12 @@ export default function DeckEditor({
                   </Box>
                   <Box style={{ flex: 1, minWidth: 260 }}>
                     <GroupLabel>
-                      Placa {idx + 1} · {slide.template}
+                      {t("ss.deck.placa", { n: idx + 1 })} · {slide.template}
                     </GroupLabel>
                     <Flex direction="column" alignItems="stretch" gap={3} marginTop={2}>
                       {fields.map((f) => (
                         <Field.Root key={f.key}>
-                          <Field.Label>{f.label}</Field.Label>
+                          <Field.Label>{t(f.label)}</Field.Label>
                           {f.multiline ? (
                             <Textarea
                               value={(slide[f.key] as string) ?? ""}
@@ -200,7 +200,7 @@ export default function DeckEditor({
                       {items
                         ? items.map((it, itemIdx) => (
                             <Field.Root key={`item-${itemIdx}`}>
-                              <Field.Label>Punto {itemIdx + 1}</Field.Label>
+                              <Field.Label>{t("ss.deck.punto", { n: itemIdx + 1 })}</Field.Label>
                               <TextInput
                                 value={it}
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setItem(idx, itemIdx, e.target.value)}
@@ -224,7 +224,7 @@ export default function DeckEditor({
             <>
               <Hairline />
               <Field.Root hint={t("ss.deck.caption")}>
-                <Field.Label>Caption</Field.Label>
+                <Field.Label>{t("ss.deck.captionLabel")}</Field.Label>
                 <Textarea
                   value={caption}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCaption(e.target.value)}
