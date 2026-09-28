@@ -13,10 +13,24 @@ export type OpenRouterImageOptions = { aspectRatio?: string; imageSize?: string 
 // template propio; acá viaja directo al modelo de imagen, incondicional, que
 // es quien parte la imagen en diptych. (Gemini/"nano-banana" tiende a hacer
 // composites lado-a-lado si no se le prohíbe explícitamente.)
+// "image" y no "photograph", y "collage of separate pictures" y no "collage" a
+// secas: el sufijo viaja siempre al modelo de imagen, y le peleaba a los
+// tratamientos del pool (lib/cover-pools.ts) que piden un linograbado, una
+// lámina o un collage de papel recortado. La regla es de MAQUETACIÓN —una sola
+// escena—, no de medio.
 const SINGLE_FRAME_SUFFIX =
-  " — IMPORTANT: render ONE single unified photograph: one continuous frame, one scene, one background. " +
-  "Do NOT split the image, NO diptych, NO side-by-side panels, NO two-up layout, NO collage, grid, montage, " +
-  "triptych or before/after, NO internal dividing line, seam or border.";
+  " — IMPORTANT: render ONE single unified image: one continuous frame, one scene, one background. " +
+  "Do NOT split the image, NO diptych, NO side-by-side panels, NO two-up layout, NO collage of separate pictures, grid, montage, " +
+  "triptych or before/after, NO internal dividing line, seam or border. " +
+  // Por la misma razón que la regla de arriba: la prohibición de texto vivía
+  // sólo en las instrucciones del LLM que ESCRIBE la descripción, y es blanda
+  // —no la cumple—. Al modelo de imagen no le llegaba nada. Medido el
+  // 24/09/2026: el prompt arrancaba citando el titular entre comillas ("Las
+  // bodegas de la DOP Jumilla…") y Gemini lo dibujó como cartel, con el
+  // castellano roto ("DÉCINA EDITCIÓN", "YOUR"). Tres portadas seguidas.
+  "ABSOLUTELY NO TEXT of any kind anywhere in the image: no title, no caption, no headline, no subtitle, " +
+  "no watermark, no logo, no signage, no lettering, no numbers, no labels. The image must contain ZERO " +
+  "written characters.";
 
 type OpenRouterChatResponse = {
   choices?: Array<{

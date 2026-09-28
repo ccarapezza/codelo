@@ -3,13 +3,15 @@ import { Box, Flex, Loader, Typography } from "@strapi/design-system";
 import { Check, Cross } from "@strapi/icons";
 import { AccentCard } from "../../components/ui";
 import type { JobState } from "./types";
+import { useT } from "../../i18n";
 
 // Progreso del job: lista de pasos con estado + detalle (ej. "procesando… 2m 10s").
 export default function JobProgress({ job }: { job: JobState }) {
+  const t = useT();
   return (
     <AccentCard
-      title="Generando…"
-      description={`Costo estimado: ~$${job.estimatedCostUsd.toFixed(3)} USD`}
+      title={t("comun.generando")}
+      description={t("ss.costoEstimado", { usd: job.estimatedCostUsd.toFixed(3) })}
       accent={job.status === "failed" ? "danger" : "primary"}
     >
       <Flex direction="column" alignItems="stretch" gap={3}>

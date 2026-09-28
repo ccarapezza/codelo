@@ -3,8 +3,9 @@
 // background clip with ffmpeg. Legibility over arbitrary video is guaranteed
 // structurally: bottom scrim + radial scrim behind the text block + textShadow.
 import { h, type SatoriNode } from "../social-cards/hyperscript";
-import { BRAND, FIRE, type Size } from "../social-cards/brand";
-import { logoMark } from "../social-cards/assets";
+import { fireGradient, resolveBrand, rgba, type Brand, type Size } from "../social-cards/brand";
+import { bundledLogoMark } from "../social-cards/assets";
+import type { RenderContext } from "../social-cards/templates";
 
 export type OverlayType = "title" | "countdown";
 
@@ -25,7 +26,7 @@ const SHADOW = "0 3px 18px rgba(0,0,0,0.7)";
 
 function topBar(width: number): SatoriNode {
   return h("div", {
-    style: { position: "absolute", top: 0, left: 0, width, height: 12, display: "flex", backgroundImage: FIRE },
+    style: { position: "absolute", top: 0, left: 0, width, height: 12, display: "flex", backgroundImage: fireGradient(marca) },
   });
 }
 
@@ -33,10 +34,19 @@ function bottomScrim(width: number, height: number, from = "32%"): SatoriNode {
   return h("div", {
     style: {
       position: "absolute", top: 0, left: 0, width, height, display: "flex",
-      backgroundImage: `linear-gradient(180deg, rgba(8,11,9,0) ${from}, rgba(8,11,9,0.50) 72%, rgba(8,11,9,0.86) 100%)`,
+      backgroundImage: `linear-gradient(180deg, ${rgba(marca.bg, 0)} ${from}, ${rgba(marca.bg, 0.5)} 72%, ${rgba(marca.bg, 0.86)} 100%)`,
     },
   });
 }
+
+/**
+ * Mismo criterio que templates.ts: son ajustes de la instalación y el render es
+ * sincrónico, así que se guardan por render en vez de enhebrarlos por cada
+ * overlay. Ver el comentario largo en `templates.ts`.
+ */
+let handleActual = "";
+let marca: Brand = resolveBrand(null);
+let logoActual = "";
 
 function footer(width: number): SatoriNode {
   return h(
@@ -47,11 +57,11 @@ function footer(width: number): SatoriNode {
         alignItems: "center", justifyContent: "center",
       },
     },
-    h("img", { src: logoMark(), style: { height: 60, marginRight: 18 } }),
+    h("img", { src: logoActual, style: { height: 60, marginRight: 18 } }),
     h(
       "div",
-      { style: { display: "flex", fontFamily: BRAND.fontBody, fontWeight: 600, fontSize: 36, color: BRAND.white } },
-      "@" + BRAND.handle,
+      { style: { display: "flex", fontFamily: marca.fontBody, fontWeight: 600, fontSize: 36, color: marca.title } },
+      handleActual ? "@" + handleActual : "",
     ),
   );
 }
@@ -62,14 +72,14 @@ function root(size: Size, ...layers: unknown[]): SatoriNode {
     {
       style: {
         display: "flex", position: "relative", width: size.width, height: size.height,
-        fontFamily: BRAND.fontBody, color: BRAND.white, overflow: "hidden",
+        fontFamily: marca.fontBody, color: marca.title, overflow: "hidden",
       },
     },
     ...layers,
   );
 }
 
-// Countdown hype: "Faltan / 8 / días / para la Expo Cannabis".
+// Countdown hype: "Faltan / 8 / días / para el evento".
 export function countdownOverlay(o: CountdownOverlayFields, size: Size): SatoriNode {
   const { width, height } = size;
 
@@ -79,7 +89,7 @@ export function countdownOverlay(o: CountdownOverlayFields, size: Size): SatoriN
     style: {
       position: "absolute", top: 0, left: 0, width, height, display: "flex",
       backgroundImage:
-        "radial-gradient(62% 40% at 50% 46%, rgba(8,11,9,0.80) 0%, rgba(8,11,9,0.45) 55%, rgba(8,11,9,0) 82%)",
+        `radial-gradient(62% 40% at 50% 46%, ${rgba(marca.bg, 0.8)} 0%, ${rgba(marca.bg, 0.45)} 55%, ${rgba(marca.bg, 0)} 82%)`,
     },
   });
 
@@ -88,8 +98,8 @@ export function countdownOverlay(o: CountdownOverlayFields, size: Size): SatoriN
       "div",
       {
         style: {
-          display: "flex", fontFamily: BRAND.fontBody, fontWeight: 700, fontSize: 60,
-          letterSpacing: 12, textTransform: "uppercase", color: BRAND.offwhite, textShadow: SHADOW,
+          display: "flex", fontFamily: marca.fontBody, fontWeight: 700, fontSize: 60,
+          letterSpacing: 12, textTransform: "uppercase", color: marca.body, textShadow: SHADOW,
         },
       },
       text,
@@ -109,8 +119,8 @@ export function countdownOverlay(o: CountdownOverlayFields, size: Size): SatoriN
       "div",
       {
         style: {
-          display: "flex", fontFamily: BRAND.fontDisplay, fontSize: 520, lineHeight: 0.82,
-          color: BRAND.terracotta, letterSpacing: 2,
+          display: "flex", fontFamily: marca.fontDisplay, fontSize: 520, lineHeight: 0.82,
+          color: marca.accentLight, letterSpacing: 2,
         },
       },
       String(o.big),
@@ -122,7 +132,7 @@ export function countdownOverlay(o: CountdownOverlayFields, size: Size): SatoriN
           {
             style: {
               display: "flex", marginTop: 36, fontSize: 46, fontWeight: 600,
-              color: BRAND.white, maxWidth: "88%", lineHeight: 1.15, textShadow: SHADOW,
+              color: marca.title, maxWidth: "88%", lineHeight: 1.15, textShadow: SHADOW,
             },
           },
           o.label,
@@ -131,7 +141,7 @@ export function countdownOverlay(o: CountdownOverlayFields, size: Size): SatoriN
     h(
       "div",
       { style: { display: "flex", marginTop: 56 } },
-      h("div", { style: { display: "flex", width: 200, height: 14, borderRadius: 8, backgroundImage: FIRE } }),
+      h("div", { style: { display: "flex", width: 200, height: 14, borderRadius: 8, backgroundImage: fireGradient(marca) } }),
     ),
   );
 
@@ -156,8 +166,8 @@ export function titleOverlay(o: TitleOverlayFields, size: Size): SatoriNode {
           "div",
           {
             style: {
-              display: "flex", fontFamily: BRAND.fontBody, fontWeight: 700, fontSize: 34,
-              letterSpacing: 8, textTransform: "uppercase", color: BRAND.greenLight,
+              display: "flex", fontFamily: marca.fontBody, fontWeight: 700, fontSize: 34,
+              letterSpacing: 8, textTransform: "uppercase", color: marca.accentLight,
               marginBottom: 22, textShadow: SHADOW,
             },
           },
@@ -168,9 +178,9 @@ export function titleOverlay(o: TitleOverlayFields, size: Size): SatoriNode {
       "div",
       {
         style: {
-          display: "flex", fontFamily: BRAND.fontDisplay, fontSize: o.titleSize || 124,
+          display: "flex", fontFamily: marca.fontDisplay, fontSize: o.titleSize || 124,
           lineHeight: 0.98, textTransform: "uppercase", letterSpacing: 1, maxWidth: "100%",
-          color: BRAND.white, textShadow: SHADOW,
+          color: marca.title, textShadow: SHADOW,
         },
       },
       o.title,
@@ -178,7 +188,7 @@ export function titleOverlay(o: TitleOverlayFields, size: Size): SatoriNode {
     h(
       "div",
       { style: { display: "flex", marginTop: 32 } },
-      h("div", { style: { display: "flex", width: 160, height: 14, borderRadius: 8, backgroundImage: FIRE } }),
+      h("div", { style: { display: "flex", width: 160, height: 14, borderRadius: 8, backgroundImage: fireGradient(marca) } }),
     ),
   );
 
@@ -187,7 +197,7 @@ export function titleOverlay(o: TitleOverlayFields, size: Size): SatoriNode {
     style: {
       position: "absolute", top: 0, left: 0, width, height, display: "flex",
       backgroundImage:
-        "linear-gradient(180deg, rgba(8,11,9,0) 38%, rgba(8,11,9,0.55) 70%, rgba(8,11,9,0.92) 100%)",
+        `linear-gradient(180deg, ${rgba(marca.bg, 0)} 38%, ${rgba(marca.bg, 0.55)} 70%, ${rgba(marca.bg, 0.92)} 100%)`,
     },
   });
 
@@ -198,7 +208,11 @@ export function renderOverlayNode(
   type: OverlayType,
   fields: Record<string, string>,
   size: Size,
+  ctx: RenderContext = {},
 ): SatoriNode {
+  handleActual = ctx.handle ?? "";
+  if (ctx.brand) marca = ctx.brand;
+  logoActual = ctx.logo || bundledLogoMark();
   if (type === "countdown") {
     return countdownOverlay(
       { pre: fields.pre, big: fields.big ?? "?", unit: fields.unit, label: fields.label },

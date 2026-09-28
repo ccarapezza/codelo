@@ -13,6 +13,7 @@ import {
 } from "@strapi/design-system";
 import { Pencil, Images, ArrowClockwise, Upload, Trash } from "@strapi/icons";
 import { AccentCard, Hairline } from "../../components/ui";
+import { useT } from "../../i18n";
 
 // El estado del form es plano: todo lo editable de una nota vive acá. La página
 // contenedora decide si al guardar llama a crear o actualizar.
@@ -81,6 +82,7 @@ export function NoteForm({
   customImagePrompt: string;
   setCustomImagePrompt: (v: string) => void;
 }) {
+  const t = useT();
   const [instruction, setInstruction] = React.useState("");
   const [refineWeb, setRefineWeb] = React.useState(false);
   const fileRef = React.useRef<HTMLInputElement | null>(null);
@@ -95,18 +97,18 @@ export function NoteForm({
   return (
     <Flex direction="column" gap={6} alignItems="stretch">
       {/* Contenido */}
-      <AccentCard title="Contenido" icon={<Pencil />} accent="secondary">
+      <AccentCard title={t("nota.contenido")} icon={<Pencil />} accent="secondary">
         <Flex direction="column" gap={4} alignItems="stretch">
           <Field.Root>
-            <Field.Label>Título</Field.Label>
+            <Field.Label>{t("comun.titulo")}</Field.Label>
             <TextInput
               value={draft.title}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => onTitle(e.target.value)}
             />
           </Field.Root>
 
-          <Field.Root hint="Se usa en la URL de la nota. Se genera solo del título; editalo si querés.">
-            <Field.Label>Slug</Field.Label>
+          <Field.Root hint={t("nota.slug.hint")}>
+            <Field.Label>{t("nota.slug")}</Field.Label>
             <TextInput
               value={draft.slug}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
@@ -118,7 +120,7 @@ export function NoteForm({
           </Field.Root>
 
           <Field.Root>
-            <Field.Label>Bajada / excerpt</Field.Label>
+            <Field.Label>{t("nota.bajada")}</Field.Label>
             <Textarea
               rows={2}
               value={draft.excerpt}
@@ -128,8 +130,8 @@ export function NoteForm({
             />
           </Field.Root>
 
-          <Field.Root hint="Cuerpo en Markdown.">
-            <Field.Label>Cuerpo</Field.Label>
+          <Field.Root hint={t("nota.cuerpo.hint")}>
+            <Field.Label>{t("nota.cuerpo")}</Field.Label>
             <Textarea
               rows={16}
               value={draft.content}
@@ -140,18 +142,19 @@ export function NoteForm({
             <Field.Hint />
           </Field.Root>
 
-          <Field.Root hint="Definen en qué sección del sitio aparece la nota.">
-            <Field.Label>Etiquetas</Field.Label>
+          <Field.Root hint={t("nota.tags.hint")}>
+            <Field.Label>{t("nota.etiquetas")}</Field.Label>
             <MultiSelect
               value={draft.tags.map(String)}
               onChange={(vals: string[]) => set("tags", vals.map(Number))}
-              placeholder="Elegí una o más…"
+              placeholder={t("nota.tags.placeholder")}
               withTags
             >
-              {tagOptions.map(t => (
-                <MultiSelectOption key={t.id} value={String(t.id)}>
-                  {t.name}
-                  {t.kind ? ` · ${t.kind}` : ""}
+              {/* `tag` y no `t`: con `t` la variable tapaba a la función de traducción. */}
+              {tagOptions.map(tag => (
+                <MultiSelectOption key={tag.id} value={String(tag.id)}>
+                  {tag.name}
+                  {tag.kind ? ` · ${tag.kind}` : ""}
                 </MultiSelectOption>
               ))}
             </MultiSelect>
@@ -161,12 +164,12 @@ export function NoteForm({
       </AccentCard>
 
       {/* Refinar con IA — disponible también en modo manual. */}
-      <AccentCard title="Mejorar con IA" icon={<ArrowClockwise />} accent="warning">
-        <Field.Root hint="Pedí un cambio sobre lo que hay arriba. Ej: 'Más corta', 'Tono más formal', 'Agregá un cierre'.">
-          <Field.Label>Instrucción</Field.Label>
+      <AccentCard title={t("nota.mejorar")} icon={<ArrowClockwise />} accent="warning">
+        <Field.Root hint={t("nota.mejorar.hint")}>
+          <Field.Label>{t("nota.instruccion")}</Field.Label>
           <Textarea
             rows={2}
-            placeholder="¿Qué querés que la IA cambie?"
+            placeholder={t("nota.instruccion.placeholder")}
             value={instruction}
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInstruction(e.target.value)}
             disabled={refining}
@@ -178,11 +181,9 @@ export function NoteForm({
             <Switch
               checked={refineWeb}
               onCheckedChange={(v: boolean) => setRefineWeb(v)}
-              aria-label="Buscar fuentes al refinar"
+              aria-label={t("nota.buscar.label")}
             />
-            <Typography variant="omega" textColor="neutral700">
-              Buscar fuentes (si el cambio necesita datos nuevos)
-            </Typography>
+            <Typography variant="omega" textColor="neutral700">{t("nota.buscar.hint")}</Typography>
           </Flex>
           <Button
             variant="secondary"
@@ -196,18 +197,18 @@ export function NoteForm({
               setInstruction("");
             }}
           >
-            {refining ? "Mejorando…" : "Aplicar cambio"}
+            {refining ? t("nota.mejorando") : t("nota.aplicarCambio")}
           </Button>
         </Flex>
       </AccentCard>
 
       {/* Imagen de portada: generar por IA o subir una propia. */}
-      <AccentCard title="Imagen de portada" icon={<Images />} accent="success">
+      <AccentCard title={t("nota.imagen.titulo")} icon={<Images />} accent="success">
         {draft.cover?.url ? (
           <Box marginBottom={4}>
             <img
               src={draft.cover.url}
-              alt="Portada"
+              alt={t("nota.portada")}
               style={{ maxWidth: "100%", maxHeight: 260, borderRadius: 8, display: "block" }}
             />
             <Box marginTop={2}>
@@ -217,18 +218,18 @@ export function NoteForm({
                 startIcon={<Trash />}
                 onClick={() => set("cover", null)}
               >
-                Quitar imagen
+                {t("nota.quitarImagen")}
               </Button>
             </Box>
             <Hairline marginY={3} />
           </Box>
         ) : null}
 
-        <Field.Root hint="Opcional. Si lo dejás vacío, la IA elige la escena con el agente configurado.">
-          <Field.Label>Prompt para generar (opcional)</Field.Label>
+        <Field.Root hint={t("nota.imagen.hint")}>
+          <Field.Label>{t("nota.imagen.label")}</Field.Label>
           <Textarea
             rows={2}
-            placeholder="Describí la imagen, o dejalo vacío…"
+            placeholder={t("nota.imagen.placeholder")}
             value={customImagePrompt}
             onChange={e => setCustomImagePrompt(e.target.value)}
             disabled={imageBusy}
@@ -244,7 +245,7 @@ export function NoteForm({
             disabled={imageBusy || uploading || !draft.title.trim()}
             onClick={onGenerateImage}
           >
-            {draft.cover ? "Regenerar con IA" : "Generar con IA"}
+            {draft.cover ? t("nota.imagen.regenerar") : t("nota.imagen.generar")}
           </Button>
           <Button
             variant="tertiary"
@@ -252,9 +253,7 @@ export function NoteForm({
             loading={uploading}
             disabled={imageBusy || uploading}
             onClick={() => fileRef.current?.click()}
-          >
-            Subir una imagen
-          </Button>
+          >{t("nota.imagen.subir")}</Button>
           <input
             ref={fileRef}
             type="file"

@@ -13,6 +13,7 @@ import * as React from "react";
 import { Box, Flex, Typography, Button } from "@strapi/design-system";
 import { Check } from "@strapi/icons";
 import { useIsMobile } from "../../hooks/useIsMobile";
+import { useT } from "../../i18n";
 
 export type Accent = "primary" | "warning" | "success" | "danger" | "secondary";
 
@@ -26,8 +27,17 @@ const ACCENT: Record<Accent, { strip: string; chipBg: string; chipFg: string }> 
 
 /** Page outer wrapper: neutral canvas + standard padding. Every page uses this. */
 export function PageContainer({ children }: { children: React.ReactNode }) {
+  // Columna flex a alto de viewport: es lo que le permite a la SaveBar irse al
+  // fondo cuando el contenido es corto. `position: sticky` sola no alcanza —
+  // sólo pega el elemento mientras hay scroll, así que en una pantalla con pocos
+  // campos la barra quedaba flotando a media altura con espacio vacío debajo.
   return (
-    <Box padding={8} background="neutral100" minHeight="100vh">
+    <Box
+      padding={8}
+      background="neutral100"
+      minHeight="100vh"
+      style={{ display: "flex", flexDirection: "column" }}
+    >
       {children}
     </Box>
   );
@@ -98,7 +108,17 @@ export function PageHeader({
         </Box>
       </Flex>
       {actions ? (
-        <Flex gap={2} wrap="wrap" justifyContent={isMobile ? "flex-start" : "flex-end"}>
+        // `flexShrink: 0` + `nowrap`: con un subtítulo largo, el bloque del
+        // título se comía el ancho de las acciones y la etiqueta de un botón se
+        // partía en dos líneas, dejándolo más alto que sus vecinos. Si de verdad
+        // no entran, el `wrap` los baja de línea enteros en vez de espachurrarlos.
+        <Flex
+          gap={2}
+          wrap="wrap"
+          alignItems="center"
+          justifyContent={isMobile ? "flex-start" : "flex-end"}
+          style={{ flexShrink: 0, whiteSpace: "nowrap" }}
+        >
           {actions}
         </Flex>
       ) : null}
@@ -107,6 +127,36 @@ export function PageHeader({
 }
 
 /** Hairline divider that respects the theme (token, not hardcoded hex). */
+/**
+ * Referencia gris de un texto FIJO que rodea a un campo editable.
+ *
+ * Sirve para que quien escribe un prompt vea dónde cae lo suyo dentro del
+ * andamiaje que no se puede tocar. Vivía dentro de PromptSettingsPage, así que
+ * una tarjeta aportada por un proyecto no podía usarlo.
+ */
+export function ReferenceNote({ children }: { children: React.ReactNode }) {
+  const t = useT();
+  return (
+    <Box
+      marginTop={2}
+      padding={3}
+      background="neutral100"
+      borderColor="neutral200"
+      borderWidth="1px"
+      borderStyle="solid"
+      borderRadius="4px"
+      hasRadius
+    >
+      <Typography variant="pi" textColor="neutral500" fontWeight="bold">{t("ui.textoFijo")}</Typography>
+      <Box marginTop={1}>
+        <Typography variant="pi" textColor="neutral500" style={{ whiteSpace: "pre-wrap" }}>
+          {children}
+        </Typography>
+      </Box>
+    </Box>
+  );
+}
+
 export function Hairline({ marginY }: { marginY?: number }) {
   return <Box background="neutral150" marginTop={marginY} marginBottom={marginY} style={{ height: 1 }} />;
 }
@@ -146,7 +196,15 @@ export function AccentCard({
       borderRadius="8px"
       hasRadius
       shadow="filterShadow"
-      style={{ display: "flex", overflow: "hidden", height: "100%" }}
+      // ⚠️ Sin `height: 100%`, y es deliberado: ese porcentaje se resuelve
+      // contra la altura de la FILA de la grilla, o sea contra la tarjeta más
+      // alta, así que ANULA el `align-items: start` del contenedor. Con él,
+      // «Publicación» —que es un toggle— medía lo mismo que «Modelos de IA» y
+      // arrastraba 332px de aire.
+      //
+      // Cuando se QUIERAN parejas, el contenedor lo pide con `align-items:
+      // stretch`, que es el default de grid y no necesita esto.
+      style={{ display: "flex", overflow: "hidden" }}
     >
       <Box background={a.strip} style={{ width: 4, flexShrink: 0 }} />
       <Box style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
@@ -217,7 +275,7 @@ export function SaveBar({
   saving,
   onSave,
   onDiscard,
-  saveLabel = "Guardar cambios",
+  saveLabel,
   edgeOffset = 40,
 }: {
   dirty: boolean;
@@ -227,6 +285,7 @@ export function SaveBar({
   saveLabel?: string;
   edgeOffset?: number;
 }) {
+  const t = useT();
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
@@ -239,10 +298,30 @@ export function SaveBar({
   }, [dirty, saving, onSave]);
 
   return (
+    // Envoltorio con una franja del color de la PÁGINA arriba de la barra.
+    //
+    // Es el aire entre la última tarjeta y la barra. No alcanza con un
+    // `marginTop` en la barra: `marginTop: auto` es lo que la empuja al fondo
+    // cuando el contenido es corto, y con contenido largo `auto` resuelve a 0 —
+    // o sea que justo cuando hay scroll, que es cuando se nota, el aire
+    // desaparecía y la tarjeta quedaba pegada al borde.
+    //
+    // La franja va DENTRO del elemento sticky para que viaje con él: es lo que
+    // tapa el contenido que pasa por debajo mientras se scrollea, en vez de
+    // dejarlo asomar contra la barra.
     <Box
       position="sticky"
       bottom={0}
-      marginTop={6}
+      paddingTop={5}
+      background="neutral100"
+      style={{
+        marginTop: "auto",
+        marginLeft: -edgeOffset,
+        marginRight: -edgeOffset,
+        marginBottom: -edgeOffset,
+      }}
+    >
+    <Box
       paddingTop={4}
       paddingBottom={4}
       paddingLeft={8}
@@ -251,33 +330,33 @@ export function SaveBar({
       borderColor="neutral200"
       borderWidth="1px 0 0 0"
       borderStyle="solid"
-      style={{ marginLeft: -edgeOffset, marginRight: -edgeOffset, marginBottom: -edgeOffset }}
     >
       <Flex justifyContent="space-between" alignItems="center" gap={4}>
         {dirty ? (
           <Flex gap={2} alignItems="center">
             <Box background="warning500" style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0 }} />
             <Typography variant="pi" textColor="neutral600">
-              Cambios sin guardar · <Typography variant="pi" textColor="neutral500">⌘S / Ctrl+S</Typography>
+              {t("ui.sinGuardar")} · <Typography variant="pi" textColor="neutral500">⌘S / Ctrl+S</Typography>
             </Typography>
           </Flex>
         ) : (
           <Flex gap={1} alignItems="center">
             <Typography textColor="success600"><Check width="0.9rem" height="0.9rem" /></Typography>
-            <Typography variant="pi" textColor="neutral500">Todo guardado</Typography>
+            <Typography variant="pi" textColor="neutral500">{t("ui.todoGuardado")}</Typography>
           </Flex>
         )}
         <Flex gap={2}>
           {onDiscard ? (
             <Button variant="tertiary" onClick={onDiscard} disabled={!dirty || saving} size="L">
-              Descartar
+              {t("ui.descartar")}
             </Button>
           ) : null}
           <Button onClick={onSave} loading={saving} disabled={!dirty} size="L">
-            {saveLabel}
+            {saveLabel ?? t("nota.guardarCambios")}
           </Button>
         </Flex>
       </Flex>
+    </Box>
     </Box>
   );
 }

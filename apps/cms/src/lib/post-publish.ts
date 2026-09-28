@@ -2,22 +2,23 @@
 // resets publishedAt to "now", which would reorder the blog (it sorts by
 // publishedAt:desc) — so we restore the original date with a direct query.
 // Used by cover/carousel regeneration and Social Studio saves.
-// Operates on the Spanish (default) locale only — covers/carousels are managed
-// on the es version; the en localization keeps its own publishedAt.
+// Opera sólo sobre el locale por defecto: las portadas y los carruseles se
+// manejan ahí; la traducción conserva su propio publishedAt.
+import * as project from "./project";
 export async function republishPreservingDate(strapi: any, documentId: string): Promise<void> {
   const publishedSibling = (await strapi.documents("api::post.post").findOne({
     documentId,
-    locale: "es",
+    locale: project.defaultLocale,
     status: "published",
     fields: ["documentId", "publishedAt"],
   })) as { publishedAt: string | null } | null;
   if (!publishedSibling) return; // draft-only: nothing to republish
 
   const originalPublishedAt = publishedSibling.publishedAt ?? null;
-  await strapi.documents("api::post.post").publish({ documentId, locale: "es" });
+  await strapi.documents("api::post.post").publish({ documentId, locale: project.defaultLocale });
   if (originalPublishedAt) {
     await strapi.db.query("api::post.post").updateMany({
-      where: { documentId, locale: "es", publishedAt: { $notNull: true } },
+      where: { documentId, locale: project.defaultLocale, publishedAt: { $notNull: true } },
       data: { publishedAt: originalPublishedAt },
     });
   }

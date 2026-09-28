@@ -1,19 +1,12 @@
 import { factories } from "@strapi/strapi";
 import { requireAdmin } from "../../../lib/admin-auth";
-import { fetchAndSaveNews, getRssLastRun, validateFeed } from "../../../lib/rss-fetcher";
-
-// Traduce las reglas de cron que usamos a algo legible. Sólo cubre los patrones
-// que existen en config/cron-tasks.ts; cualquier otra cosa se muestra cruda en
-// vez de inventarle una interpretación (una regla mal traducida en la UI es
-// peor que la regla a secas).
-function describeCronRule(rule: string): string {
-  const everyNMinutes = rule.match(/^\*\/(\d+) \* \* \* \*$/);
-  if (everyNMinutes) return `cada ${everyNMinutes[1]} minutos`;
-  if (rule === "* * * * *") return "cada minuto";
-  const dailyAt = rule.match(/^(\d+) (\d+) \* \* \*$/);
-  if (dailyAt) return `todos los días a las ${dailyAt[2].padStart(2, "0")}:${dailyAt[1].padStart(2, "0")}`;
-  return rule;
-}
+import {
+  fetchAndSaveNews,
+  getIngestWindowDays,
+  getRssLastRun,
+  validateFeed,
+} from "../../../lib/rss-fetcher";
+import { discoverFeeds } from "../../../lib/feed-discovery";
 
 const UID = "api::rss-feed.rss-feed";
 
@@ -78,8 +71,8 @@ export default factories.createCoreController(UID, ({ strapi }) => ({
       // CRON_ENABLED=false apaga TODOS los crons: sin esto la página diría
       // "cada 30 minutos" en un entorno donde no corre nunca.
       cronEnabled: Boolean(strapi.config.get("server.cron.enabled")),
+      // La regla va cruda: el panel la pone en palabras en su idioma.
       rule: rule ?? null,
-      label: rule ? describeCronRule(rule) : null,
       lastRunAt: await getRssLastRun(strapi),
     };
   },
@@ -96,11 +89,31 @@ export default factories.createCoreController(UID, ({ strapi }) => ({
 
   // Validate a feed URL without persisting anything. Used by the admin UI
   // "Verificar" button so the user can sanity-check a feed before saving it.
+  /**
+   * Buscador de fuentes: de un tema o un dominio a una lista de feeds que ya
+   * fueron bajados y parseados. Puede tardar: valida cada candidato en vivo.
+   */
+  async discover(ctx) {
+    if (!(await requireAdmin(ctx, strapi))) return;
+    const { query, max, lang, country } = ctx.request.body as {
+      query?: string;
+      max?: number;
+      lang?: string | null;
+      country?: string | null;
+    };
+    if (!query || !query.trim()) return ctx.badRequest("query es obligatorio");
+    ctx.body = await discoverFeeds(strapi, query, {
+      max: Math.min(Math.max(Number(max) || 12, 1), 25),
+      lang: typeof lang === "string" ? lang : null,
+      country: typeof country === "string" ? country : null,
+    });
+  },
+
   async validate(ctx) {
     if (!(await requireAdmin(ctx, strapi))) return;
     const { url } = ctx.request.body as { url?: string };
     if (!url) return ctx.badRequest("url is required");
-    const result = await validateFeed(url);
+    const result = await validateFeed(url, 8000, 5, await getIngestWindowDays(strapi));
     ctx.body = result;
   },
 }));

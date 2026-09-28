@@ -29,7 +29,8 @@
       "enum": [
         "director",
         "redactor",
-        "image-generator"
+        "image-generator",
+        "explorador"
       ],
       "required": true,
       "default": "redactor"

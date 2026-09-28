@@ -4,8 +4,8 @@
 
 import type OpenAI from "openai";
 import { TEMPLATE_NAMES, type Slide, type TemplateName } from "./templates";
-import { BRAND } from "./brand";
 import type { PromptSettings } from "../prompt-defaults";
+import * as project from "../project";
 
 export interface ComposeCarouselInput {
   title: string;
@@ -109,56 +109,95 @@ export function sanitizeSlide(raw: unknown): Slide | null {
   return s;
 }
 
-function buildSystemPrompt(ps: PromptSettings): string {
+/**
+ * Exportado para poder compararlo sin red (test/preservation).
+ *
+ * ⚠️ Nada de acá puede describir un tema, una regla editorial, una paleta ni un
+ * dominio: el motor no sabe de qué habla el sitio que lo usa. Todo eso entra por
+ * `ps`. Esta función llegó a tener escrita la voz de marca, las reglas de
+ * consumo, la paleta y hasta los hashtags de UN proyecto, y se los aplicaba a
+ * todos: un portal publicaba sus placas con los hashtags de OTRO tema.
+ */
+export function buildCarouselSystemPrompt(ps: PromptSettings, siteUrl: string): string {
   return [
-    `Sos el editor de redes sociales de ${ps.brandName}, asociación civil sin fines de lucro.`,
-    "Generás un carrusel de Instagram (5 a 7 placas) a partir de un artículo ya publicado.",
-    "Voz de marca: divulgación seria y cercana sobre cannabis, cáñamo, salud, derechos y",
-    "ambiente. Tono rioplatense, claro, sin solemnidad y sin apología.",
+    `You are the social-media editor for ${ps.brandName}.`,
+    "You produce an Instagram carousel (5 to 7 cards) from an already-published article.",
+    ps.socialVoice,
     "",
-    "REGLAS DURAS: nunca fomentes el consumo de sustancia alguna, lícita o no; no des",
-    "consejo médico ni dosis; no publicites productos, marcas ni comercios.",
+    "UNBREAKABLE RULE (credibility): use ONLY information present in the article.",
+    "Do NOT invent data, figures, dates, results or statements. It is forbidden to fabricate:",
+    `${ps.fabricationProneFacts}. If a fact is not in the text, do NOT include it. One card fewer`,
+    "is better than one card with an invented fact. In 'quote', the text must be verbatim",
+    "from the article.",
     "",
-    "REGLA INVIOLABLE (credibilidad): usá ÚNICAMENTE información presente en el artículo.",
-    "NO inventes datos, cifras, fechas, resultados ni declaraciones. Está prohibido fabricar:",
-    `${ps.fabricationProneFacts}. Si un dato no está en el texto, NO lo incluyas. Es preferible`,
-    "una placa menos a una placa con un dato inventado. En 'quote', el texto debe ser textual",
-    "del artículo.",
+    "DECK STRUCTURE:",
+    '- Card 1 = cover, template "cover": short kicker, one-line hook title, hint.',
+    '  Include in the cover "bg": { "ai": "<prompt IN ENGLISH for an editorial image (photo or illustration)',
+    `  ${ps.socialCoverStyle}>" }.`,
+    "- Middle cards: choose between stat (one strong figure from the text), bullets (2 to 4 points),",
+    "  quote (one verbatim sentence + author if present).",
+    `- Last card = "cta": short title, subtitle, url "${siteUrl}".`,
     "",
-    "ESTRUCTURA del deck:",
-    '- Placa 1 = portada con template "cover": kicker corto, title gancho en una línea, hint "deslizá".',
-    '  Incluí en la portada "bg": { "ai": "<prompt EN INGLÉS para una imagen editorial (foto o ilustración)',
-    '  que refleje el TEMA de la nota —botánica, cultivo de cannabis/cáñamo, ciencia, comunidad, ambiente—,',
-    '  en tonos azul-negro profundo con acentos ámbar, sin texto, sin logos, sin caras reconocibles y sin',
-    '  imágenes de consumo>" }.',
-    "- Placas intermedias: elegí entre stat (un dato/número fuerte del texto), bullets (2 a 4 puntos),",
-    "  quote (una frase textual + autor si aparece).",
-    `- Última placa = "cta": title corto, subtitle, url "${BRAND.handle}.com.ar".`,
+    `VALID TEMPLATES (do not invent others): ${TEMPLATE_NAMES.join(", ")}.`,
     "",
-    `TEMPLATES VÁLIDOS (no inventes otros): ${TEMPLATE_NAMES.join(", ")}.`,
-    "",
-    'FORMA DE CADA SLIDE — objeto PLANO con un campo "template" y los campos de ese template.',
-    'NO anides los campos bajo el nombre del template. Campos por template:',
+    'SHAPE OF EACH SLIDE — a FLAT object with a "template" field and that template\'s fields.',
+    "Do NOT nest the fields under the template name. Fields per template:",
     "  template=cover  → kicker, title, hint, bg",
     "  template=stat   → kicker, big, label",
     "  template=bullets→ kicker, title, items (array)",
     "  template=quote  → text, by",
     "  template=cta    → title, subtitle, url",
-    "Textos cortos: title <= 60, label <= 90, items <= 70 c/u. Sin emojis ni flechas en las placas.",
+    "Short texts: title <= 60, label <= 90, items <= 70 each. No emojis or arrows on the cards.",
     "",
-    'CAPTION (campo "caption"): texto para el feed de Instagram en rioplatense, con un hook en la',
-    'primera línea, 2 a 4 líneas de desarrollo basadas en el artículo, cierre "Link en la bio 👇"',
-    "y 8 a 12 hashtags relevantes al tema (cannabis, cáñamo, salud, derechos, ambiente,",
-    "según corresponda). Los emojis van solo acá, no en las placas.",
+    `ALL card text and the caption must be written in ${ps.writingLanguage}.`,
+    'CAPTION (field "caption"): text for the Instagram feed, with a hook on the first line,',
+    "2 to 4 lines of development based on the article, and a closing call to action.",
+    ps.socialHashtags
+      ? `Then 8 to 12 hashtags relevant to the topic (${ps.socialHashtags}, as appropriate).`
+      : "Then 8 to 12 hashtags relevant to the article's topic.",
+    "Emojis go only here, never on the cards.",
     "",
-    "Devolvé EXCLUSIVAMENTE este JSON (placas PLANAS, fijate el ejemplo):",
+    "Return EXCLUSIVELY this JSON (FLAT cards, see the example):",
     '{ "slides": [',
-    '  { "template": "cover", "kicker": "...", "title": "...", "hint": "deslizá", "bg": { "ai": "<prompt en inglés>" } },',
+    '  { "template": "cover", "kicker": "...", "title": "...", "hint": "...", "bg": { "ai": "<prompt in English>" } },',
     '  { "template": "stat", "kicker": "...", "big": "27%", "label": "..." },',
     '  { "template": "bullets", "kicker": "...", "title": "...", "items": ["...", "..."] },',
-    `  { "template": "cta", "title": "...", "subtitle": "...", "url": "${BRAND.handle}.com.ar" }`,
+    `  { "template": "cta", "title": "...", "subtitle": "...", "url": "${siteUrl}" }`,
     '], "caption": "..." }',
   ].join("\n");
+}
+
+/**
+ * El caption que se usa si el modelo no devuelve uno.
+ *
+ * El handle sale de los ajustes y puede estar vacío: una instancia sin redes no
+ * tiene que imprimir el `#` de nadie. Antes esto terminaba, fijo, en
+ * los hashtags de un tema concreto — para cualquier proyecto.
+ */
+/**
+ * El dominio que se imprime en la placa de cierre.
+ *
+ * Sale de la URL pública de la instalación y ya no de `${BRAND.handle}.com.ar`,
+ * que además de ser de un proyecto le agregaba un `.com.ar` a cualquier handle
+ * — un portal terminaba mostrando un dominio que no existe.
+ */
+function siteHost(): string {
+  try {
+    return new URL(project.siteUrl).host.replace(/^www\./, "");
+  } catch {
+    return project.siteUrl;
+  }
+}
+
+export function fallbackCaption(ps: PromptSettings, title: string): string {
+  const tags = ps.socialHashtags
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .slice(0, 3)
+    .map((t) => `#${t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "")}`);
+  if (ps.socialHandle) tags.push(`#${ps.socialHandle.replace(/[^a-zA-Z0-9]/g, "")}`);
+  return [title, ps.socialCta, tags.join(" ")].filter(Boolean).join("\n\n");
 }
 
 export async function composeCarousel(
@@ -179,7 +218,7 @@ export async function composeCarousel(
     temperature: 0.7,
     response_format: { type: "json_object" },
     messages: [
-      { role: "system", content: buildSystemPrompt(input.promptSettings) },
+      { role: "system", content: buildCarouselSystemPrompt(input.promptSettings, siteHost()) },
       { role: "user", content: userPrompt },
     ],
   });
@@ -235,8 +274,7 @@ export async function composeCarousel(
     return rest as Slide;
   });
 
-  const caption =
-    cut(parsed.caption, 2200) ?? `${input.title}\n\nLink en la bio 👇\n\n#cannabis #canamo #${BRAND.handle.replace(".", "")}`;
+  const caption = cut(parsed.caption, 2200) ?? fallbackCaption(input.promptSettings, input.title);
 
   return { slides, caption, coverPrompt };
 }

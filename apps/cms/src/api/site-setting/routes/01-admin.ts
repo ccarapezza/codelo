@@ -16,5 +16,11 @@ export default {
       handler: "api::site-setting.site-setting.adminUpdate",
       config: ADMIN_ROUTE,
     },
+    {
+      method: "POST",
+      path: "/site-setting/admin-logo",
+      handler: "api::site-setting.site-setting.adminUploadLogo",
+      config: ADMIN_ROUTE,
+    },
   ],
 };

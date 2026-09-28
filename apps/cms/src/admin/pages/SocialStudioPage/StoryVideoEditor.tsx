@@ -4,6 +4,7 @@ import { ArrowClockwise, Check, Download } from "@strapi/icons";
 import { useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { AccentCard, GroupLabel } from "../../components/ui";
 import { TEMPLATE_FIELDS, type Slide, type StoryVideoResult } from "./types";
+import { useT } from "../../i18n";
 
 // Historia en formato video: la placa va sobreimpresa sobre el clip. Se editan
 // los textos de la placa y "Recomponer" reusa el clip ya generado ($0 de IA,
@@ -19,6 +20,7 @@ export default function StoryVideoEditor({
   onRecompose: (slide: Slide, clipFileId: number) => void;
   onSaved: (url: string | null) => void;
 }) {
+  const t = useT();
   const { post } = useFetchClient();
   const { toggleNotification } = useNotification();
 
@@ -47,12 +49,12 @@ export default function StoryVideoEditor({
     setSaving(true);
     try {
       const { data } = await post("/api/social-studio/save", { format: "reel", jobId });
-      toggleNotification({ type: "success", message: "Historia (video) guardada en Medios." });
+      toggleNotification({ type: "success", message: t("ss.ok.historia") });
       onSaved((data as { url: string | null }).url ?? null);
     } catch (err) {
       toggleNotification({
         type: "danger",
-        message: (err as Error).message || "Error al guardar. Probá recomponer (es gratis).",
+        message: (err as Error).message || t("ss.story.err"),
       });
     } finally {
       setSaving(false);
@@ -61,8 +63,8 @@ export default function StoryVideoEditor({
 
   return (
     <AccentCard
-      title={`Historia (video) — ${result.seconds}s · 1080×1920`}
-      description="Editá los textos de la placa y recomponé: reusa el clip ya generado, así que no vuelve a gastar IA (solo ffmpeg)."
+      title={t("ss.historia.titulo", { s: result.seconds })}
+      description={t("ss.story.ayuda")}
       accent="success"
       actions={
         <Button
@@ -71,7 +73,7 @@ export default function StoryVideoEditor({
           disabled={!dirty}
           onClick={() => onRecompose(slide, result.clipFileId)}
         >
-          Recomponer (gratis)
+          {t("ss.recomponer")}
         </Button>
       }
     >
@@ -85,11 +87,11 @@ export default function StoryVideoEditor({
           />
         </Box>
         <Box style={{ flex: 1, minWidth: 260 }}>
-          <GroupLabel>Placa · {slide.template}</GroupLabel>
+          <GroupLabel>{t("ss.placa")} · {slide.template}</GroupLabel>
           <Flex direction="column" alignItems="stretch" gap={3} marginTop={2}>
             {fields.map((f) => (
               <Field.Root key={f.key}>
-                <Field.Label>{f.label}</Field.Label>
+                <Field.Label>{t(f.label)}</Field.Label>
                 {f.multiline ? (
                   <Textarea value={(slide[f.key] as string) ?? ""} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setField(f.key, e.target.value)} />
                 ) : (
@@ -100,14 +102,12 @@ export default function StoryVideoEditor({
             {items
               ? items.map((it, i) => (
                   <Field.Root key={`item-${i}`}>
-                    <Field.Label>Punto {i + 1}</Field.Label>
+                    <Field.Label>{t("ss.deck.punto", { n: i + 1 })}</Field.Label>
                     <TextInput value={it} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setItem(i, e.target.value)} />
                   </Field.Root>
                 ))
               : null}
-            <Typography variant="pi" textColor="neutral500">
-              El clip quedó en AI Backgrounds — recomponer no vuelve a pagar IA.
-            </Typography>
+            <Typography variant="pi" textColor="neutral500">{t("ss.story.nota")}</Typography>
             <Flex justifyContent="flex-end" gap={2} marginTop={2} wrap="wrap">
               <Button
                 size="L"
@@ -120,10 +120,10 @@ export default function StoryVideoEditor({
                   a.remove();
                 }}
               >
-                Descargar video
+                {t("ss.descargarVideo")}
               </Button>
               <Button size="L" variant="secondary" startIcon={<Check />} loading={saving} onClick={save}>
-                Guardar en Medios
+                {t("ss.guardarMedios")}
               </Button>
             </Flex>
           </Flex>

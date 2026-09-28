@@ -4,6 +4,7 @@ import { Images } from "@strapi/icons";
 import { useFetchClient } from "@strapi/strapi/admin";
 import { EmptyState } from "../../components/ui";
 import type { BackgroundFile } from "./types";
+import { useT } from "../../i18n";
 
 // Picker de fondos preexistentes de la carpeta "AI Backgrounds" del Media
 // Library. Elegir uno saltea la generación IA (costo $0).
@@ -18,6 +19,7 @@ export default function BackgroundPickerModal({
   onClose: () => void;
   onPick: (file: BackgroundFile) => void;
 }) {
+  const t = useT();
   const { get } = useFetchClient();
   const [files, setFiles] = React.useState<BackgroundFile[] | null>(null);
 
@@ -34,19 +36,19 @@ export default function BackgroundPickerModal({
       <Modal.Content>
         <Modal.Header>
           <Typography variant="omega" fontWeight="bold">
-            {type === "video" ? "Clips de video generados" : "Fondos generados"} — AI Backgrounds
+            {type === "video" ? t("ss.fondos.clips") : t("ss.fondos.imagenes")} — AI Backgrounds
           </Typography>
         </Modal.Header>
         <Modal.Body>
           {files === null ? (
             <Flex justifyContent="center" padding={6}>
-              <Loader>Cargando fondos…</Loader>
+              <Loader>{t("ss.fondos.cargando")}</Loader>
             </Flex>
           ) : files.length === 0 ? (
             <EmptyState
               icon={<Images />}
-              title="Todavía no hay fondos generados"
-              description="Cuando generes contenido con IA, los fondos quedan guardados acá para reusarlos gratis."
+              title={t("ss.fondos.vacio")}
+              description={t("ss.fondos.vacioDesc")}
             />
           ) : (
             <Box
@@ -92,7 +94,7 @@ export default function BackgroundPickerModal({
         </Modal.Body>
         <Modal.Footer>
           <Modal.Close>
-            <Button variant="tertiary">Cerrar</Button>
+            <Button variant="tertiary">{t("comun.cerrar")}</Button>
           </Modal.Close>
         </Modal.Footer>
       </Modal.Content>

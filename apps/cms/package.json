@@ -2,7 +2,7 @@
   "name": "@nib/cms",
   "version": "0.1.0",
   "private": true,
-  "description": "x100 CMS — Strapi application",
+  "description": "Nib CMS — Strapi application",
   "scripts": {
     "build": "strapi build",
     "console": "strapi console",
@@ -19,9 +19,9 @@
   },
   "dependencies": {
     "@resvg/resvg-js": "^2.6.2",
-    "@strapi/plugin-users-permissions": "5.31.2",
-    "@strapi/strapi": "5.31.2",
-    "openai": "^4.73.0",
+    "@strapi/plugin-users-permissions": "5.54.0",
+    "@strapi/strapi": "5.54.0",
+    "openai": "^7.22.0",
     "pg": "8.8.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -30,8 +30,9 @@
     "styled-components": "^6.1.19"
   },
   "devDependencies": {
-    "@strapi/design-system": "^2.0.0-rc.30",
-    "@strapi/icons": "*",
+    "@strapi/design-system": "2.2.4",
+    "react-intl": "6.6.2",
+    "@strapi/icons": "2.2.4",
     "@types/node": "^20.19.27",
     "@types/react": "^18.3.27",
     "@types/react-dom": "^18.3.7",
@@ -39,7 +40,7 @@
     "vitest": "^3.2.4"
   },
   "engines": {
-    "node": ">=20.0.0 <=24.x.x",
+    "node": ">=22.0.0 <=24.x.x",
     "npm": ">=6.0.0"
   }
 }

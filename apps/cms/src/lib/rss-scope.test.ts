@@ -1,6 +1,6 @@
 // Tests del MECANISMO de relevancia editorial, no de las palabras de un
 // vertical: las listas se inyectan mockeando verticals/rss-scope, así que el
-// test sigue valiendo cuando codelo las complete o cuando otro proyecto adopte
+// test sigue valiendo cuando un proyecto las complete o cuando otro adopte
 // el motor con las suyas.
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -14,7 +14,7 @@ const listas = {
 };
 vi.mock("../verticals/rss-scope", () => listas);
 
-const { isEditoriallyRelevant } = await import("./rss-fetcher");
+const { isEditoriallyRelevant, selectFreePool } = await import("./rss-fetcher");
 
 function setListas(next: Partial<typeof listas>) {
   listas.scope = next.scope ?? [];
@@ -26,47 +26,47 @@ function setListas(next: Partial<typeof listas>) {
 beforeEach(() => setListas({}));
 
 describe("isEditoriallyRelevant", () => {
-  it("sin alcance declarado deja pasar todo (el caso de codelo hoy)", () => {
+  it("sin alcance declarado deja pasar todo (el default del motor)", () => {
     expect(isEditoriallyRelevant({ title: "Cualquier cosa", summary: "" })).toBe(true);
     expect(isEditoriallyRelevant({ title: "El dólar hoy", summary: null })).toBe(true);
   });
 
   it("acepta por un término inequívoco del alcance", () => {
-    setListas({ scope: ["reprocann"] });
-    expect(isEditoriallyRelevant({ title: "Cómo renovar el REPROCANN", summary: "" })).toBe(true);
+    setListas({ scope: ["matrícula"] });
+    expect(isEditoriallyRelevant({ title: "Cómo renovar la MATRÍCULA", summary: "" })).toBe(true);
   });
 
   it("descarta lo que no matchea ningún término", () => {
-    setListas({ scope: ["reprocann"] });
+    setListas({ scope: ["matrícula"] });
     expect(isEditoriallyRelevant({ title: "Messi ganó otro premio", summary: "" })).toBe(false);
   });
 
   it("no matchea un término dentro de otra palabra", () => {
-    setListas({ scope: ["cáñamo"] });
+    setListas({ scope: ["energía"] });
     expect(isEditoriallyRelevant({ title: "Cañamoquis, banda de rock", summary: "" })).toBe(false);
   });
 
   it("matchea respetando acentos", () => {
-    setListas({ scope: ["cáñamo"] });
-    expect(isEditoriallyRelevant({ title: "Industria del cáñamo", summary: "" })).toBe(true);
+    setListas({ scope: ["energía"] });
+    expect(isEditoriallyRelevant({ title: "Industria de la energía", summary: "" })).toBe(true);
   });
 
   it("un término ambiguo NO alcanza solo", () => {
-    setListas({ ambiguous: ["planta"], contextCues: ["cannabis"] });
+    setListas({ ambiguous: ["planta"], contextCues: ["vivero"] });
     expect(isEditoriallyRelevant({ title: "Cerró la planta automotriz", summary: "" })).toBe(false);
   });
 
   it("un término ambiguo cuenta si hay pista de contexto", () => {
-    setListas({ ambiguous: ["planta"], contextCues: ["cannabis"] });
+    setListas({ ambiguous: ["planta"], contextCues: ["vivero"] });
     expect(
-      isEditoriallyRelevant({ title: "Cuidados de la planta", summary: "cultivo de cannabis" }),
+      isEditoriallyRelevant({ title: "Cuidados de la planta", summary: "cultivo en vivero" }),
     ).toBe(true);
   });
 
   it("la denylist gana aunque el término del alcance esté presente", () => {
-    setListas({ scope: ["cannabis"], denylist: ["publinota"] });
+    setListas({ scope: ["energía"], denylist: ["publinota"] });
     expect(
-      isEditoriallyRelevant({ title: "Cannabis y salud", summary: "publinota de la marca" }),
+      isEditoriallyRelevant({ title: "Energía y salud", summary: "publinota de la marca" }),
     ).toBe(false);
   });
 
@@ -75,5 +75,35 @@ describe("isEditoriallyRelevant", () => {
     expect(
       isEditoriallyRelevant({ title: "Nueva resolución", summary: "en el marco de la Ley 27.350" }),
     ).toBe(true);
+  });
+});
+
+describe("selectFreePool (el pool del redactor en modo libre)", () => {
+  const item = (title: string) => ({ title, summary: "" });
+  const POOL = [item("Nueva matrícula para el sector"), item("El dólar hoy"), item("Clima del fin de semana")];
+
+  it("sin alcance declarado es el pool tal cual, recortado al límite", () => {
+    const r = selectFreePool(POOL, 2);
+    expect(r.items.map((i) => i.title)).toEqual(["Nueva matrícula para el sector", "El dólar hoy"]);
+    expect(r.fellBack).toBe(false);
+  });
+
+  it("con alcance, deja sólo lo relevante", () => {
+    setListas({ scope: ["matrícula"] });
+    const r = selectFreePool(POOL);
+    expect(r.items.map((i) => i.title)).toEqual(["Nueva matrícula para el sector"]);
+    expect(r.fellBack).toBe(false);
+  });
+
+  it("si nada es relevante, cae al pool completo y lo avisa", () => {
+    setListas({ scope: ["cosecha"] });
+    const r = selectFreePool(POOL);
+    expect(r.items).toHaveLength(3);
+    expect(r.fellBack).toBe(true);
+  });
+
+  it("un pool vacío no es un respaldo", () => {
+    setListas({ scope: ["cosecha"] });
+    expect(selectFreePool([])).toEqual({ items: [], fellBack: false });
   });
 });

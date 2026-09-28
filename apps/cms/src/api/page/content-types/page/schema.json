@@ -5,7 +5,7 @@
     "singularName": "page",
     "pluralName": "pages",
     "displayName": "Page",
-    "description": "Static-content pages editable from the admin (quiénes somos, REPROCANN, contacto…). The web maps fixed routes to well-known slugs."
+    "description": "Static-content pages editable from the admin (about, contact…). The web maps fixed routes to well-known slugs."
   },
   "options": {
     "draftAndPublish": true
@@ -34,7 +34,9 @@
     "coverImage": {
       "type": "media",
       "multiple": false,
-      "allowedTypes": ["images"]
+      "allowedTypes": [
+        "images"
+      ]
     }
   }
 }

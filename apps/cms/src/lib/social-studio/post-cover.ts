@@ -9,13 +9,8 @@
 // original publishedAt so feed ordering doesn't jump.
 
 import type { Core } from "@strapi/strapi";
-import {
-  generateCoverImage,
-  chooseImagePrompt,
-  uploadImageToStrapi,
-  getOpenAIClient,
-  isOpenRouterModel,
-} from "../openai";
+import { getOpenAIClient, isOpenRouterModel } from "../openai";
+import { findActiveImageGenerator, generateCoverForPost } from "../cover-pipeline";
 import {
   getOpenRouterImageKey,
   getOpenAIImageKey,
@@ -25,20 +20,7 @@ import {
 } from "../openai-config";
 import { getPromptSettings } from "../prompt-settings";
 import { logAgentAction } from "../audit";
-
-type ImageGeneratorAgentDoc = {
-  documentId: string;
-  imagePromptTemplate: string | null;
-  imageSize: string | null;
-  imageQuality: string | null;
-};
-
-async function findActiveImageGenerator(strapi: Core.Strapi): Promise<ImageGeneratorAgentDoc | null> {
-  const results = await strapi.documents("api::agent.agent").findMany({
-    filters: { role: "image-generator", enabled: true },
-  });
-  return (results[0] as unknown as ImageGeneratorAgentDoc) ?? null;
-}
+import * as project from "../project";
 
 // Guard against re-entrancy: our own update+publish below re-triggers the publish
 // middleware. The coverImage check already short-circuits that, but this avoids
@@ -96,39 +78,20 @@ export async function ensurePostCover(
     // vertical defaults so a post still gets a cover even with no agent enabled.
     const imgAgent = await findActiveImageGenerator(strapi);
 
-    // Last 10 cover prompts so the new one is forced to differ.
-    const recent = (await strapi.documents("api::post.post").findMany({
-      filters: { coverPrompt: { $notNull: true } },
-      sort: { createdAt: "desc" },
-      fields: ["coverPrompt"],
-      limit: 10,
-    } as never)) as unknown as Array<{ coverPrompt: string | null }>;
-    const recentDescriptions = recent.map((r) => r.coverPrompt!).filter(Boolean);
-
-    const chosenPrompt = await chooseImagePrompt(getOpenAIClient(textKey), textModel, {
-      title: post.title,
-      excerpt: post.excerpt ?? "",
-      seedKey: `${documentId}|${post.title}`,
-      recentDescriptions,
-      systemInstructions: imgAgent?.imagePromptTemplate?.trim() || promptSettings.imageSystemInstructions,
-      themeGuide: promptSettings.imageThemeGuide,
-      anchorTaxonomy: promptSettings.imageAnchorTaxonomy,
-    });
-
-    const imageBuffer = await generateCoverImage(
-      { openaiImageKey: imageKey, openrouterKey },
-      imageModel,
-      chosenPrompt,
-      { size: imgAgent?.imageSize ?? undefined, quality: imgAgent?.imageQuality ?? undefined },
-    );
-
-    const ext = isOpenRouterModel(imageModel) ? "png" : "jpg";
-    const filename = `cover-${documentId}-${Date.now()}.${ext}`;
-    const coverImageId = await uploadImageToStrapi(
-      strapi as Parameters<typeof uploadImageToStrapi>[0],
-      imageBuffer,
-      filename,
-      post.title,
+    // Mismo camino que el Director (semilla `documentId|title`, reintento ante
+    // el 200 vacío de Gemini); antes esta copia no reintentaba.
+    const { coverImageId, coverPrompt: chosenPrompt } = await generateCoverForPost(
+      strapi,
+      { documentId, title: post.title, excerpt: post.excerpt },
+      {
+        textClient: getOpenAIClient(textKey),
+        textModel,
+        imageModel,
+        keys: { openaiImageKey: imageKey, openrouterKey },
+        imgAgent,
+        promptSettings,
+        logTag: "[post-cover]",
+      },
     );
 
     await strapi.documents("api::post.post").update({
@@ -143,7 +106,7 @@ export async function ensurePostCover(
       try {
         await strapi.db
           .connection("posts")
-          .where({ document_id: documentId, locale: "es" })
+          .where({ document_id: documentId, locale: project.defaultLocale })
           .whereNotNull("published_at")
           .update({ published_at: new Date(post.publishedAt) });
       } catch (restoreErr) {

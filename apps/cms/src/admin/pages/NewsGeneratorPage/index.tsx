@@ -14,6 +14,7 @@ import {
 import { Magic, Feather, Pencil, Images, ArrowClockwise } from "@strapi/icons";
 import { useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { PageContainer, PageHeader, AccentCard, Hairline } from "../../components/ui";
+import { useT } from "../../i18n";
 
 type Note = { title: string; excerpt: string; content: string };
 type Source = { title: string; url: string };
@@ -25,6 +26,7 @@ const IMAGE = "/api/news-generator/image";
 const SAVE = "/api/news-generator/save";
 
 export default function NewsGeneratorPage() {
+  const t = useT();
   const { post } = useFetchClient();
   const { toggleNotification } = useNotification();
   const navigate = useNavigate();
@@ -55,9 +57,14 @@ export default function NewsGeneratorPage() {
       const { data } = await post(GENERATE, { prompt, webSearch });
       setNote({ title: data.title, excerpt: data.excerpt ?? "", content: data.content });
       setSources(Array.isArray(data.sources) ? data.sources : []);
-      toggleNotification({ type: "success", message: "Nota generada." });
+      const calcado = data.titleWarning?.echoedHeadline as string | undefined;
+      if (calcado) {
+        toggleNotification({ type: "warning", message: t("nota.aviso.calco", { titular: calcado }) });
+      } else {
+        toggleNotification({ type: "success", message: t("gen.ok.generada") });
+      }
     } catch {
-      toggleNotification({ type: "danger", message: "Falló la generación." });
+      toggleNotification({ type: "danger", message: t("gen.err.generar") });
     } finally {
       setGenerating(false);
     }
@@ -70,9 +77,9 @@ export default function NewsGeneratorPage() {
       const { data } = await post(REFINE, { current: note, instruction, webSearch: refineWeb });
       setNote({ title: data.title, excerpt: data.excerpt ?? "", content: data.content });
       setInstruction("");
-      toggleNotification({ type: "success", message: "Nota actualizada." });
+      toggleNotification({ type: "success", message: t("nota.ok.actualizada") });
     } catch {
-      toggleNotification({ type: "danger", message: "Falló el refinamiento." });
+      toggleNotification({ type: "danger", message: t("gen.err.refinar") });
     } finally {
       setRefining(false);
     }
@@ -88,9 +95,9 @@ export default function NewsGeneratorPage() {
         customPrompt: customImagePrompt.trim() || undefined,
       });
       setCover({ mediaId: data.mediaId, url: data.url, prompt: data.prompt });
-      toggleNotification({ type: "success", message: "Imagen generada." });
+      toggleNotification({ type: "success", message: t("nota.ok.imagen") });
     } catch {
-      toggleNotification({ type: "danger", message: "Falló la generación de imagen." });
+      toggleNotification({ type: "danger", message: t("gen.err.imagen") });
     } finally {
       setImageBusy(false);
     }
@@ -118,7 +125,7 @@ export default function NewsGeneratorPage() {
       // Notas es la pantalla curada donde cualquier rol gestiona la nota.
       navigate("/notas");
     } catch {
-      toggleNotification({ type: "danger", message: "Falló el guardado." });
+      toggleNotification({ type: "danger", message: t("gen.err.guardar") });
     } finally {
       setSaving(false);
     }
@@ -136,19 +143,19 @@ export default function NewsGeneratorPage() {
     <PageContainer>
       <PageHeader
         icon={<Magic />}
-        title="Generador de notas"
-        subtitle="Generá una nota a demanda con un prompt. El modelo busca fuentes en internet, vos editás, refinás y publicás."
+        title={t("gen.titulo")}
+        subtitle={t("gen.subtitulo")}
         accent="primary"
       />
 
       {/* 1 — Prompt */}
       <Box marginBottom={6}>
-        <AccentCard title="1 · Prompt" icon={<Feather />} accent="primary">
-          <Field.Root hint="Describí la nota que querés. Ej: 'Resumen del triunfo de Argentina y las claves del partido'.">
-            <Field.Label>Pedido</Field.Label>
+        <AccentCard title={t("gen.paso1")} icon={<Feather />} accent="primary">
+          <Field.Root hint={t("gen.pedido.hint")}>
+            <Field.Label>{t("nota.pedido")}</Field.Label>
             <Textarea
               rows={4}
-              placeholder="Escribí el pedido de la nota…"
+              placeholder={t("gen.pedido.placeholder")}
               value={prompt}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setPrompt(e.target.value)}
               disabled={generating}
@@ -160,10 +167,10 @@ export default function NewsGeneratorPage() {
               <Switch
                 checked={webSearch}
                 onCheckedChange={(v: boolean) => setWebSearch(v)}
-                aria-label="Buscar en internet"
+                aria-label={t("nota.buscarWeb")}
               />
               <Typography variant="omega" textColor="neutral700">
-                Buscar fuentes en internet
+                {t("nota.buscarWeb")}
               </Typography>
             </Flex>
             <Button
@@ -173,7 +180,7 @@ export default function NewsGeneratorPage() {
               startIcon={<Magic />}
               size="L"
             >
-              {generating ? "Generando…" : "Generar nota"}
+              {generating ? t("comun.generando") : t("gen.generarNota")}
             </Button>
           </Flex>
         </AccentCard>
@@ -181,7 +188,7 @@ export default function NewsGeneratorPage() {
 
       {generating && !note ? (
         <Flex justifyContent="center" padding={8}>
-          <Loader>Generando la nota…</Loader>
+          <Loader>{t("gen.generando")}</Loader>
         </Flex>
       ) : null}
 
@@ -190,18 +197,16 @@ export default function NewsGeneratorPage() {
           {/* 2 — Preview + edición */}
           <Box marginBottom={6}>
             <AccentCard
-              title="2 · Preview y edición"
+              title={t("gen.paso2")}
               icon={<Pencil />}
               accent="secondary"
               actions={
-                <Button variant="tertiary" onClick={handleReset} disabled={saving}>
-                  Empezar de nuevo
-                </Button>
+                <Button variant="tertiary" onClick={handleReset} disabled={saving}>{t("gen.empezarDeNuevo")}</Button>
               }
             >
               <Flex direction="column" gap={4} alignItems="stretch">
                 <Field.Root>
-                  <Field.Label>Título</Field.Label>
+                  <Field.Label>{t("comun.titulo")}</Field.Label>
                   <TextInput
                     value={note.title}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -210,7 +215,7 @@ export default function NewsGeneratorPage() {
                   />
                 </Field.Root>
                 <Field.Root>
-                  <Field.Label>Bajada / excerpt</Field.Label>
+                  <Field.Label>{t("nota.bajada")}</Field.Label>
                   <Textarea
                     rows={2}
                     value={note.excerpt}
@@ -219,8 +224,8 @@ export default function NewsGeneratorPage() {
                     }
                   />
                 </Field.Root>
-                <Field.Root hint="Cuerpo en Markdown. Editá libremente.">
-                  <Field.Label>Cuerpo (Markdown)</Field.Label>
+                <Field.Root hint={t("gen.cuerpo.hint")}>
+                  <Field.Label>{t("gen.cuerpoMarkdown")}</Field.Label>
                   <Textarea
                     rows={18}
                     value={note.content}
@@ -235,7 +240,7 @@ export default function NewsGeneratorPage() {
                   <Box>
                     <Hairline marginY={3} />
                     <Typography variant="sigma" textColor="neutral600">
-                      Fuentes consultadas
+                      {t("gen.fuentes")}
                     </Typography>
                     <Flex direction="column" gap={1} marginTop={2} alignItems="flex-start">
                       {sources.map(s => (
@@ -255,15 +260,15 @@ export default function NewsGeneratorPage() {
           {/* 3 — Refinar con prompt */}
           <Box marginBottom={6}>
             <AccentCard
-              title="3 · Refinar con un prompt"
+              title={t("gen.paso3")}
               icon={<ArrowClockwise />}
               accent="warning"
             >
-              <Field.Root hint="Pedí un cambio. Ej: 'Hacela más corta', 'Agregá una cita', 'Cambiá el enfoque al arquero'.">
-                <Field.Label>Instrucción de modificación</Field.Label>
+              <Field.Root hint={t("gen.refinar.hint")}>
+                <Field.Label>{t("gen.refinar.label")}</Field.Label>
                 <Textarea
                   rows={2}
-                  placeholder="¿Qué querés cambiar?"
+                  placeholder={t("gen.refinar.placeholder")}
                   value={instruction}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                     setInstruction(e.target.value)
@@ -277,11 +282,9 @@ export default function NewsGeneratorPage() {
                   <Switch
                     checked={refineWeb}
                     onCheckedChange={(v: boolean) => setRefineWeb(v)}
-                    aria-label="Buscar en internet al refinar"
+                    aria-label={t("gen.buscar.label")}
                   />
-                  <Typography variant="omega" textColor="neutral700">
-                    Buscar fuentes (si el cambio necesita datos nuevos)
-                  </Typography>
+                  <Typography variant="omega" textColor="neutral700">{t("gen.buscar.hint")}</Typography>
                 </Flex>
                 <Button
                   onClick={handleRefine}
@@ -290,7 +293,7 @@ export default function NewsGeneratorPage() {
                   variant="secondary"
                   startIcon={<ArrowClockwise />}
                 >
-                  {refining ? "Refinando…" : "Refinar"}
+                  {refining ? t("gen.refinando") : t("gen.refinar")}
                 </Button>
               </Flex>
             </AccentCard>
@@ -298,12 +301,12 @@ export default function NewsGeneratorPage() {
 
           {/* 4 — Imagen de portada */}
           <Box marginBottom={6}>
-            <AccentCard title="4 · Imagen de portada" icon={<Images />} accent="success">
-              <Field.Root hint="Opcional. Si lo dejás vacío, usa el agente de imagen configurado.">
-                <Field.Label>Prompt custom (opcional)</Field.Label>
+            <AccentCard title={t("gen.paso4")} icon={<Images />} accent="success">
+              <Field.Root hint={t("gen.imagen.hint")}>
+                <Field.Label>{t("gen.promptImagen")}</Field.Label>
                 <Textarea
                   rows={2}
-                  placeholder="Dejalo vacío para usar el agente, o describí la imagen…"
+                  placeholder={t("gen.imagen.placeholder")}
                   value={customImagePrompt}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                     setCustomImagePrompt(e.target.value)
@@ -320,7 +323,7 @@ export default function NewsGeneratorPage() {
                   variant="secondary"
                   startIcon={<Images />}
                 >
-                  {imageBusy ? "Generando imagen…" : cover ? "Regenerar imagen" : "Generar imagen"}
+                  {imageBusy ? t("gen.imagen.generando") : cover ? t("gen.imagen.regenerar") : t("gen.imagen.generar")}
                 </Button>
               </Flex>
               {cover?.url ? (
@@ -328,7 +331,7 @@ export default function NewsGeneratorPage() {
                   <Hairline marginY={3} />
                   <img
                     src={cover.url}
-                    alt="Portada generada"
+                    alt={t("gen.portadaGenerada")}
                     style={{ maxWidth: "100%", borderRadius: 8, display: "block" }}
                   />
                 </Box>
@@ -347,8 +350,7 @@ export default function NewsGeneratorPage() {
           >
             <Flex justifyContent="space-between" alignItems="center" gap={4}>
               <Typography variant="omega" textColor="neutral600">
-                Guardá como borrador para revisar en el Content Manager, o publicá directo (genera
-                la versión EN).
+                {t("gen.guardar.nota")}
               </Typography>
               <Flex gap={2}>
                 <Button
@@ -357,7 +359,7 @@ export default function NewsGeneratorPage() {
                   loading={saving}
                   disabled={saving}
                 >
-                  Guardar borrador
+                  {t("nota.guardarBorrador")}
                 </Button>
                 <Button
                   onClick={() => handleSave(true)}
@@ -365,7 +367,7 @@ export default function NewsGeneratorPage() {
                   disabled={saving}
                   size="L"
                 >
-                  Publicar ahora
+                  {t("nota.publicarAhora")}
                 </Button>
               </Flex>
             </Flex>

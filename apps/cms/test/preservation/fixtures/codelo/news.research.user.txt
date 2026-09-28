@@ -1,0 +1,10 @@
+Write an article in Spanish for today (2026-09-22) from the following editor request:
+"""Contá qué cambia con el nuevo régimen de inscripción y a quién le afecta."""
+
+## VERIFIED WEB RESEARCH (base EVERY concrete fact ONLY on this)
+- El organismo publicó el nuevo régimen el 12 de marzo.
+- La renovación pasa a tener un plazo de 30 días.
+
+Reminder: do NOT name or credit any OUTLET from the research; report the underlying fact in Cogollos del Oeste's own voice. Official sources (Boletín Oficial, normas, reguladores como ARICCAME o ANMAT, revistas científicas) ARE cited.
+
+Return only the JSON.

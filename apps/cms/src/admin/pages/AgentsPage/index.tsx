@@ -20,8 +20,10 @@ import {
 import { Plus, Trash, Pencil, Feather, Magic, PlusCircle, Play, Eye } from "@strapi/icons";
 import { useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { useNavigate } from "react-router-dom";
+import * as verticals from "../../verticals";
 import { PageContainer, PageHeader, Hairline } from "../../components/ui";
 import { useIsMobile } from "../../hooks/useIsMobile";
+import { useLocaleFechas, useT } from "../../i18n";
 
 // CRUD por la API propia y no por la del Content Manager: el content-type está
 // oculto ahí a propósito (editar un agente a mano rompe cosas), y esa marca hace
@@ -31,6 +33,22 @@ const CREATE_API = "/api/agent/admin-create";
 const UPDATE_API = "/api/agent/admin-update";
 const DELETE_API = "/api/agent/admin-delete";
 const RUN_NOW_API = "/api/agent/run-now";
+
+/**
+ * Roles que agrega el proyecto (admin/verticals.ts). Se lee a la defensiva,
+ * como en Ajustes: un proyecto con una costura anterior a `agentRoles` no la
+ * exporta, y un `.map` sobre `undefined` deja la pantalla en blanco. Son sólo
+ * datos: las etiquetas vienen como texto literal del proyecto.
+ */
+const VERTICAL_ROLES: NonNullable<typeof verticals.agentRoles> =
+  (verticals as Partial<typeof verticals>).agentRoles ?? [];
+
+/** El acento de una sección según el `badgeVariant` que declara el proyecto. */
+function acentoDe(variante: string): "primary" | "warning" | "success" | "secondary" {
+  return variante === "primary" || variante === "warning" || variante === "success"
+    ? variante
+    : "secondary";
+}
 
 // Estimated prices USD per image
 // gpt-image-1: quality = low / medium / high
@@ -44,24 +62,28 @@ const IMAGE_PRICING: Record<string, Record<string, string>> = {
   "512x512":   { low: "$0.007", medium: "N/A",    high: "N/A",    standard: "N/A",    hd: "N/A"    },
 };
 
+// Las etiquetas son claves (o nombres técnicos, que `t()` devuelve tal cual):
+// se traducen al renderizar, nunca acá.
 const QUALITY_OPTIONS = [
-  { value: "low",      label: "Baja",          model: "gpt-image-1" },
-  { value: "medium",   label: "Media",         model: "gpt-image-1" },
-  { value: "high",     label: "Alta",          model: "gpt-image-1" },
+  { value: "low",      label: "ag.calidad.baja",  model: "gpt-image-1" },
+  { value: "medium",   label: "ag.calidad.media", model: "gpt-image-1" },
+  { value: "high",     label: "ag.calidad.alta",  model: "gpt-image-1" },
   { value: "standard", label: "Standard",      model: "dall-e-3"    },
   { value: "hd",       label: "HD",            model: "dall-e-3"    },
 ] as const;
 
 // ─── Day constants ────────────────────────────────────────────────────────────
 
+// Iniciales de cada día, como CLAVES: "L M X J V S D" en castellano no son las
+// del inglés ("M T W T F S S").
 const DAYS = [
-  { key: "MON", label: "L" },
-  { key: "TUE", label: "M" },
-  { key: "WED", label: "X" },
-  { key: "THU", label: "J" },
-  { key: "FRI", label: "V" },
-  { key: "SAT", label: "S" },
-  { key: "SUN", label: "D" },
+  { key: "MON", label: "ag.dia.lun" },
+  { key: "TUE", label: "ag.dia.mar" },
+  { key: "WED", label: "ag.dia.mie" },
+  { key: "THU", label: "ag.dia.jue" },
+  { key: "FRI", label: "ag.dia.vie" },
+  { key: "SAT", label: "ag.dia.sab" },
+  { key: "SUN", label: "ag.dia.dom" },
 ] as const;
 
 type DayKey = (typeof DAYS)[number]["key"];
@@ -134,22 +156,19 @@ function convertTime(time: string, fromTz: string, toTz: string): string | null 
   return `${String(out.hour).padStart(2, "0")}:${String(out.minute).padStart(2, "0")}`;
 }
 
-function formatScheduleSummary(s: ScheduleEntry): string {
+// Recibe `t` en vez de llamar a `useT()`: es una función común que se invoca
+// dentro de un `.map`, y un hook ahí adentro funcionaba de casualidad.
+function formatScheduleSummary(s: ScheduleEntry, t: ReturnType<typeof useT>): string {
   const order: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
   const sorted = [...(s.days ?? [])].sort(
     (a, b) => order.indexOf(a as DayKey) - order.indexOf(b as DayKey),
   );
-  const dayMap: Record<DayKey, string> = {
-    MON: "L", TUE: "M", WED: "X", THU: "J", FRI: "V", SAT: "S", SUN: "D",
-  };
-  const daysStr =
-    sorted.length === 0
-      ? "Todos los días"
-      : sorted.map((d) => dayMap[d as DayKey]).join("");
+  const inicial = (d: string) => t(DAYS.find((x) => x.key === d)?.label ?? d);
+  const daysStr = sorted.length === 0 ? t("ag.todosLosDias") : sorted.map(inicial).join("");
   const tz = s.timezone || DEFAULT_SCHEDULE_TZ;
   const local = tz !== BROWSER_TZ ? convertTime(s.time, tz, BROWSER_TZ) : null;
   const timeStr = local ? `${s.time} (${local} local)` : s.time;
-  return `${daysStr} · ${timeStr} · ${s.notesCount} nota${s.notesCount !== 1 ? "s" : ""}`;
+  return `${daysStr} · ${timeStr} · ${t("ag.nNotas", { n: s.notesCount })}`;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -168,7 +187,7 @@ type Agent = {
   id: number;
   documentId: string;
   name: string;
-  role: "director" | "redactor" | "image-generator";
+  role: string;
   instructions: string;
   topic: string | null;
   requireNewsContext?: boolean;
@@ -178,11 +197,12 @@ type Agent = {
   imagePromptTemplate: string | null;
   imageSize: string | null;
   imageQuality: string | null;
+  defaultTag?: { documentId: string; name: string } | null;
 };
 
 type FormData = {
   name: string;
-  role: "director" | "redactor" | "image-generator";
+  role: string;
   instructions: string;
   topic: string;
   requireNewsContext: boolean;
@@ -191,6 +211,8 @@ type FormData = {
   imagePromptTemplate: string;
   imageSize: string;
   imageQuality: string;
+  /** documentId de la etiqueta, o "" para ninguna. */
+  defaultTag: string;
 };
 
 const EMPTY_FORM: FormData = {
@@ -204,6 +226,7 @@ const EMPTY_FORM: FormData = {
   imagePromptTemplate: "",
   imageSize: "1024x1024",
   imageQuality: "low",
+  defaultTag: "",
 };
 
 const EMPTY_SCHEDULE = (): ScheduleEntry => ({
@@ -222,6 +245,7 @@ function agentToForm(a: Agent): FormData {
     instructions: a.instructions ?? "",
     topic: a.topic ?? "",
     requireNewsContext: a.requireNewsContext ?? false,
+    defaultTag: a.defaultTag?.documentId ?? "",
     enabled: a.enabled,
     schedules: a.schedules.map((s) => ({
       id: s.id,
@@ -241,6 +265,13 @@ function agentToForm(a: Agent): FormData {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
+/**
+ * Botón de selección chico: los días de un horario.
+ *
+ * Con los tokens del tema y no con hex. Tenía clavado el violeta de Strapi
+ * (#4945ff sobre #f0f0ff), que no es la paleta de Nib y no cambia con el modo
+ * oscuro: en oscuro quedaba un recuadro lila claro sobre fondo casi negro.
+ */
 function DayChip({
   label,
   selected,
@@ -251,16 +282,20 @@ function DayChip({
   onClick: () => void;
 }) {
   return (
-    <button
+    <Box
+      tag="button"
       type="button"
       onClick={onClick}
+      background={selected ? "primary100" : "neutral0"}
+      borderColor={selected ? "primary600" : "neutral200"}
+      borderStyle="solid"
+      borderWidth={selected ? "2px" : "1px"}
+      color={selected ? "primary600" : "neutral600"}
+      hasRadius
       style={{
-        width: 28,
+        minWidth: 28,
         height: 28,
-        borderRadius: 4,
-        border: selected ? "2px solid #4945ff" : "1px solid #dcdce4",
-        background: selected ? "#f0f0ff" : "transparent",
-        color: selected ? "#4945ff" : "#666687",
+        padding: "0 8px",
         fontWeight: selected ? 700 : 400,
         fontSize: 12,
         cursor: "pointer",
@@ -270,7 +305,7 @@ function DayChip({
       }}
     >
       {label}
-    </button>
+    </Box>
   );
 }
 
@@ -281,6 +316,8 @@ function RecurringScheduleEditor({
   schedules: ScheduleEntry[];
   onChange: (s: ScheduleEntry[]) => void;
 }) {
+  const t = useT();
+  const loc = useLocaleFechas();
   const addEntry = () => onChange([...schedules, EMPTY_SCHEDULE()]);
   const removeEntry = (idx: number) => onChange(schedules.filter((_, i) => i !== idx));
 
@@ -306,11 +343,9 @@ function RecurringScheduleEditor({
   return (
     <Box>
       <Flex justifyContent="space-between" alignItems="center" paddingBottom={2}>
-        <Typography variant="sigma" textColor="neutral600">
-          Horarios de ejecución recurrentes
-        </Typography>
+        <Typography variant="sigma" textColor="neutral600">{t("ag.horarios.titulo")}</Typography>
         <Button size="S" startIcon={<Plus />} variant="tertiary" onClick={addEntry}>
-          Agregar horario
+          {t("ag.horario.agregar")}
         </Button>
       </Flex>
 
@@ -324,9 +359,7 @@ function RecurringScheduleEditor({
           borderRadius="4px"
           hasRadius
         >
-          <Typography textColor="neutral500" textAlign="center" variant="omega">
-            Sin horarios configurados. Agregá uno para que el agente se ejecute automáticamente.
-          </Typography>
+          <Typography textColor="neutral500" textAlign="center" variant="omega">{t("ag.horarios.vacio")}</Typography>
         </Box>
       ) : (
         <Flex direction="column" alignItems="stretch" gap={3}>
@@ -345,36 +378,17 @@ function RecurringScheduleEditor({
                 <Flex direction="column" alignItems="stretch" gap={3} style={{ flex: 1 }}>
                   {/* Days row */}
                   <Box>
-                    <Typography variant="pi" textColor="neutral600">
-                      Días
-                    </Typography>
+                    <Typography variant="pi" textColor="neutral600">{t("ag.dias")}</Typography>
                     <Flex gap={1} marginTop={1} alignItems="center">
-                      <button
-                        type="button"
+                      <DayChip
+                        label={t("ag.dias.todos")}
+                        selected={(s.days ?? []).length === 0}
                         onClick={() => toggleAllDays(idx)}
-                        style={{
-                          height: 28,
-                          padding: "0 8px",
-                          borderRadius: 4,
-                          border:
-                            (s.days ?? []).length === 0
-                              ? "2px solid #4945ff"
-                              : "1px solid #dcdce4",
-                          background:
-                            (s.days ?? []).length === 0 ? "#f0f0ff" : "transparent",
-                          color:
-                            (s.days ?? []).length === 0 ? "#4945ff" : "#666687",
-                          fontWeight: (s.days ?? []).length === 0 ? 700 : 400,
-                          fontSize: 11,
-                          cursor: "pointer",
-                        }}
-                      >
-                        Todos
-                      </button>
+                      />
                       {DAYS.map((d) => (
                         <DayChip
                           key={d.key}
-                          label={d.label}
+                          label={t(d.label)}
                           selected={(s.days ?? []).includes(d.key)}
                           onClick={() => toggleDay(idx, d.key)}
                         />
@@ -392,7 +406,7 @@ function RecurringScheduleEditor({
                         <Flex gap={4} alignItems="flex-end">
                           <Box style={{ width: 120 }}>
                             <Field.Root>
-                              <Field.Label>Hora</Field.Label>
+                              <Field.Label>{t("ag.horario.hora")}</Field.Label>
                               <TextInput
                                 type="time"
                                 value={s.time}
@@ -404,7 +418,7 @@ function RecurringScheduleEditor({
                           </Box>
                           <Box style={{ width: 240 }}>
                             <Field.Root>
-                              <Field.Label>Zona horaria</Field.Label>
+                              <Field.Label>{t("ag.horario.zona")}</Field.Label>
                               <SingleSelect
                                 value={tz}
                                 onChange={(v: string | number) =>
@@ -413,7 +427,7 @@ function RecurringScheduleEditor({
                               >
                                 {tzOptions(tz).map((z) => (
                                   <SingleSelectOption key={z} value={z}>
-                                    {z === BROWSER_TZ ? `${z} (tu zona)` : z}
+                                    {z === BROWSER_TZ ? t("ag.horario.tuZona", { zona: z }) : z}
                                   </SingleSelectOption>
                                 ))}
                               </SingleSelect>
@@ -421,7 +435,7 @@ function RecurringScheduleEditor({
                           </Box>
                           <Box style={{ width: 150 }}>
                             <Field.Root>
-                              <Field.Label>Notas por ejecución</Field.Label>
+                              <Field.Label>{t("ag.notasPorEjecucion")}</Field.Label>
                               <NumberInput
                                 value={s.notesCount}
                                 onValueChange={(v: number | undefined) =>
@@ -436,16 +450,16 @@ function RecurringScheduleEditor({
                             <Switch
                               checked={s.enabled}
                               onCheckedChange={(v: boolean) => update(idx, "enabled", v)}
-                              aria-label="Activar horario"
+                              aria-label={t("ag.horario.activar")}
                             />
                             <Typography variant="pi" textColor="neutral500">
-                              {s.enabled ? "Activo" : "Inactivo"}
+                              {s.enabled ? t("ag.activo") : t("ag.inactivo")}
                             </Typography>
                           </Flex>
                         </Flex>
                         {local ? (
                           <Typography variant="pi" textColor="primary600">
-                            🕑 {s.time} en {tz} = {local} en tu hora local ({BROWSER_TZ})
+                            🕑 {t("ag.horario.equivale", { hora: s.time, tz, local, tzLocal: BROWSER_TZ })}
                           </Typography>
                         ) : null}
                       </>
@@ -455,13 +469,13 @@ function RecurringScheduleEditor({
                   {/* Last run info */}
                   {s.lastRunAt ? (
                     <Typography variant="pi" textColor="neutral400">
-                      Último run: {new Date(s.lastRunAt).toLocaleString("es-AR")}
+                      {t("ag.ultimoRun", { cuando: new Date(s.lastRunAt).toLocaleString(loc) })}
                     </Typography>
                   ) : null}
                 </Flex>
 
                 <IconButton
-                  label="Eliminar horario"
+                  label={t("ag.horario.eliminar")}
                   variant="ghost"
                   onClick={() => removeEntry(idx)}
                 >
@@ -487,17 +501,29 @@ function AgentFormModal({
   open: boolean;
   onClose: () => void;
   onSaved: () => void;
-  initial: { agent: Agent | null };
+  /** `role`: con qué rol se abre el alta (el "+" de cada sección preselecciona el suyo). */
+  initial: { agent: Agent | null; role?: string };
 }) {
-  const { post, put } = useFetchClient();
+  const t = useT();
+  const { get, post, put } = useFetchClient();
   const { toggleNotification } = useNotification();
   const isMobile = useIsMobile();
   const [form, setForm] = React.useState<FormData>(EMPTY_FORM);
+  const [etiquetas, setEtiquetas] = React.useState<Array<{ documentId: string; name: string }>>([]);
   const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
-    setForm(initial.agent ? agentToForm(initial.agent) : EMPTY_FORM);
-  }, [initial.agent, open]);
+    setForm(
+      initial.agent
+        ? agentToForm(initial.agent)
+        : { ...EMPTY_FORM, role: initial.role ?? EMPTY_FORM.role },
+    );
+    // Las etiquetas se listan al abrir el modal y no al montar la pantalla: es
+    // el único lugar donde se usan.
+    get<Array<{ documentId: string; name: string }>>("/api/news-generator/tags")
+      .then((r) => setEtiquetas(r.data ?? []))
+      .catch(() => setEtiquetas([]));
+  }, [initial.agent, initial.role, open]);
 
   const set = <K extends keyof FormData>(key: K, value: FormData[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -505,11 +531,11 @@ function AgentFormModal({
   const handleSave = async () => {
     const isImageGen = form.role === "image-generator";
     if (!form.name.trim()) {
-      toggleNotification({ type: "warning", message: "El nombre es obligatorio." });
+      toggleNotification({ type: "warning", message: t("ag.err.nombre") });
       return;
     }
     if (!isImageGen && !form.instructions.trim()) {
-      toggleNotification({ type: "warning", message: "Las instrucciones son obligatorias." });
+      toggleNotification({ type: "warning", message: t("ag.err.instrucciones") });
       return;
     }
 
@@ -519,8 +545,12 @@ function AgentFormModal({
         name: form.name.trim(),
         role: form.role,
         instructions: isImageGen ? null : form.instructions.trim(),
-        topic: form.role === "redactor" ? form.topic.trim() : null,
+        topic: (form.role === "redactor" || form.role === "explorador") ? form.topic.trim() : null,
+        // Sólo el Redactor lee el pool de RSS: para el Explorador este ajuste
+        // no significa nada y guardarlo en true sería mentirle al usuario.
         requireNewsContext: form.role === "redactor" ? form.requireNewsContext : false,
+        // El generador de imágenes no publica notas: no tiene sección.
+        defaultTag: isImageGen ? null : form.defaultTag || null,
         enabled: form.enabled,
         schedules: isImageGen
           ? []
@@ -550,21 +580,29 @@ function AgentFormModal({
       onSaved();
       onClose();
     } catch {
-      toggleNotification({ type: "danger", message: "Ocurrió un error al guardar." });
+      toggleNotification({ type: "danger", message: t("ag.err.guardar") });
     } finally {
       setSaving(false);
     }
   };
 
+  // Un rol del proyecto no es un redactor: sus textos salen de su declaración
+  // en admin/verticals.ts o son genéricos, no los del redactor.
+  const rolPropio = VERTICAL_ROLES.find((r) => r.value === form.role);
+
   const instructionsLabel =
     form.role === "director"
-      ? "Instrucciones editoriales del Director"
-      : "Tono y estilo del Redactor";
+      ? t("ag.instrucciones.director")
+      : rolPropio
+        ? t("ag.instrucciones.label")
+        : t("ag.tono.titulo");
 
   const instructionsHint =
     form.role === "director"
-      ? "Lineamientos que el Director aplicará al revisar y publicar borradores."
-      : "Describí la voz, el estilo y la personalidad del redactor.";
+      ? t("ag.director.hint")
+      : rolPropio
+        ? t("ag.instrucciones.hint")
+        : t("ag.redactor.hint");
 
   return (
     <Modal.Root open={open} onOpenChange={(v: boolean) => !v && onClose()}>
@@ -585,7 +623,7 @@ function AgentFormModal({
       >
         <Modal.Header>
           <Modal.Title>
-            {initial.agent ? `Editar agente: ${initial.agent.name}` : "Nuevo agente"}
+            {initial.agent ? t("ag.editarX", { nombre: initial.agent.name }) : t("ag.nuevo")}
           </Modal.Title>
         </Modal.Header>
 
@@ -607,36 +645,46 @@ function AgentFormModal({
                 required
                 hint={
                   form.role === "director"
-                    ? "El Director revisa los borradores generados por los Redactores y los publica."
+                    ? t("ag.rol.director")
                     : form.role === "image-generator"
-                    ? "El Generador de imágenes provee configuración para generar portadas con IA."
-                    : "El Redactor genera artículos en borrador según su tema y estilo."
+                    ? t("ag.rol.imagen")
+                    : form.role === "explorador"
+                    ? t("ag.rol.explorador")
+                    : rolPropio
+                    ? (rolPropio.description ? t(rolPropio.description) : undefined)
+                    : t("ag.rol.redactor")
                 }
               >
-                <Field.Label>Tipo de agente</Field.Label>
+                <Field.Label>{t("ag.tipo")}</Field.Label>
                 <SingleSelect
                   value={form.role}
                   onChange={(val: string | number) =>
-                    set("role", String(val) as "director" | "redactor" | "image-generator")
+                    set("role", String(val) as "director" | "redactor" | "image-generator" | "explorador")
                   }
                 >
                   <SingleSelectOption value="redactor" startIcon={<Feather />}>
-                    Redactor
+                    {t("ag.redactor")}
                   </SingleSelectOption>
                   <SingleSelectOption value="director" startIcon={<Magic />}>
-                    Director
+                    {t("ag.director")}
                   </SingleSelectOption>
-                  <SingleSelectOption value="image-generator" startIcon={<Magic />}>
-                    Generador de imágenes
+                  <SingleSelectOption value="explorador" startIcon={<Feather />}>
+                    {t("ag.explorador")}
                   </SingleSelectOption>
+                  {VERTICAL_ROLES.map((r) => (
+                    <SingleSelectOption key={r.value} value={r.value} startIcon={<Magic />}>
+                      {t(r.label)}
+                    </SingleSelectOption>
+                  ))}
+                  <SingleSelectOption value="image-generator" startIcon={<Magic />}>{t("ag.generadorImagenes")}</SingleSelectOption>
                 </SingleSelect>
                 <Field.Hint />
               </Field.Root>
 
-              <Field.Root required hint="Este nombre aparecerá como Autor en los artículos generados.">
-                <Field.Label>Nombre del agente / Autor</Field.Label>
+              <Field.Root required hint={t("ag.nombre.hint")}>
+                <Field.Label>{t("ag.nombre.label")}</Field.Label>
                 <TextInput
-                  placeholder="Ej: Lucas Pérez"
+                  placeholder={t("ag.nombre.placeholder")}
                   value={form.name}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     set("name", e.target.value)
@@ -645,12 +693,16 @@ function AgentFormModal({
                 <Field.Hint />
               </Field.Root>
 
-              {form.role === "redactor" ? (
-                <Field.Root hint="Definí el área temática que cubrirá este redactor. Cuanto más específico, mejor.">
-                  <Field.Label>Tema del redactor</Field.Label>
+              {(form.role === "redactor" || form.role === "explorador") ? (
+                <Field.Root
+                  hint={form.role === "explorador" ? t("ag.area.hint") : t("ag.tema.hint")}
+                >
+                  <Field.Label>
+                    {form.role === "explorador" ? t("ag.area.label") : t("ag.tema.label")}
+                  </Field.Label>
                   <Textarea
                     rows={4}
-                    placeholder="Palabras clave del beat, separadas por espacios. Ej: cannabis cannábico cáñamo REPROCANN ARICCAME autocultivo"
+                    placeholder={t("ag.tema.placeholder")}
                     value={form.topic}
                     onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                       set("topic", e.target.value)
@@ -660,25 +712,41 @@ function AgentFormModal({
                 </Field.Root>
               ) : null}
 
+              {form.role !== "image-generator" ? (
+                <Field.Root hint={t("ag.etiqueta.hint")}>
+                  <Field.Label>{t("ag.etiqueta.label")}</Field.Label>
+                  <SingleSelect
+                    value={form.defaultTag}
+                    onChange={(v: string) => set("defaultTag", String(v ?? ""))}
+                  >
+                    <SingleSelectOption value="">{t("ag.etiqueta.ninguna")}</SingleSelectOption>
+                    {etiquetas.map((e) => (
+                      <SingleSelectOption key={e.documentId} value={e.documentId}>
+                        {e.name}
+                      </SingleSelectOption>
+                    ))}
+                  </SingleSelect>
+                  <Field.Hint />
+                </Field.Root>
+              ) : null}
+
               {form.role === "redactor" ? (
                 <Box padding={4} background="neutral100" hasRadius>
                   <Flex justifyContent="space-between" alignItems="center" gap={3}>
                     <Box>
                       <Typography variant="omega" fontWeight="semiBold">
-                        Exigir fuentes
+                        {t("ag.exigirFuentes")}
                       </Typography>
                       <Box>
                         <Typography variant="pi" textColor="neutral500">
-                          Si no hay noticias que matcheen el tema, no escribe nada. Sin
-                          fuentes el modelo redacta de memoria e inventa datos.
-                          Recomendado en legales y salud.
+                          {t("ag.exigirFuentes.hint")}
                         </Typography>
                       </Box>
                     </Box>
                     <Switch
                       checked={form.requireNewsContext}
                       onCheckedChange={(v: boolean) => set("requireNewsContext", v)}
-                      aria-label="Exigir contexto de noticias"
+                      aria-label={t("ag.exigirContexto")}
                     />
                   </Flex>
                 </Box>
@@ -687,29 +755,29 @@ function AgentFormModal({
               {form.role === "image-generator" ? (
                 <>
                   <Field.Root required>
-                    <Field.Label>Tamaño de imagen</Field.Label>
+                    <Field.Label>{t("ag.tamanoImagen")}</Field.Label>
                     <SingleSelect
                       value={form.imageSize}
                       onChange={(val: string | number) => set("imageSize", String(val))}
                     >
-                      <SingleSelectOption value="1024x1024">1024×1024 (cuadrada)</SingleSelectOption>
+                      <SingleSelectOption value="1024x1024">{t("ag.tamano.cuadrada")}</SingleSelectOption>
                       <SingleSelectOption value="1536x1024">1536×1024 (landscape)</SingleSelectOption>
                       <SingleSelectOption value="1024x1536">1024×1536 (portrait)</SingleSelectOption>
                       <SingleSelectOption value="1792x1024">1792×1024 (wide)</SingleSelectOption>
                       <SingleSelectOption value="1024x1792">1024×1792 (tall)</SingleSelectOption>
-                      <SingleSelectOption value="512x512">512×512 (pequeña)</SingleSelectOption>
+                      <SingleSelectOption value="512x512">{t("ag.tamano.512")}</SingleSelectOption>
                     </SingleSelect>
                   </Field.Root>
 
                   <Field.Root required>
-                    <Field.Label>Calidad</Field.Label>
+                    <Field.Label>{t("ag.calidad")}</Field.Label>
                     <SingleSelect
                       value={form.imageQuality}
                       onChange={(val: string | number) => set("imageQuality", String(val))}
                     >
-                      <SingleSelectOption value="low">Baja — gpt-image-1</SingleSelectOption>
-                      <SingleSelectOption value="medium">Media — gpt-image-1</SingleSelectOption>
-                      <SingleSelectOption value="high">Alta — gpt-image-1</SingleSelectOption>
+                      <SingleSelectOption value="low">{t("ag.calidad.baja")} — gpt-image-1</SingleSelectOption>
+                      <SingleSelectOption value="medium">{t("ag.calidad.media")} — gpt-image-1</SingleSelectOption>
+                      <SingleSelectOption value="high">{t("ag.calidad.alta")} — gpt-image-1</SingleSelectOption>
                       <SingleSelectOption value="standard">Standard — dall-e-3</SingleSelectOption>
                       <SingleSelectOption value="hd">HD — dall-e-3</SingleSelectOption>
                     </SingleSelect>
@@ -725,9 +793,7 @@ function AgentFormModal({
                       borderRadius="4px"
                       hasRadius
                     >
-                      <Typography variant="pi" textColor="neutral600" fontWeight="bold">
-                        Costo estimado por imagen
-                      </Typography>
+                      <Typography variant="pi" textColor="neutral600" fontWeight="bold">{t("ag.costoImagen")}</Typography>
                       <Flex gap={2} marginTop={2} style={{ flexWrap: "wrap" }}>
                         {QUALITY_OPTIONS.map(({ value, label, model }) => {
                           const price = IMAGE_PRICING[form.imageSize]?.[value];
@@ -739,15 +805,16 @@ function AgentFormModal({
                               direction="column"
                               alignItems="center"
                               gap={1}
-                              style={{
-                                padding: "6px 10px",
-                                borderRadius: 4,
-                                background: isSelected ? "#f0f0ff" : "transparent",
-                                border: isSelected ? "1px solid #4945ff" : "1px solid transparent",
-                              }}
+                              // Tokens del tema: tenía clavado el violeta de Strapi.
+                              background={isSelected ? "primary100" : undefined}
+                              borderColor={isSelected ? "primary600" : "transparent"}
+                              borderStyle="solid"
+                              borderWidth="1px"
+                              hasRadius
+                              style={{ padding: "6px 10px" }}
                             >
                               <Typography variant="pi" textColor={isSelected ? "primary600" : "neutral500"} fontWeight={isSelected ? "bold" : "normal"}>
-                                {label}
+                                {t(label)}
                               </Typography>
                               <Typography variant="pi" textColor="neutral400" style={{ fontSize: 10 }}>
                                 {model}
@@ -760,9 +827,7 @@ function AgentFormModal({
                         })}
                       </Flex>
                       <Box marginTop={2}>
-                        <Typography variant="pi" textColor="neutral400">
-                          * Precios aprox. en USD. El modelo de imagen se configura en Site Settings. La calidad y estos precios aplican solo a modelos OpenAI; con Nano Banana (Gemini) la calidad se ignora, el tamaño se mapea a aspect ratio y el costo es ~$0.039–0.134 por imagen.
-                        </Typography>
+                        <Typography variant="pi" textColor="neutral400">{t("ag.costoImagen.nota")}</Typography>
                       </Box>
                     </Box>
                   ) : null}
@@ -781,18 +846,16 @@ function AgentFormModal({
                 <Flex justifyContent="space-between" alignItems="center" gap={3}>
                   <Box style={{ flex: 1, minWidth: 0 }}>
                     <Typography variant="omega" fontWeight="bold">
-                      Agente activo
+                      {t("ag.agenteActivo")}
                     </Typography>
                     <Box>
-                      <Typography variant="pi" textColor="neutral500">
-                        Si está desactivado, el cron no lo ejecutará.
-                      </Typography>
+                      <Typography variant="pi" textColor="neutral500">{t("ag.habilitado.hint")}</Typography>
                     </Box>
                   </Box>
                   <Switch
                     checked={form.enabled}
                     onCheckedChange={(v: boolean) => set("enabled", v)}
-                    aria-label="Activar agente"
+                    aria-label={t("ag.activarAgente")}
                   />
                 </Flex>
               </Box>
@@ -801,11 +864,11 @@ function AgentFormModal({
             {/* RIGHT COLUMN — prompt textarea + (optional) schedules */}
             <Flex direction="column" alignItems="stretch" gap={4} style={{ minWidth: 0 }}>
               {form.role === "image-generator" ? (
-                <Field.Root hint="Instrucciones de estilo visual para el modelo de texto que genera el prompt de imagen. Cuanto más específico, más coherentes serán las portadas. Si está vacío se usan las instrucciones por defecto.">
-                  <Field.Label>Instrucciones de estilo visual</Field.Label>
+                <Field.Root hint={t("ag.estiloVisual.hint")}>
+                  <Field.Label>{t("ag.estiloVisual.label")}</Field.Label>
                   <Textarea
                     rows={18}
-                    placeholder={`Ej: Prefer botanical plate illustrations over photographs for this beat. Warm ochre inks on cream stock, herbarium-sheet layout. No consumption imagery, no people, no faces.`}
+                    placeholder={t("ag.estiloVisual.placeholder")}
                     value={form.imagePromptTemplate}
                     onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                       set("imagePromptTemplate", e.target.value)
@@ -818,11 +881,11 @@ function AgentFormModal({
                   <Field.Root required hint={instructionsHint}>
                     <Field.Label>{instructionsLabel}</Field.Label>
                     <Textarea
-                      rows={form.role === "redactor" ? 10 : 14}
+                      rows={(form.role === "redactor" || form.role === "explorador") ? 10 : 14}
                       placeholder={
                         form.role === "director"
-                          ? "Ej: Asegurate de que los títulos sean atractivos, el contenido sea preciso y la redacción sea en español rioplatense..."
-                          : "Ej: Escribí en primera persona, con un tono apasionado y experto en fútbol argentino..."
+                          ? t("ag.director.placeholder")
+                          : t("ag.redactor.placeholder")
                       }
                       value={form.instructions}
                       onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
@@ -844,10 +907,10 @@ function AgentFormModal({
 
         <Modal.Footer>
           <Modal.Close>
-            <Button variant="tertiary">Cancelar</Button>
+            <Button variant="tertiary">{t("comun.cancelar")}</Button>
           </Modal.Close>
           <Button onClick={handleSave} loading={saving}>
-            {initial.agent ? "Guardar cambios" : "Crear agente"}
+            {initial.agent ? t("nota.guardarCambios") : t("ag.crearAgente")}
           </Button>
         </Modal.Footer>
       </Modal.Content>
@@ -872,6 +935,8 @@ function AgentItem({
   onToggleEnabled: (next: boolean) => void;
   toggling: boolean;
 }) {
+  const t = useT();
+  const loc = useLocaleFechas();
   const activeSchedules = (agent.schedules ?? []).filter((s) => s.enabled);
   const isMobile = useIsMobile();
 
@@ -920,10 +985,10 @@ function AgentItem({
             </Typography>
           ) : null}
 
-          {agent.role === "redactor" && agent.topic ? (
+          {agent.role !== "image-generator" && agent.topic ? (
             <Box marginTop={1}>
               <Typography variant="pi" textColor="primary600">
-                Tema: {agent.topic.slice(0, 60)}{agent.topic.length > 60 ? "…" : ""}
+                {t("ag.temaLabel")} {agent.topic.slice(0, 60)}{agent.topic.length > 60 ? "…" : ""}
               </Typography>
             </Box>
           ) : null}
@@ -937,7 +1002,7 @@ function AgentItem({
                 {agent.imageQuality ?? "low"}
               </Badge>
               <Typography variant="pi" textColor="neutral400">
-                {agent.imagePromptTemplate ? "Prompt personalizado" : "Prompt por defecto"}
+                {agent.imagePromptTemplate ? t("ag.promptPropio") : t("ag.promptDefecto")}
               </Typography>
             </Flex>
           ) : (
@@ -946,19 +1011,17 @@ function AgentItem({
                 <Flex direction="column" gap={1}>
                   {activeSchedules.map((s, i) => (
                     <Typography key={i} variant="pi" textColor="neutral500">
-                      🕐 {formatScheduleSummary(s)}
+                      🕐 {formatScheduleSummary(s, t)}
                     </Typography>
                   ))}
                 </Flex>
               ) : (
-                <Typography variant="pi" textColor="neutral400">
-                  Sin horarios activos
-                </Typography>
+                <Typography variant="pi" textColor="neutral400">{t("ag.sinHorarios")}</Typography>
               )}
               {agent.lastRunAt ? (
                 <Box marginTop={1}>
                   <Typography variant="pi" textColor="neutral400">
-                    Último run: {new Date(agent.lastRunAt).toLocaleString("es-AR")}
+                    {t("ag.ultimoRun", { cuando: new Date(agent.lastRunAt).toLocaleString(loc) })}
                   </Typography>
                 </Box>
               ) : null}
@@ -980,24 +1043,24 @@ function AgentItem({
               variant="pi"
               textColor={agent.enabled ? "success600" : "neutral500"}
             >
-              {agent.enabled ? "Activo" : "Inactivo"}
+              {agent.enabled ? t("ag.activo") : t("ag.inactivo")}
             </Typography>
             <Switch
               checked={agent.enabled}
               onCheckedChange={(v: boolean) => onToggleEnabled(v)}
               disabled={toggling}
-              aria-label={agent.enabled ? `Desactivar ${agent.name}` : `Activar ${agent.name}`}
+              aria-label={agent.enabled ? t("ag.desactivarX", { nombre: agent.name }) : t("ag.activarX", { nombre: agent.name })}
             />
           </Flex>
           {agent.role !== "image-generator" ? (
-            <IconButton label="Ejecutar ahora" variant="ghost" onClick={onRunNow}>
+            <IconButton label={t("ag.ejecutarAhora")} variant="ghost" onClick={onRunNow}>
               <Play />
             </IconButton>
           ) : null}
-          <IconButton label="Editar" variant="ghost" onClick={onEdit}>
+          <IconButton label={t("comun.editar")} variant="ghost" onClick={onEdit}>
             <Pencil />
           </IconButton>
-          <IconButton label="Eliminar" variant="ghost" onClick={onDelete}>
+          <IconButton label={t("comun.eliminar")} variant="ghost" onClick={onDelete}>
             <Trash />
           </IconButton>
         </Flex>
@@ -1013,7 +1076,6 @@ function RoleSection({
   title,
   description,
   accent,
-  count,
   countLabel,
   canCreate,
   onCreate,
@@ -1023,12 +1085,12 @@ function RoleSection({
   title: string;
   description: string;
   accent: "primary" | "warning" | "success" | "secondary";
-  count: number;
   countLabel: string;
   canCreate: boolean;
   onCreate: () => void;
   children: React.ReactNode;
 }) {
+  const t = useT();
   const accentBg =
     accent === "primary"
       ? "primary100"
@@ -1082,13 +1144,13 @@ function RoleSection({
               </Typography>
               <Box>
                 <Typography variant="pi" textColor="neutral500">
-                  {count} {countLabel}
+                  {countLabel}
                 </Typography>
               </Box>
             </Box>
           </Flex>
           {canCreate ? (
-            <IconButton label={`Crear ${title}`} variant="tertiary" onClick={onCreate}>
+            <IconButton label={t("ag.crear", { que: title })} variant="tertiary" onClick={onCreate}>
               <Plus />
             </IconButton>
           ) : null}
@@ -1161,6 +1223,7 @@ function EmptySectionState({
 // ─── AgentsPage ───────────────────────────────────────────────────────────────
 
 export default function AgentsPage() {
+  const t = useT();
   const { get, post, put, del } = useFetchClient();
   const { toggleNotification } = useNotification();
   const navigate = useNavigate();
@@ -1169,6 +1232,7 @@ export default function AgentsPage() {
   const [loading, setLoading] = React.useState(true);
   const [modalOpen, setModalOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Agent | null>(null);
+  const [crearRol, setCrearRol] = React.useState<string | undefined>(undefined);
   const [deleteTarget, setDeleteTarget] = React.useState<Agent | null>(null);
   const [deleting, setDeleting] = React.useState(false);
   // documentId del agente cuyo toggle está en vuelo (deshabilita ese switch).
@@ -1187,7 +1251,7 @@ export default function AgentsPage() {
       const { data } = await get<{ results: Agent[] }>(LIST_API);
       setAgents(data.results ?? []);
     } catch {
-      toggleNotification({ type: "danger", message: "No se pudieron cargar los agentes." });
+      toggleNotification({ type: "danger", message: t("ag.err.cargar") });
     } finally {
       setLoading(false);
     }
@@ -1202,11 +1266,11 @@ export default function AgentsPage() {
     setDeleting(true);
     try {
       await del(`${DELETE_API}/${deleteTarget.documentId}`);
-      toggleNotification({ type: "success", message: "Agente eliminado." });
+      toggleNotification({ type: "success", message: t("ag.ok.eliminado") });
       setDeleteTarget(null);
       loadAgents();
     } catch {
-      toggleNotification({ type: "danger", message: "No se pudo eliminar el agente." });
+      toggleNotification({ type: "danger", message: t("ag.err.eliminar") });
     } finally {
       setDeleting(false);
     }
@@ -1234,7 +1298,9 @@ export default function AgentsPage() {
       );
       toggleNotification({
         type: "danger",
-        message: `No se pudo ${next ? "activar" : "desactivar"} "${agent.name}".`,
+        message: next
+          ? t("ag.err.activar", { nombre: agent.name })
+          : t("ag.err.desactivar", { nombre: agent.name }),
       });
     } finally {
       setTogglingId(null);
@@ -1251,12 +1317,12 @@ export default function AgentsPage() {
       });
       toggleNotification({
         type: "success",
-        message: `Agente "${runNowTarget.name}" ejecutado con ${runNowCount} nota${runNowCount !== 1 ? "s" : ""}.`,
+        message: t("ag.ok.ejecutado", { nombre: runNowTarget.name, n: runNowCount }),
       });
       setRunNowTarget(null);
       loadAgents();
     } catch {
-      toggleNotification({ type: "danger", message: "Error al ejecutar el agente." });
+      toggleNotification({ type: "danger", message: t("ag.err.ejecutar") });
     } finally {
       setRunning(false);
     }
@@ -1265,6 +1331,7 @@ export default function AgentsPage() {
   const director = agents.find((a) => a.role === "director") ?? null;
   const imageGenerator = agents.find((a) => a.role === "image-generator") ?? null;
   const redactors = agents.filter((a) => a.role === "redactor");
+  const exploradores = agents.filter((a) => a.role === "explorador");
 
   // Backfill English translations for every published Spanish post that lacks
   // one. Fire-and-forget on the server (sequential, respects rate limits);
@@ -1281,20 +1348,23 @@ export default function AgentsPage() {
         message:
           data.scheduled > 0
             ? `Traduciendo ${data.scheduled} nota${data.scheduled !== 1 ? "s" : ""} al inglés en segundo plano.`
-            : "Todas las notas publicadas ya están traducidas.",
+            : t("ag.trad.alDia"),
       });
     } catch {
       toggleNotification({
         type: "danger",
-        message: "No se pudo iniciar la traducción.",
+        message: t("ag.err.traducir"),
       });
     } finally {
       setBackfilling(false);
     }
   };
 
-  const openCreate = () => {
+  // Recibe el rol a preseleccionar. Se llama siempre con una flecha: pasada
+  // directo a un onClick recibiría el evento como "rol".
+  const openCreate = (rol?: string) => {
     setEditing(null);
+    setCrearRol(rol);
     setModalOpen(true);
   };
 
@@ -1312,31 +1382,29 @@ export default function AgentsPage() {
     <PageContainer>
       <PageHeader
         icon={<Magic width="1.4rem" height="1.4rem" />}
-        title="AI Agents"
-        subtitle="Gestioná los agentes que generan y publican artículos automáticamente."
+        title={t("ag.titulo")}
+        subtitle={t("ag.subtitulo")}
         actions={
           <Flex gap={2}>
             {/* Audit ya no está en el menú lateral; este es su único acceso visible. */}
             <Button variant="tertiary" startIcon={<Eye />} onClick={() => navigate("/audit")}>
-              Audit
+              {t("ag.audit")}
             </Button>
             <Button
               variant="secondary"
               loading={backfilling}
               onClick={handleBackfillTranslations}
             >
-              Traducir faltantes
+              {t("ag.traducirFaltantes")}
             </Button>
-            <Button startIcon={<PlusCircle />} onClick={openCreate}>
-              Nuevo agente
-            </Button>
+            <Button startIcon={<PlusCircle />} onClick={() => openCreate()}>{t("ag.nuevo")}</Button>
           </Flex>
         }
       />
 
       {loading ? (
         <Flex justifyContent="center" padding={10}>
-          <Loader>Cargando agentes...</Loader>
+          <Loader>{t("ag.cargando")}</Loader>
         </Flex>
       ) : (
         <Box
@@ -1350,13 +1418,12 @@ export default function AgentsPage() {
           {/* Director */}
           <RoleSection
             icon={<Magic aria-hidden />}
-            title="Director"
-            description="Revisa los borradores generados por los Redactores y publica las notas finales."
+            title={t("ag.director")}
+            description={t("ag.director.desc")}
             accent="primary"
-            count={director ? 1 : 0}
-            countLabel="de 1 configurado"
+            countLabel={t("ag.de1Configurado", { n: director ? 1 : 0 })}
             canCreate={!director}
-            onCreate={openCreate}
+            onCreate={() => openCreate("director")}
           >
             {director ? (
               <AgentItem
@@ -1370,9 +1437,9 @@ export default function AgentsPage() {
             ) : (
               <EmptySectionState
                 icon={<Magic aria-hidden />}
-                message="Sin Director configurado. Sin él, los borradores no se publicarán automáticamente."
-                actionLabel="Crear Director"
-                onAction={openCreate}
+                message={t("ag.director.vacio")}
+                actionLabel={t("ag.crear", { que: t("ag.director") })}
+                onAction={() => openCreate("director")}
               />
             )}
           </RoleSection>
@@ -1380,13 +1447,12 @@ export default function AgentsPage() {
           {/* Image Generator */}
           <RoleSection
             icon={<Magic aria-hidden />}
-            title="Generador de imágenes"
-            description="Provee la configuración para generar portadas con IA. Sin él, las notas se publicarán sin imagen."
+            title={t("ag.generadorImagenes")}
+            description={t("ag.imagen.desc")}
             accent="warning"
-            count={imageGenerator ? 1 : 0}
-            countLabel="de 1 configurado"
+            countLabel={t("ag.de1Configurado", { n: imageGenerator ? 1 : 0 })}
             canCreate={!imageGenerator}
-            onCreate={openCreate}
+            onCreate={() => openCreate("image-generator")}
           >
             {imageGenerator ? (
               <AgentItem
@@ -1400,9 +1466,9 @@ export default function AgentsPage() {
             ) : (
               <EmptySectionState
                 icon={<Magic aria-hidden />}
-                message="Sin Generador de imágenes. El botón de portada del Content Manager quedará deshabilitado."
-                actionLabel="Crear Generador"
-                onAction={openCreate}
+                message={t("ag.imagen.vacio")}
+                actionLabel={t("ag.crear", { que: t("ag.generadorImagenes") })}
+                onAction={() => openCreate("image-generator")}
               />
             )}
           </RoleSection>
@@ -1410,13 +1476,12 @@ export default function AgentsPage() {
           {/* Redactors */}
           <RoleSection
             icon={<Feather aria-hidden />}
-            title="Redactores"
-            description="Cada Redactor genera artículos en borrador sobre su tema específico, con su propio tono y estilo."
+            title={t("ag.redactores")}
+            description={t("ag.redactores.desc")}
             accent="success"
-            count={redactors.length}
-            countLabel={`Redactor${redactors.length !== 1 ? "es" : ""} configurado${redactors.length !== 1 ? "s" : ""}`}
+            countLabel={t("ag.redactoresConfigurados", { n: redactors.length })}
             canCreate
-            onCreate={openCreate}
+            onCreate={() => openCreate("redactor")}
           >
             {redactors.length > 0 ? (
               <Flex direction="column" alignItems="stretch" gap={3}>
@@ -1435,13 +1500,87 @@ export default function AgentsPage() {
             ) : (
               <EmptySectionState
                 icon={<Feather aria-hidden />}
-                message="Sin Redactores configurados. Agregá al menos uno para empezar a generar artículos."
-                actionLabel="Crear Redactor"
-                onAction={openCreate}
+                message={t("ag.redactores.vacio")}
+                actionLabel={t("ag.crear", { que: t("ag.redactor") })}
+                onAction={() => openCreate("redactor")}
               />
             )}
           </RoleSection>
 
+          {/* Exploradores */}
+          <RoleSection
+            icon={<Feather aria-hidden />}
+            title={t("ag.exploradores")}
+            description={t("ag.exploradores.desc")}
+            accent="secondary"
+            countLabel={t("ag.redactoresConfigurados", { n: exploradores.length })}
+            canCreate
+            onCreate={() => openCreate("explorador")}
+          >
+            {exploradores.length > 0 ? (
+              <Flex direction="column" alignItems="stretch" gap={3}>
+                {exploradores.map((a) => (
+                  <AgentItem
+                    key={a.documentId}
+                    agent={a}
+                    onEdit={() => openEdit(a)}
+                    onDelete={() => setDeleteTarget(a)}
+                    onRunNow={() => openRunNow(a)}
+                    onToggleEnabled={(next) => handleToggleEnabled(a, next)}
+                    toggling={togglingId === a.documentId}
+                  />
+                ))}
+              </Flex>
+            ) : (
+              <EmptySectionState
+                icon={<Feather aria-hidden />}
+                message={t("ag.exploradores.vacio")}
+                actionLabel={t("ag.crear", { que: t("ag.explorador") })}
+                onAction={() => openCreate("explorador")}
+              />
+            )}
+          </RoleSection>
+
+          {/* Los roles que suma el proyecto (admin/verticals.ts), con el mismo
+              tablero que los del motor: editar, borrar, correr, activar. */}
+          {VERTICAL_ROLES.map((r) => {
+            const propios = agents.filter((a) => a.role === r.value);
+            return (
+              <RoleSection
+                key={r.value}
+                icon={<Feather aria-hidden />}
+                title={t(r.label)}
+                description={r.description ? t(r.description) : ""}
+                accent={acentoDe(r.badgeVariant)}
+                countLabel={t("ag.redactoresConfigurados", { n: propios.length })}
+                canCreate
+                onCreate={() => openCreate(r.value)}
+              >
+                {propios.length > 0 ? (
+                  <Flex direction="column" alignItems="stretch" gap={3}>
+                    {propios.map((a) => (
+                      <AgentItem
+                        key={a.documentId}
+                        agent={a}
+                        onEdit={() => openEdit(a)}
+                        onDelete={() => setDeleteTarget(a)}
+                        onRunNow={() => openRunNow(a)}
+                        onToggleEnabled={(next) => handleToggleEnabled(a, next)}
+                        toggling={togglingId === a.documentId}
+                      />
+                    ))}
+                  </Flex>
+                ) : (
+                  <EmptySectionState
+                    icon={<Feather aria-hidden />}
+                    message={t("ag.rol.vacio", { rol: t(r.label) })}
+                    actionLabel={t("ag.crear", { que: t(r.label) })}
+                    onAction={() => openCreate(r.value)}
+                  />
+                )}
+              </RoleSection>
+            );
+          })}
         </Box>
       )}
 
@@ -1450,7 +1589,7 @@ export default function AgentsPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSaved={loadAgents}
-        initial={{ agent: editing }}
+        initial={{ agent: editing, role: crearRol }}
       />
 
       {/* Delete confirmation */}
@@ -1459,22 +1598,20 @@ export default function AgentsPage() {
         onOpenChange={(v: boolean) => !v && setDeleteTarget(null)}
       >
         <Dialog.Content>
-          <Dialog.Header>Eliminar agente</Dialog.Header>
+          <Dialog.Header>{t("ag.eliminar.titulo")}</Dialog.Header>
           <Dialog.Body>
             <Typography textAlign="center">
-              ¿Estás seguro de que querés eliminar el agente{" "}
-              <Typography fontWeight="bold">{deleteTarget?.name}</Typography>?
-              Esta acción no se puede deshacer.
+              {t("ag.eliminar.pregunta")}{" "}
+              <Typography fontWeight="bold">{deleteTarget?.name}</Typography>
+              {t("ag.eliminar.irreversible")}
             </Typography>
           </Dialog.Body>
           <Dialog.Footer>
             <Dialog.Cancel>
-              <Button variant="tertiary">Cancelar</Button>
+              <Button variant="tertiary">{t("comun.cancelar")}</Button>
             </Dialog.Cancel>
             <Dialog.Action>
-              <Button variant="danger-light" onClick={handleDelete} loading={deleting}>
-                Eliminar
-              </Button>
+              <Button variant="danger-light" onClick={handleDelete} loading={deleting}>{t("comun.eliminar")}</Button>
             </Dialog.Action>
           </Dialog.Footer>
         </Dialog.Content>
@@ -1487,14 +1624,14 @@ export default function AgentsPage() {
       >
         <Dialog.Content>
           <Dialog.Header>
-            Ejecutar ahora: {runNowTarget?.name}
+            {t("ag.ejecutarAhora.titulo", { nombre: runNowTarget?.name ?? "" })}
           </Dialog.Header>
           <Dialog.Body>
             <Flex direction="column" gap={4} padding={2}>
               <Typography textAlign="center" textColor="neutral600">
-                {runNowTarget?.role === "redactor"
-                  ? "¿Cuántas notas generar?"
-                  : "¿Cuántos borradores revisar y publicar?"}
+                {runNowTarget?.role === "director"
+                  ? t("ag.cuantosBorradores")
+                  : t("ag.cuantasNotas")}
               </Typography>
               <Flex justifyContent="center">
                 <Box style={{ width: 160 }}>
@@ -1512,7 +1649,7 @@ export default function AgentsPage() {
           </Dialog.Body>
           <Dialog.Footer>
             <Dialog.Cancel>
-              <Button variant="tertiary">Cancelar</Button>
+              <Button variant="tertiary">{t("comun.cancelar")}</Button>
             </Dialog.Cancel>
             <Dialog.Action>
               <Button
@@ -1520,7 +1657,7 @@ export default function AgentsPage() {
                 onClick={handleRunNow}
                 loading={running}
               >
-                Ejecutar
+                {t("ag.ejecutar")}
               </Button>
             </Dialog.Action>
           </Dialog.Footer>

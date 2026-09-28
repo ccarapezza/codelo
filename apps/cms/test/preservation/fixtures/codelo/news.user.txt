@@ -1,0 +1,6 @@
+Write an article in Spanish for today (2026-09-22) from the following editor request:
+"""Contá qué cambia con el nuevo régimen de inscripción y a quién le afecta."""
+
+(No web research — write as analysis/preview; do not state recent events as fact.)
+
+Return only the JSON.

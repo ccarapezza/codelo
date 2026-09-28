@@ -1,13 +1,13 @@
 // Detección de títulos calcados de un titular fuente. El prompt del redactor
 // pide títulos "literales a la fuente" como defensa anti-alucinación, y en
 // modo asignado eso degenera en reproducir el titular del medio original —
-// inadmisible editorialmente (pasó con "Cómo renovar el REPROCANN paso a
-// paso…", idéntico al de Revista THC). La regla del prompt sola no alcanza:
+// inadmisible editorialmente (pasó en producción: un título salió idéntico al
+// del medio del que venía la noticia). La regla del prompt sola no alcanza:
 // esta compuerta determinística es la garantía.
 //
 // La comparación es por solapamiento de tokens significativos, no por
-// distancia de edición: "Mendoza Reglamenta la Investigación con Cannabis" y
-// "Mendoza aprueba reglamentación para la investigación con cannabis" casi no
+// distancia de edición: "Mendoza Reglamenta la Investigación Sanitaria" y
+// "Mendoza aprueba reglamentación para la investigación sanitaria" casi no
 // comparten prefijos pero son el mismo titular reordenado. Stemming crudo por
 // prefijo (6 chars) para que "reglamenta"/"reglamentación" cuenten como el
 // mismo token.
@@ -58,6 +58,24 @@ export function headlineTooSimilar(candidate: string, source: string): boolean {
   const jaccard = intersection / union;
   const containment = intersection / Math.min(a.size, b.size);
   return jaccard >= 0.55 || containment >= 0.8;
+}
+
+/**
+ * Las reglas de originalidad del título, tal como las lee el modelo. Las usan
+ * el redactor y el generador manual: el generador no las tenía, y un editor
+ * con búsqueda web recibía titulares copiados de la fuente que encontró.
+ */
+export const TITLE_ORIGINALITY_RULES: readonly string[] = [
+  "- The title must be an ORIGINAL headline written in your own words. NEVER copy or closely paraphrase a source's headline: cover the same fact with different wording AND different structure. Reproducing another outlet's headline is plagiarism and grounds for rejection.",
+  "- The excerpt must also be written fresh in your own words — never lifted from the source's headline or lede.",
+];
+
+/**
+ * El pedido de reescritura cuando un título salió calcado: se agrega al user
+ * prompt del reintento. El mismo para el redactor y el generador manual.
+ */
+export function echoFeedback(previousTitle: string, echoed: string): string {
+  return `IMPORTANT: your previous title "${previousTitle}" nearly copies the source headline "${echoed}". That is plagiarism. Write a COMPLETELY different headline — same facts, but your own wording and structure (change the opening words, the syntax, the angle). Rewrite the excerpt in your own words too.`;
 }
 
 /** Devuelve el titular fuente calcado, o null si el título es original. */

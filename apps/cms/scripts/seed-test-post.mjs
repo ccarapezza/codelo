@@ -10,12 +10,12 @@
  *   node apps/cms/scripts/seed-test-post.mjs
  *
  * Optional:
- *   STRAPI_URL  default http://localhost:1339
+ *   STRAPI_URL  default http://localhost:1340
  *   IMG_QUALITY default "medium" (gpt-image-1 supports low|medium|high)
  *   IMG_SIZE    default "1536x1024" (3:2 — closest to 16:9 in gpt-image-1)
  */
 
-const STRAPI_URL = (process.env.STRAPI_URL ?? "http://localhost:1339").replace(/\/$/, "");
+const STRAPI_URL = (process.env.STRAPI_URL ?? "http://localhost:1340").replace(/\/$/, "");
 const STRAPI_TOKEN = process.env.STRAPI_TOKEN;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const IMG_QUALITY = process.env.IMG_QUALITY ?? "medium";
@@ -106,16 +106,16 @@ async function uploadToStrapi(buffer, filename, alt) {
 }
 
 const TAG_DEFS = [
-  { name: "REPROCANN", slug: "reprocann", kind: "topic", reference: null },
+  { name: "Actualidad", slug: "actualidad", kind: "topic", reference: null },
   { name: "Legales", slug: "legales", kind: "topic", reference: null },
   { name: "Ciencia", slug: "ciencia", kind: "topic", reference: null },
-  { name: "Cáñamo", slug: "canamo", kind: "topic", reference: null },
+  { name: "Cultura", slug: "cultura", kind: "topic", reference: null },
   { name: "Ambiente", slug: "ambiente", kind: "topic", reference: null },
   { name: "Comunidad", slug: "comunidad", kind: "topic", reference: null },
 ];
 
 const PROMPT_BASE =
-  "Editorial photography, photorealistic, magazine cover style, natural light, cinematic depth of field, botanical and community-oriented. No text, no watermarks, no logos, no brand labels, no faces, no smoking or consumption imagery.";
+  "Editorial photography, photorealistic, magazine cover style, natural light, cinematic depth of field. No text, no watermarks, no logos, no brand labels, no faces.";
 
 // Contenido de PRUEBA para revisar maquetación y ejercitar el pipeline sin
 // gastar en los agentes. Deliberadamente genérico: no afirma hechos concretos
@@ -126,7 +126,7 @@ const POSTS = [
     title: "Marco legal y trámites: por dónde empezar",
     excerpt:
       "Nota de prueba: qué distingue una norma vigente de un proyecto en discusión, y por qué importa al informarse.",
-    tags: ["legales", "reprocann"],
+    tags: ["legales", "actualidad"],
     imagePrompt: `${PROMPT_BASE} Generic paperwork fanned on a wooden desk beside a small potted plant, warm morning light, no readable text.`,
     imageAlt: "Documentación sobre un escritorio junto a una planta en maceta",
     content: `Entender el marco regulatorio exige una distinción que se pierde seguido en la conversación pública: **no es lo mismo una norma vigente que un proyecto en discusión**.
@@ -142,14 +142,14 @@ Un proyecto presentado no cambia nada por sí solo. Una media sanción tampoco. 
 Ante cualquier gestión concreta, la fuente oficial es la que manda. Esta nota es material de prueba y no reemplaza asesoramiento.`,
   },
   {
-    slug: "prueba-plantas-hongos-y-divulgacion",
-    title: "Plantas, hongos y el trabajo de divulgar",
+    slug: "prueba-leer-un-estudio",
+    title: "Cómo leer un estudio antes de contarlo",
     excerpt:
       "Nota de prueba: cómo se lee un estudio, qué es un preprint y por qué la diferencia entre promisorio y probado no es un detalle.",
-    tags: ["ciencia", "ambiente"],
-    imagePrompt: `${PROMPT_BASE} Macro close-up of green leaves at backlight with dew drops, shallow depth of field, golden morning light, no people.`,
-    imageAlt: "Macro de hojas verdes a contraluz con gotas de rocío",
-    content: `La divulgación seria sobre plantas y hongos empieza por una pregunta simple: **¿qué tan sólido es lo que estoy leyendo?**
+    tags: ["ciencia", "cultura"],
+    imagePrompt: `${PROMPT_BASE} An open notebook and a pair of reading glasses on a library table, soft window light, shallow depth of field, no people, no readable text.`,
+    imageAlt: "Un cuaderno abierto y unos anteojos sobre una mesa de biblioteca",
+    content: `La divulgación seria empieza por una pregunta simple: **¿qué tan sólido es lo que estoy leyendo?**
 
 ## Preprint no es paper revisado
 
@@ -172,7 +172,7 @@ async function findOrCreatePost(post, tagBySlug) {
   if (existing.data?.[0]) {
     return { post: existing.data[0], created: false };
   }
-  const tagIds = post.tagSlugs.map((slug) => tagBySlug[slug]).filter(Boolean);
+  const tagIds = (post.tags ?? []).map((slug) => tagBySlug[slug]).filter(Boolean);
   const created = await strapi(`/api/posts`, {
     method: "POST",
     body: JSON.stringify({

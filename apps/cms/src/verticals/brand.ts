@@ -1,30 +1,26 @@
-// Identidad de marca para las placas de redes.
+// Tipografías y logo por defecto de las placas.
 //
-// Es una COSTURA: el motor (lib/social-cards) compone las placas sin saber de
-// qué color son. Acá viven los colores, las tipografías, el handle y el archivo
-// del logo; los TAMAÑOS y la maquetación son del motor y no se tocan.
+// ⚠️ Los COLORES ya no están acá. Viven en `site-setting` y se editan desde el
+// panel (Sitio e integraciones → Identidad visual), porque tenerlos en código
+// obligaba a editar TypeScript y reconstruir la imagen para que una instancia
+// nueva dejara de publicar las placas de Nib. Un proyecto que venía de la
+// versión anterior carga los suyos una sola vez con su semilla
+// (`verticals/seed.ts`, clave `siteSettings`) y de ahí en más manda la base.
+//
+// Lo que queda es lo que ES un archivo y no se puede escribir en un campo:
+//
+//   · Las FUENTES tienen que nombrar una familia que satori haya cargado de
+//     `lib/social-cards/assets/fonts/`. Nombrar una que no está no da ningún
+//     error: dibuja con otra. Para usar otra tipografía hay que dejar el .woff
+//     en esa carpeta y nombrarlo acá.
+//   · El LOGO por defecto es el archivo de `assets/logo/`. Se usa mientras no
+//     haya ninguno subido desde el panel, que es el camino normal.
 
-// Sistema de marca de Cogollos del Oeste (colores, tipografías, tamaños).
-// Alineado con la dirección Organic Biophilic de la web: verde bosque como
-// color de marca, terracota como acento de CTA, fondo verde casi negro.
-// Ver apps/web/design-system/ y app/[lang]/globals.css.
-export const BRAND = {
-  bg: "#0B1710", // verde casi negro (mismo que el dark mode de la web)
-  bgSoft: "#14251B",
-  white: "#FFFFFF",
-  offwhite: "#E7F2E9",
-  muted: "#8CA694",
-  green: "#15803D", // verde bosque — color primario de marca
-  greenLight: "#4ADE80", // verde claro para números/destacados sobre fondo oscuro
-  terracotta: "#C2410C", // acento cálido (CTA)
-  earth: "#8B5E34", // tierra, acento secundario
-  fontDisplay: "Anton", // titulares (condensada pesada)
-  fontBody: "Inter", // cuerpo y etiquetas
-  handle: "cogollosdeloeste",
+/** Familias tipográficas. Tienen que estar cargadas en assets/fonts/. */
+export const BRAND_FONTS = {
+  fontDisplay: "Anton",
+  fontBody: "Inter",
 };
 
-// Gradiente de marca reutilizable (verde bosque -> verde claro).
-export const FIRE = `linear-gradient(95deg, ${BRAND.greenLight} 0%, ${BRAND.green} 55%, ${BRAND.earth} 100%)`;
-
 /** Nombre del archivo dentro de lib/social-cards/assets/logo/. */
-export const LOGO_FILE = "cogollosdeloeste.png";
+export const LOGO_FILE = "nib.png";

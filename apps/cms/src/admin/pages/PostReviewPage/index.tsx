@@ -27,6 +27,7 @@ import {
 import { useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { PageContainer, PageHeader, EmptyState } from "../../components/ui";
 import { useIsMobile } from "../../hooks/useIsMobile";
+import { useLocaleFechas, useT } from "../../i18n";
 
 const LIST_API = "/api/post-review/list";
 const PUBLISH_API = "/api/post-review/publish";
@@ -56,9 +57,9 @@ type ListResponse = { pageSize: number; published: TableData; unpublished: Table
 
 const EMPTY_TABLE: TableData = { items: [], page: 1, pageCount: 1, total: 0 };
 
-function fmtDate(iso: string | null): string {
+function fmtDate(iso: string | null, loc: string): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("es-AR", {
+  return new Date(iso).toLocaleDateString(loc, {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -101,6 +102,8 @@ function NoteRow({
   onDelete: () => void;
   deleting: boolean;
 }) {
+  const t = useT();
+  const loc = useLocaleFechas();
   const hasCover = Boolean(note.coverUrl);
   const src = coverSrc(note.coverUrl);
   const fecha = mode === "published" ? note.publishedAt : note.createdAt;
@@ -146,9 +149,7 @@ function NoteRow({
               hasRadius
               style={{ width: imgW, height: imgH }}
             >
-              <Typography variant="pi" textColor="neutral400">
-                sin portada
-              </Typography>
+              <Typography variant="pi" textColor="neutral400">{t("notas.sinPortada")}</Typography>
             </Flex>
           )}
         </Box>
@@ -196,7 +197,7 @@ function NoteRow({
                 <Calendar width="0.75rem" height="0.75rem" />
               </Typography>
               <Typography variant="pi" textColor="neutral500">
-                {fechaLabel} {fmtDate(fecha)}
+                {fechaLabel} {fmtDate(fecha, loc)}
               </Typography>
             </Flex>
           </Flex>
@@ -208,13 +209,13 @@ function NoteRow({
           {mode === "published" ? (
             <Flex justifyContent="space-between" alignItems="center" gap={2}>
               <Typography variant="pi" textColor={note.featured ? "success600" : "neutral500"}>
-                En carrusel
+                {t("notas.enCarrusel")}
               </Typography>
               <Switch
                 checked={note.featured}
                 onCheckedChange={(v: boolean) => onToggleFeatured(v)}
                 disabled={featuring}
-                aria-label={note.featured ? "Quitar del carrusel" : "Agregar al carrusel"}
+                aria-label={note.featured ? t("notas.quitarCarrusel") : t("notas.agregarCarrusel")}
               />
             </Flex>
           ) : null}
@@ -228,9 +229,7 @@ function NoteRow({
             disabled={busy || generating}
             startIcon={<Pencil />}
             onClick={onEdit}
-          >
-            Editar
-          </Button>
+          >{t("comun.editar")}</Button>
 
           {/* Vista previa: abre la nota renderizada por la web real (borradores
               incluidos, vía draftMode) en un iframe. */}
@@ -243,7 +242,7 @@ function NoteRow({
             startIcon={<Eye />}
             onClick={onPreview}
           >
-            Vista previa
+            {t("notas.vistaPrevia")}
           </Button>
 
           {/* Imagen: generar o regenerar con el agente generador de imágenes. */}
@@ -256,7 +255,7 @@ function NoteRow({
             startIcon={<Images />}
             onClick={onGenerateImage}
           >
-            {hasCover ? "Regenerar imagen" : "Generar imagen"}
+            {hasCover ? t("gen.imagen.regenerar") : t("gen.imagen.generar")}
           </Button>
 
           {mode === "published" ? (
@@ -269,7 +268,7 @@ function NoteRow({
               startIcon={<EyeStriked />}
               onClick={onToggle}
             >
-              Despublicar
+              {t("notas.despublicar")}
             </Button>
           ) : (
             <>
@@ -283,12 +282,10 @@ function NoteRow({
                 startIcon={<Eye />}
                 onClick={onToggle}
               >
-                Publicar
+                {t("notas.publicar")}
               </Button>
               {!hasCover ? (
-                <Typography variant="pi" textColor="neutral500" style={{ textAlign: "center" }}>
-                  Generá la imagen para poder publicar
-                </Typography>
+                <Typography variant="pi" textColor="neutral500" style={{ textAlign: "center" }}>{t("notas.generaImagen")}</Typography>
               ) : null}
 
               {/* Borrar: sólo borradores. Para borrar una publicada hay que
@@ -302,7 +299,7 @@ function NoteRow({
                 startIcon={<Trash />}
                 onClick={onDelete}
               >
-                Borrar
+                {t("notas.borrar")}
               </Button>
             </>
           )}
@@ -324,15 +321,16 @@ function Pager({
   total: number;
   onPage: (p: number) => void;
 }) {
+  const t = useT();
   if (total === 0) return null;
   return (
     <Flex justifyContent="space-between" alignItems="center" paddingTop={2}>
       <Typography variant="pi" textColor="neutral500">
-        {total} {total === 1 ? "nota" : "notas"} · página {page} de {pageCount}
+        {t("notas.totalPaginas", { total, pagina: page, paginas: pageCount })}
       </Typography>
       <Flex gap={2}>
         <Button variant="tertiary" size="S" disabled={page <= 1} onClick={() => onPage(page - 1)}>
-          Anterior
+          {t("comun.anterior")}
         </Button>
         <Button
           variant="tertiary"
@@ -340,7 +338,7 @@ function Pager({
           disabled={page >= pageCount}
           onClick={() => onPage(page + 1)}
         >
-          Siguiente
+          {t("comun.siguiente")}
         </Button>
       </Flex>
     </Flex>
@@ -421,6 +419,7 @@ function Section({
 
 // ── Página ───────────────────────────────────────────────────────────────────
 export default function PostReviewPage() {
+  const t = useT();
   const { get, post } = useFetchClient();
   const { toggleNotification } = useNotification();
   const navigate = useNavigate();
@@ -452,7 +451,7 @@ export default function PostReviewPage() {
   );
 
   // El banner de la web (dentro del iframe) avisa por postMessage cuando el
-  // usuario toca "Cerrar" ahí; cerramos el modal desde acá. (El banner ya limpió
+  // usuario toca t("comun.cerrar") ahí; cerramos el modal desde acá. (El banner ya limpió
   // draftMode antes de avisar.)
   React.useEffect(() => {
     const onMessage = (e: MessageEvent) => {
@@ -472,7 +471,7 @@ export default function PostReviewPage() {
         setPublished(data.published);
         setUnpublished(data.unpublished);
       } catch {
-        toggleNotification({ type: "danger", message: "No se pudieron cargar las notas." });
+        toggleNotification({ type: "danger", message: t("notas.err.cargar") });
       } finally {
         setLoading(false);
       }
@@ -497,7 +496,7 @@ export default function PostReviewPage() {
       // Refresca ambas tablas: la nota se mueve de una a la otra.
       await load({ silent: true });
     } catch {
-      toggleNotification({ type: "danger", message: "No se pudo cambiar el estado de la nota." });
+      toggleNotification({ type: "danger", message: t("notas.err.estado") });
     } finally {
       setBusyId(null);
     }
@@ -520,7 +519,7 @@ export default function PostReviewPage() {
           n.documentId === note.documentId ? { ...n, featured: !next } : n,
         ),
       }));
-      toggleNotification({ type: "danger", message: "No se pudo cambiar el destacado." });
+      toggleNotification({ type: "danger", message: t("notas.err.destacado") });
     } finally {
       setFeaturingId(null);
     }
@@ -535,13 +534,13 @@ export default function PostReviewPage() {
       const { data } = await get<{ url: string }>(
         `${PREVIEW_URL_API}?documentId=${encodeURIComponent(note.documentId)}`,
       );
-      if (!data?.url) throw new Error("sin url");
+      if (!data?.url) throw new Error(t("notas.sinUrl"));
       setPreview({ title: note.title, url: data.url });
     } catch {
       toggleNotification({
         type: "danger",
         message:
-          "No se pudo abrir la vista previa (¿falta configurar PREVIEW_SECRET / PREVIEW_WEB_URL?).",
+          t("notas.err.preview"),
       });
     } finally {
       setPreviewingId(null);
@@ -557,7 +556,7 @@ export default function PostReviewPage() {
       await post(GENERATE_COVER_API, { documentId: note.documentId });
       toggleNotification({
         type: "success",
-        message: "Generando la imagen con el agente… puede tardar ~30 s.",
+        message: t("notas.generandoImagen"),
       });
       window.setTimeout(() => {
         if (!mountedRef.current) return;
@@ -569,7 +568,7 @@ export default function PostReviewPage() {
       // endpoint responde 400 y lo avisamos de una.
       toggleNotification({
         type: "danger",
-        message: "No se pudo generar la imagen (revisá el agente / la API key).",
+        message: t("notas.err.imagen"),
       });
       setGeneratingId(null);
     }
@@ -581,13 +580,13 @@ export default function PostReviewPage() {
     setDeletingId(note.documentId);
     try {
       await post(DELETE_API, { documentId: note.documentId });
-      toggleNotification({ type: "success", message: "Borrador eliminado." });
+      toggleNotification({ type: "success", message: t("notas.ok.borrado") });
       setToDelete(null);
       await load({ silent: true });
     } catch (err) {
       const msg =
         (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error
-          ?.message ?? "No se pudo borrar la nota.";
+          ?.message ?? t("notas.err.borrar");
       toggleNotification({ type: "danger", message: msg });
     } finally {
       setDeletingId(null);
@@ -598,28 +597,28 @@ export default function PostReviewPage() {
     <PageContainer>
       <PageHeader
         icon={<Files width="1.4rem" height="1.4rem" />}
-        title="Notas"
-        subtitle="Verificá, editá y publicá las notas del sitio, en orden cronológico."
+        title={t("notas.titulo")}
+        subtitle={t("notas.subtitulo")}
         actions={
           <Button startIcon={<Plus />} onClick={() => navigate("/editor-nota")}>
-            Crear nota
+            {t("notas.crear")}
           </Button>
         }
       />
 
       {loading ? (
         <Flex justifyContent="center" padding={10}>
-          <Loader>Cargando notas…</Loader>
+          <Loader>{t("notas.cargando")}</Loader>
         </Flex>
       ) : (
         <Tabs.Root variant="simple" value={tab} onValueChange={setTab}>
-          <Tabs.List aria-label="Notas por estado">
+          <Tabs.List aria-label={t("notas.porEstado")}>
             <Tabs.Trigger value="publicadas">
               <Flex gap={2} alignItems="center">
                 <Typography textColor="success600" style={{ display: "inline-flex" }}>
                   <CheckCircle />
                 </Typography>
-                Publicadas
+                {t("notas.publicadas")}
                 <Badge>{published.total}</Badge>
               </Flex>
             </Tabs.Trigger>
@@ -627,9 +626,7 @@ export default function PostReviewPage() {
               <Flex gap={2} alignItems="center">
                 <Typography textColor="warning600" style={{ display: "inline-flex" }}>
                   <Clock />
-                </Typography>
-                Sin publicar
-                <Badge>{unpublished.total}</Badge>
+                </Typography>{t("notas.sinPublicar")}<Badge>{unpublished.total}</Badge>
               </Flex>
             </Tabs.Trigger>
           </Tabs.List>
@@ -651,7 +648,7 @@ export default function PostReviewPage() {
                 onDelete={setToDelete}
                 deletingId={deletingId}
                 onPage={setPubPage}
-                emptyText="No hay notas publicadas."
+                emptyText={t("notas.vacio.publicadas")}
               />
             </Box>
           </Tabs.Content>
@@ -673,7 +670,7 @@ export default function PostReviewPage() {
                 onDelete={setToDelete}
                 deletingId={deletingId}
                 onPage={setDraftPage}
-                emptyText="No hay borradores sin publicar."
+                emptyText={t("notas.vacio.borradores")}
               />
             </Box>
           </Tabs.Content>
@@ -692,19 +689,19 @@ export default function PostReviewPage() {
         {preview ? (
           <Modal.Content style={{ maxWidth: "95vw", width: 1100 }}>
             <Modal.Header>
-              <Modal.Title>Vista previa · {preview.title}</Modal.Title>
+              <Modal.Title>{t("notas.vistaPreviaDe", { titulo: preview.title })}</Modal.Title>
             </Modal.Header>
             <Modal.Body>
               <Box
                 background="neutral150"
                 hasRadius
-                style={{
-                  overflow: "hidden",
-                  border: "1px solid var(--strapi-neutral200, #eaeaef)",
-                }}
+                borderColor="neutral200"
+                borderStyle="solid"
+                borderWidth="1px"
+                style={{ overflow: "hidden" }}
               >
                 <iframe
-                  title="Vista previa de la nota"
+                  title={t("notas.preview.titulo")}
                   src={preview.url}
                   style={{
                     width: "100%",
@@ -717,21 +714,18 @@ export default function PostReviewPage() {
               </Box>
               <Box paddingTop={2}>
                 <Typography variant="pi" textColor="neutral500">
-                  Estás viendo el borrador renderizado por la web real. Los cambios de diseño del
-                  sitio se reflejan acá.
+                  {t("notas.preview.nota")}
                 </Typography>
               </Box>
             </Modal.Body>
             <Modal.Footer>
               <Modal.Close>
-                <Button variant="tertiary">Cerrar</Button>
+                <Button variant="tertiary">{t("comun.cerrar")}</Button>
               </Modal.Close>
               <Button
                 variant="secondary"
                 onClick={() => window.open(preview.url, "_blank", "noopener")}
-              >
-                Abrir en pestaña nueva
-              </Button>
+              >{t("notas.preview.nuevaPestana")}</Button>
             </Modal.Footer>
           </Modal.Content>
         ) : null}
@@ -748,17 +742,16 @@ export default function PostReviewPage() {
         {toDelete ? (
           <Modal.Content>
             <Modal.Header>
-              <Modal.Title>Borrar borrador</Modal.Title>
+              <Modal.Title>{t("notas.borrar.titulo")}</Modal.Title>
             </Modal.Header>
             <Modal.Body>
               <Typography>
-                ¿Seguro que querés borrar <strong>{toDelete.title}</strong>? Esta acción no se puede
-                deshacer.
+                {t("notas.borrar.pregunta", { titulo: toDelete.title })}
               </Typography>
             </Modal.Body>
             <Modal.Footer>
               <Modal.Close>
-                <Button variant="tertiary">Cancelar</Button>
+                <Button variant="tertiary">{t("comun.cancelar")}</Button>
               </Modal.Close>
               <Button
                 variant="danger"
@@ -766,7 +759,7 @@ export default function PostReviewPage() {
                 loading={deletingId === toDelete.documentId}
                 onClick={() => handleDelete(toDelete)}
               >
-                Borrar
+                {t("notas.borrar")}
               </Button>
             </Modal.Footer>
           </Modal.Content>

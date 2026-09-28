@@ -1,0 +1,71 @@
+Create an editorial cover image description for this news article.
+
+Title: "El organismo publicó el nuevo régimen de inscripción"
+Summary: "La medida fija plazos y requisitos para quienes ya estaban inscriptos y para los que se sumen este año."
+
+HARD CONSTRAINTS for this specific cover (these override theme defaults if they conflict):
+- Medium: photograph
+- Treatment: archival 1970s film photograph: visible grain, faded dyes, slight vignette
+- Composition: wide environmental shot with leading lines
+- Lighting mood: single hard light source at night, deep shadows
+
+RECENTLY USED scenes (the last 2 covers — DO NOT replicate any of these; pick a clearly different visual angle):
+  1. A wide desk with stacked folders under warm window light.
+  2. An empty meeting room seen from the doorway.
+
+STEPS:
+1. Identify the core theme of THIS specific article.
+2. Choose the ONE category from THEME → SCENE CUES that matches it. Each category already
+   carries its scene cue for this cover — use that cue as given, this is the SUBJECT only.
+3. Render that subject in the medium and treatment specified above.
+4. Bake in the composition and ink/lighting constraints, plus any anchors.
+5. Output a single dense paragraph, 2-3 sentences max.
+
+THEME → SCENE CUES (pick exactly ONE category; its cue is already chosen for you):
+
+SQUAD CALL-UP / CONVOCATORIA:
+  tactical chalkboard with magnetic names, half-erased annotations
+
+INJURY / FITNESS SETBACK:
+  crutches leaning against a stadium wall (no jersey on top)
+
+PLAYER PROFILE / SPOTLIGHT:
+  personal items on a locker shelf — towel, watch, water bottle (no branded gear)
+
+TRANSFER / MOVE:
+  car window with the new stadium reflected outside
+
+STATEMENT / INTERVIEW / PRESS:
+  journalist's recorder on a table with a plain solid-colored scarf draped behind
+
+MATCH PREVIEW / CLASH (one single frame — these are all single objects-in-one-scene, never a split or merged composite):
+  two facing solid-color flags planted together on a single tactical board (national colors only, no emblems)
+
+MATCH RESULT / GOAL / WIN / BRILLIANCE:
+  overhead ring of a team huddle on the grass — shoulders, arms and kit patterns seen from straight above, no faces
+
+MATCH DEFEAT / ELIMINATION:
+  crumpled match-day ticket in a puddle on stadium concourse
+
+MILESTONE / RECORD / CAP:
+  stacked plain solid-color match-issue jerseys with only printed back numbers ascending (no crests, no names)
+
+COACH DECISION / TACTICAL:
+  clipboard with hand-drawn arrows and a pencil (no readable text)
+
+STADIUM / VENUE:
+  close-up of seat row numbers with brand-new paint
+
+TRAINING / PREPARATION:
+  row of water bottles lined up on the touchline
+
+HISTORICAL / NOSTALGIA:
+  glass case with a vintage leather match ball
+
+OFF-PITCH / INSTITUTIONAL / VISA / ADMINISTRATIVE:
+  generic passport (cover obscured / blank) open beside a plain football on a polished desk
+
+CONTROVERSY / VAR / RED CARD / DISCIPLINE:
+  tunnel security tape across a doorway
+
+Reminder: the medium MUST be a photograph, rendered as "archival 1970s film photograph: visible grain, faded dyes, slight vignette", with composition "wide environmental shot with leading lines". Do not drift.

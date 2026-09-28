@@ -1,0 +1,52 @@
+/*
+ * Oculta lo que Strapi pone en el panel para vender algo: el Marketplace y sus
+ * banners de anuncio.
+ *
+ * No es esconder sobre qué corre el producto —eso lo dice el subtítulo del
+ * login y la pantalla de versión de Strapi queda intacta—. Es no ponerle a
+ * quien usa Nib una tienda y un aviso de un blog que no eligió.
+ *
+ * ⚠️ Todo esto es COSMÉTICO y depende de cómo Strapi arma su DOM, así que una
+ * versión nueva lo puede romper. Cuando se rompe, vuelve a aparecer lo que
+ * oculta: se ve enseguida y no rompe nada. Vale la pena revisarlo después de
+ * cada `pnpm update` de Strapi — de hecho ya pasó una vez, ver abajo.
+ */
+
+/*
+ * MARKETPLACE.
+ *
+ * Es parte del CORE del admin: se registra en useMenu() y su única puerta es el
+ * permiso `admin::marketplace.read`. Revocarlo sirve para roles comunes, pero
+ * los Super Admin saltean la capa de permisos entera, así que para ellos no hay
+ * forma soportada de sacarlo. Para bloquear el ACCESO de verdad —la ruta sigue
+ * respondiendo si se la escribe a mano— el camino es un rol sin ese permiso.
+ *
+ * Van los dos selectores porque el destino cambió: hasta 5.31 era la ruta
+ * interna `/marketplace` y en 5.54 pasó a ser el sitio externo
+ * `market.strapi.io`. Con sólo el primero, el ítem reapareció en el menú al
+ * actualizar y nadie se enteró hasta mirar una captura.
+ */
+nav a[href$="/marketplace"],
+nav a[href*="market.strapi.io"] {
+  display: none !important;
+}
+
+/*
+ * BANNERS DE ANUNCIO.
+ *
+ * Desde 5.54 el admin muestra una barra a todo el ancho, en TODAS las
+ * pantallas, promocionando una entrada del blog de Strapi. Se puede descartar,
+ * pero la marca queda en `localStorage` —clave
+ * `STRAPI_MEDIA_LIBRARY_BANNER_DISMISSED_FOR_<flag>`—, o sea por navegador y
+ * por persona: cada usuario nuevo la vuelve a ver. Como arreglo de producto no
+ * alcanza.
+ *
+ * El selector va por el LINK, que es lo único estable: las clases son hashes de
+ * styled-components y cambian en cada build. La profundidad de los `>` está
+ * medida contra el DOM real (el link cuelga a tres niveles de la barra); es lo
+ * que ata esta regla a la estructura y lo que hay que volver a medir si el
+ * banner reaparece.
+ */
+div:has(> div > div > a[href*="strapi.io/blog"]) {
+  display: none !important;
+}

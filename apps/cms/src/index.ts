@@ -3,6 +3,8 @@ import type { Core } from "@strapi/strapi";
 import { registerAdminPermissionActions } from "./lib/admin-permissions";
 import { ensurePostCover } from "./lib/social-studio/post-cover";
 import { ensurePostTranslation } from "./lib/translate-post";
+import { applyProjectSeeds } from "./lib/seed-runner";
+import { seeds } from "./verticals/seed";
 
 export default {
   /**
@@ -41,7 +43,7 @@ export default {
           // REST publishes) still get their English localization. Skip operations
           // that target the "en" locale themselves — those are the translation's
           // own update/publish re-entering the middleware.
-          if (locale !== "en") {
+          if (locale !== project.translationLocale) {
             void ensurePostTranslation(strapi, documentId).catch((err) =>
               strapi.log.warn(`[translate-post] ensure failed for ${documentId}:`, err),
             );
@@ -95,7 +97,7 @@ export default {
       if (!migrated) {
         const [{ count }] = (await strapi.db
           .connection("posts")
-          .whereNot({ locale: "es" })
+          .whereNot({ locale: project.defaultLocale })
           .whereNotNull("locale")
           .count({ count: "*" })) as unknown as Array<{ count: number | string }>;
         if (Number(count) > 0) {
@@ -111,23 +113,27 @@ export default {
       if (!migrated) {
         const locales = strapi.plugin("i18n").service("locales");
         const existing = (await locales.find()) as Array<{ code: string }>;
-        if (!existing.some((l) => l.code === "es")) {
-          await locales.create({ code: "es", name: "Spanish (es)" });
+        if (!existing.some((l) => l.code === project.defaultLocale)) {
+          await locales.create({ code: project.defaultLocale, name: project.defaultLocale });
         }
-        if (!existing.some((l) => l.code === "en")) {
-          await locales.create({ code: "en", name: "English (en)" });
+        if (!existing.some((l) => l.code === project.translationLocale)) {
+          await locales.create({ code: project.translationLocale, name: project.translationLocale });
         }
-        await locales.setDefaultLocale({ code: "es" });
-        const updated = await strapi.db.connection("posts").update({ locale: "es" });
+        await locales.setDefaultLocale({ code: project.defaultLocale });
+        const updated = await strapi.db.connection("posts").update({ locale: project.defaultLocale });
         await coreStore.set({ key: migrationKey, value: true });
         strapi.log.info(
-          `[i18n-migration] default locale set to "es"; ${updated} post row(s) re-stamped as es.`,
+          `[i18n-migration] default locale set to "es"; ${updated} post row(s) re-stamped as ${project.defaultLocale}.`,
         );
       }
     };
 
     try {
       await migrarI18n();
+
+      // La configuración editorial del proyecto, una sola vez. Rellena lo que
+      // esté vacío; lo editado desde el panel gana.
+      await applyProjectSeeds(strapi, seeds);
     } catch (err) {
       // Never block boot on the migration — but make the failure loud so it
       // isn't silently skipped (the flag is only set on success, so it retries

@@ -29,27 +29,42 @@ const FIELDS_BY_TEMPLATE: Record<ComposeSingleInput["template"], string> = {
   countdown: "countdown{pre,big,unit,label}",
 };
 
-function buildSystemPrompt(input: ComposeSingleInput): string {
+// ⚠️ Nada de lo que hay acá puede describir un tema, una regla editorial o una
+// paleta concretas: el motor no sabe de qué habla el sitio que lo usa. Todo eso
+// entra por `promptSettings`, que el proyecto define en sus prompt-defaults y
+// el admin deja editar.
+//
+// Esta función llegó a tener escritas las reglas y la paleta de UN proyecto, y
+// se las aplicaba a todos. Además la extracción había cortado la primera frase
+// al medio y dejaba colgado un "de lucro." suelto, que viajaba al modelo en
+// cada llamada.
+export function buildSystemPrompt(input: ComposeSingleInput): string {
+  const ps = input.promptSettings;
   return [
-    `Sos el editor de redes sociales de ${project.name}, con la voz editorial del sitio.`,
-    "de lucro. Generás UNA placa vertical de Instagram (historia, 1080x1920) a partir del",
-    "material que te dan. Tono rioplatense, claro, cercano, sin solemnidad ni apología.",
-    "Nunca fomentes el consumo, no des dosis ni consejo médico, no publicites marcas.",
+    `You are the social-media editor for ${ps.brandName || project.name}, a site covering:`,
+    `${ps.domainDescription}.`,
+    ps.socialVoice,
+    "You produce ONE vertical Instagram card (story, 1080x1920) from the material given to you.",
     "",
-    "REGLA INVIOLABLE: usá ÚNICAMENTE información presente en el material. NO inventes",
-    `datos, cifras, fechas ni declaraciones. Está prohibido fabricar: ${input.promptSettings.fabricationProneFacts}.`,
+    "UNBREAKABLE RULE: use ONLY information present in the material. Do NOT invent",
+    `data, figures, dates or statements. It is forbidden to fabricate: ${ps.fabricationProneFacts}.`,
     "",
-    `La placa usa el template "${input.template}" con SOLO estos campos: ${FIELDS_BY_TEMPLATE[input.template]}.`,
-    "Textos cortos: title <= 60, label <= 90, text <= 150. Sin emojis ni flechas en la placa.",
+    `The card uses the "${input.template}" template with ONLY these fields: ${FIELDS_BY_TEMPLATE[input.template]}.`,
+    "Short texts: title <= 60, label <= 90, text <= 150. No emojis or arrows on the card.",
     "",
-    'Además devolvé "bg": un prompt EN INGLÉS para el fondo — una imagen editorial (foto o ilustración)',
-    "que refleje el TEMA de la nota (botánica, cultivo de cannabis/cáñamo, ciencia, comunidad, ambiente,",
-    "según el contenido), vertical 9:16, en tonos azul-negro profundo con acentos ámbar (paleta de la casa),",
-    "sin texto, sin logos, sin caras reconocibles y sin imágenes de consumo, coherente con el contenido,",
-    'y "caption": un caption corto para la historia (opcional, 1-2 líneas, acá sí pueden ir emojis).',
+    `All card text and the caption must be written in ${ps.writingLanguage}.`,
+    'Also return "bg": a prompt IN ENGLISH for the background — an editorial image (photo or',
+    "illustration) reflecting the TOPIC of the article, vertical 9:16, no text, no logos and no",
+    "recognisable faces, coherent with the content.",
+    // Las reglas de imagen del dominio —qué se muestra, con qué paleta, qué
+    // está prohibido— son justamente lo que este campo declara.
+    ps.imageSystemInstructions ? `Site image rules: ${ps.imageSystemInstructions}` : "",
+    'And "caption": a short caption for the story (optional, 1-2 lines; emojis are allowed here).',
     "",
-    'Devolvé EXCLUSIVAMENTE un objeto JSON: { "slide": {...}, "bg": "...", "caption": "..." }.',
-  ].join("\n");
+    'Return EXCLUSIVELY a JSON object: { "slide": {...}, "bg": "...", "caption": "..." }.',
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 export async function composeSingleSlide(

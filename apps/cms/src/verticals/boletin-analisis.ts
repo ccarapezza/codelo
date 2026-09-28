@@ -16,7 +16,8 @@
 
 import type { Core } from "@strapi/strapi";
 import { getOpenAIClient } from "../lib/openai";
-import { getOpenAINormaModel, getOpenAITextKey } from "../lib/openai-config";
+import { getOpenAITextKey } from "../lib/openai-config";
+import { getOpenAINormaModel } from "./norma-model";
 import { getPromptSettings } from "../lib/prompt-settings";
 
 /** Ficha de una norma, ya validada y lista para persistir. */

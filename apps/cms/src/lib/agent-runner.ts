@@ -1,17 +1,25 @@
 import type { Core } from "@strapi/strapi";
 import {
   generatePost,
-  generateCoverImage,
-  chooseImagePrompt,
-  uploadImageToStrapi,
   getOpenAIClient,
   isOpenRouterModel,
   reviewPost,
   findDuplicateSubject,
   type GeneratedPost,
 } from "./openai";
-import { getRecentNewsForTopic, type NewsItem } from "./rss-fetcher";
-import { findEchoedHeadline } from "./headline-similarity";
+import {
+  CoverPipelineError,
+  findActiveImageGenerator,
+  generateCoverForPost,
+} from "./cover-pipeline";
+import {
+  getIngestWindowDays,
+  getRecentNewsForTopic,
+  ingestWindowLabel,
+  selectFreePool,
+  type NewsItem,
+} from "./rss-fetcher";
+import { echoFeedback, findEchoedHeadline, TITLE_ORIGINALITY_RULES } from "./headline-similarity";
 import {
   getOpenRouterImageKey,
   getOpenAIImageKey,
@@ -25,8 +33,11 @@ import {
   buildSourceContext,
   formatSourceContext,
   parseSourceContext,
+  type SourceItem,
 } from "./source-context";
+import { investigar } from "./web-research";
 import { ensurePostTranslation } from "./translate-post";
+import * as project from "./project";
 import { verticalAgentRoles } from "../verticals/agent-roles";
 import { extraDirectorFilters } from "../verticals/director-filters";
 
@@ -65,17 +76,10 @@ type AgentDoc = {
   schedules: ScheduleEntry[];
 };
 
-type ImageGeneratorAgentDoc = {
-  documentId: string;
-  imagePromptTemplate: string | null;
-  imageSize: string | null;
-  imageQuality: string | null;
-};
-
 // Each schedule carries its own IANA zone (the wall-clock zone its time/days
 // were authored in). The container TZ stays UTC; we never rely on it. This
 // env only provides the fallback zone for schedules with no timezone set.
-const DEFAULT_SCHEDULE_TZ = process.env.AGENT_SCHEDULE_TZ || "America/Argentina/Buenos_Aires";
+const DEFAULT_SCHEDULE_TZ = project.scheduleTz;
 
 const ZONED_FORMAT_OPTS: Intl.DateTimeFormatOptions = {
   year: "numeric",
@@ -168,14 +172,14 @@ export function makeSlug(title: string): string {
   return `${base || "post"}-${Date.now().toString(36)}`;
 }
 
-async function findActiveImageGenerator(strapi: Core.Strapi): Promise<ImageGeneratorAgentDoc | null> {
-  const results = await strapi.documents("api::agent.agent").findMany({
-    filters: { role: "image-generator", enabled: true },
-  });
-  return (results[0] as unknown as ImageGeneratorAgentDoc) ?? null;
-}
+// Vive en cover-pipeline.ts; se re-exporta acá porque los verticales la
+// importan de este módulo junto con findActiveDirector.
+export { findActiveImageGenerator };
 
-async function findActiveDirector(strapi: Core.Strapi): Promise<AgentDoc | null> {
+// Exportadas para los runners que aporte el vertical (src/verticals/agent-roles.ts):
+// un rol propio que publique necesita el mismo director y el mismo generador de
+// imágenes que usan los del motor, y sin esto tendría que duplicar la consulta.
+export async function findActiveDirector(strapi: Core.Strapi): Promise<AgentDoc | null> {
   const directors = await strapi.documents("api::agent.agent").findMany({
     filters: { role: "director", enabled: true },
   });
@@ -187,6 +191,14 @@ export async function runRedactor(
   agent: AgentDoc,
   notesCount = 1,
   assignedItems?: NewsItem[],
+  /**
+   * Tercer modo: el Explorador ya investigó en la web y trae los hechos y las
+   * páginas que consultó. Se reutiliza todo el camino del Redactor —la voz, el
+   * formato, la compuerta anti-calco, el dedup semántico, la portada— y sólo
+   * cambian dos cosas: de dónde salen los hechos y qué se guarda como
+   * evidencia.
+   */
+  investigacion?: { tema: string; apuntes: string; fuentes: SourceItem[] },
 ): Promise<void> {
   const client = getOpenAIClient(getOpenAITextKey());
   const model = await getOpenAITextModel(strapi);
@@ -205,22 +217,34 @@ export async function runRedactor(
   const rawNews = !isAssignedMode && agent.topic
     ? await getRecentNewsForTopic(strapi, agent.topic, 50)
     : [];
-  // `getRecentNewsForTopic` already ranks by how well each item matches the
-  // agent's topic keywords, so the top slice IS the relevant slice — there is
-  // no second relevance filter to apply here.
-  const recentNews = isAssignedMode ? assignedItems! : rawNews.slice(0, 10);
+  // `getRecentNewsForTopic` ordena por parecido con el tema del AGENTE; el
+  // alcance editorial del SITIO (verticals/rss-scope.ts) es otro filtro: una
+  // palabra del tema matchea también notas de un generalista que no son del
+  // sitio. Sin alcance declarado pasa todo, como antes.
+  const libre = isAssignedMode ? null : selectFreePool(rawNews, 10);
+  if (libre?.fellBack) {
+    strapi.log.warn(
+      `[agent-runner] Redactor "${agent.name}": ningún ítem del pool matchea el alcance ` +
+        `editorial; se usa el pool completo (${rawNews.length} ítems).`,
+    );
+  }
+  const recentNews = isAssignedMode ? assignedItems! : libre!.items;
 
   const hasContext = recentNews.length > 0;
+  // La ventana REAL del pool (la de ingesta, 7 días por defecto). El prompt
+  // decía "last 24h" fijo, y el modelo trataba como del día noticias que
+  // tenían una semana.
+  const dias = await getIngestWindowDays(strapi);
   if (!isAssignedMode && agent.topic && !hasContext) {
     strapi.log.info(
-      `[agent-runner] Redactor "${agent.name}": sin noticias de las últimas 24h que ` +
-        `matcheen su topic; no se genera nota en esta corrida.`,
+      `[agent-runner] Redactor "${agent.name}": sin noticias de los últimos ${dias} ` +
+        `día${dias === 1 ? "" : "s"} que matcheen su topic; no se genera nota en esta corrida.`,
     );
   }
 
   const sharedNewsContextBlock = !isAssignedMode && hasContext
     ? [
-        "\nVerified news context (last 24h) — base your article EXCLUSIVELY on these facts:",
+        `\nVerified news context (${ingestWindowLabel(dias)}) — base your article EXCLUSIVELY on these facts:`,
         ...recentNews.map(
           (n, i) =>
             `[${i + 1}] ${n.source} | ${n.title}\n${(n.summary ?? "").slice(0, 300)}`,
@@ -238,13 +262,12 @@ export async function runRedactor(
         "",
         "## TITLE RULES (CRITICAL — most hallucinations come from bad titles)",
         "- The title MUST describe ONE single concrete fact that appears in ONE single source above.",
-        "- NEVER combine two unrelated facts into one title (e.g. if source A says 'X is sad' and source B says 'Y is injured', DO NOT write 'X and Y are injured').",
-        "- The title MUST NOT contradict the body of the article. If the body says 'X wants to play', the title cannot say 'X will not play'.",
-        "- The title MUST NOT contradict the source. If the source headline says 'the ruling recognises the right to self-cultivation', the title cannot imply it was denied.",
+        "- NEVER combine two unrelated facts into one title (e.g. if source A says 'X resigned' and source B says 'Y was appointed', DO NOT write 'X and Y were appointed').",
+        "- The title MUST NOT contradict the body of the article. If the body says 'X wants to continue', the title cannot say 'X will step down'.",
+        "- The title MUST NOT contradict the source. If the source headline says 'the ruling recognises the right', the title cannot imply it was denied.",
         "- Prefer factual, neutral titles over sensationalist clickbait.",
-        "- The title must be an ORIGINAL headline written in your own words. NEVER copy or closely paraphrase a source's headline: cover the same fact with different wording AND different structure. Reproducing another outlet's headline is plagiarism and grounds for rejection.",
-        "- The excerpt must also be written fresh in your own words — never lifted from the source's headline or lede.",
-        "- If the title mentions a player, the named action (injury, transfer, statement) must be literally about THAT player in the source.",
+        ...TITLE_ORIGINALITY_RULES,
+        "- If the title names a person or organisation, the named action (decision, statement, appointment) must be literally about THAT subject in the source.",
         "",
         "## SELF-CHECK before returning",
         "Before returning your JSON, mentally verify:",
@@ -274,7 +297,11 @@ export async function runRedactor(
       newsBlock,
       contentTypeGuidance,
       `\n${promptSettings.bodyStructureGuide}`,
-      `\nReturn STRICT JSON: { "title": string, "excerpt": string (1-2 sentences), "content": string (rich GitHub-Flavored Markdown, ~600 words) }`,
+      // `sourceIndexes` sólo se pide cuando existe el bloque numerado: en modo
+      // asignado la fuente ya se conoce y no hay números que citar.
+      !isAssignedMode && hasContext
+        ? `\nReturn STRICT JSON: { "title": string, "excerpt": string (1-2 sentences), "content": string (rich GitHub-Flavored Markdown, ~600 words), "sourceIndexes": number[] — the [n] numbers of the context items you ACTUALLY used for the facts in this article. List only those. Do NOT list items you did not use. }`
+        : `\nReturn STRICT JSON: { "title": string, "excerpt": string (1-2 sentences), "content": string (rich GitHub-Flavored Markdown, ~600 words) }`,
     ]
       .filter(Boolean)
       .join("\n");
@@ -331,7 +358,17 @@ export async function runRedactor(
     const today = new Date().toISOString().slice(0, 10);
     const assignedItem = isAssignedMode ? assignedItems![i] : null;
 
-    const newsBlock = assignedItem
+    const newsBlock = investigacion
+      ? [
+          "\n## RESEARCH NOTES — write your article about THIS and nothing else",
+          `Topic: ${investigacion.tema}`,
+          "",
+          investigacion.apuntes.slice(0, 4000),
+          "",
+          "Sources consulted:",
+          ...investigacion.fuentes.map((f, n) => `[${n + 1}] ${f.source} | ${f.title}`),
+        ].join("\n")
+      : assignedItem
       ? [
           "\n## ASSIGNED NEWS ITEM — write your article SPECIFICALLY about this and nothing else",
           `[1] ${assignedItem.source} | ${assignedItem.title}`,
@@ -352,14 +389,16 @@ export async function runRedactor(
     if (!isAssignedMode && recentTitles.length > 0) {
       dedupBlock = [
         "\n## ALREADY-COVERED SUBJECTS — DO NOT REPEAT",
-        "These titles already exist as drafts. Write about a DIFFERENT subject from the news context above (a different player, team, event, or angle).",
+        "These titles already exist as drafts. Write about a DIFFERENT subject from the news context above (a different person, organisation, event, or angle).",
         "If the same person/event is the only candidate, find a DIFFERENT angle (a different fact, a different framing) — never duplicate the same headline subject.",
         ...recentTitles.map((t) => `  - "${t}"`),
       ].join("\n");
     }
 
     const lang = promptSettings.writingLanguage;
-    const userPrompt = assignedItem
+    const userPrompt = investigacion
+      ? `Write an article in ${lang} (${today}) based EXCLUSIVELY on the research notes above. It does not have to be breaking news, but every fact must come from the notes. Return only the JSON.`
+      : assignedItem
       ? `Write a news article in ${lang} for today (${today}) based EXCLUSIVELY on the assigned news item above. Return only the JSON.`
       : hasContext
         ? `Write a news article in ${lang} based on the verified context above (${today}).${dedupBlock}\nReturn only the JSON.`
@@ -369,7 +408,7 @@ export async function runRedactor(
     // Compuerta anti-calco: la regla del prompt ("original headline") sola no
     // alcanza — las TITLE RULES empujan a títulos literales a la fuente y el
     // modelo resuelve la tensión copiando el titular (pasó con el de Revista
-    // THC sobre REPROCANN, publicado casi idéntico). Se compara contra los
+    // de un medio del sector, publicado casi idéntico). Se compara contra los
     // titulares del contexto y se regenera con feedback explícito; si tras los
     // reintentos sigue calcado, la nota NO se crea (mismo criterio que el gate
     // de duplicados: mejor un slot vacío que un titular ajeno).
@@ -385,7 +424,7 @@ export async function runRedactor(
         client,
         model,
         systemPrompt,
-        `${userPrompt}\n\nIMPORTANT: your previous title "${generated.title}" nearly copies the source headline "${echoed}". That is plagiarism. Write a COMPLETELY different headline — same facts, but your own wording and structure (change the opening words, the syntax, the angle). Rewrite the excerpt in your own words too.`,
+        `${userPrompt}\n\n${echoFeedback(generated.title, echoed)}`,
       );
     }
     const stillEchoed = findEchoedHeadline(generated.title, sourceHeadlines);
@@ -410,7 +449,13 @@ export async function runRedactor(
     // check (vs lexical similarity) catches "same event, different title" without
     // flagging a bill's introduction vs its sanction, or two organisations each
     // obtaining their own licence.
-    const duplicateOf = await findDuplicateSubject(client, model, generated.title, recentTitles);
+    const duplicateOf = await findDuplicateSubject(
+      client,
+      model,
+      generated.title,
+      recentTitles,
+      promptSettings,
+    );
     if (duplicateOf) {
       strapi.log.warn(
         `[agent] "${agent.name}": skipped duplicate post "${generated.title}" ` +
@@ -424,7 +469,37 @@ export async function runRedactor(
     // Se guarda con el borrador para que el Director revise contra lo que el
     // Redactor realmente vio y no contra una reconstrucción por palabras clave
     // (ver source-context.ts).
-    const evidencia = buildSourceContext(assignedItem ? [assignedItem] : recentNews);
+    // En modo libre el Redactor ve un pool numerado y declara cuáles usó. Antes
+    // se guardaba el pool ENTERO, y eso tenía dos consecuencias medidas en la
+    // POC del 23/09/2026: el Director recibía 10 fuentes como "la evidencia que
+    // decide" para juzgar una afirmación puntual —9 de ellas irrelevantes— y
+    // rechazaba notas cuya fuente estaba ahí, en la posición 4 de 10; y la
+    // Auditoría mostraba las mismas 10 URLs en cada nota, de modo que "¿de
+    // dónde salió este dato?" no tenía respuesta. Si el modelo no declara nada
+    // utilizable se cae al pool completo, que es el comportamiento anterior.
+    const declaradas = (generated.sourceIndexes ?? [])
+      .map((n) => recentNews[n - 1])
+      .filter((item): item is NewsItem => Boolean(item));
+
+    if (!isAssignedMode && hasContext && declaradas.length === 0) {
+      strapi.log.info(
+        `[agent-runner] Redactor "${agent.name}": no declaró fuentes para ` +
+          `"${generated.title}"; se guarda el pool completo como evidencia.`,
+      );
+    }
+
+    // El Explorador ya trae sus fuentes verificadas: son las páginas que la
+    // búsqueda web citó, no un pool de RSS. Los APUNTES no van acá: tienen su
+    // propio campo (`researchNotes`) y su propio bloque en el prompt de
+    // revisión. Metidos en el resumen de la primera fuente —como estaban—
+    // dejaban a las demás con resumen vacío y el Director leía el bloque como
+    // evidencia floja: rechazó cuatro notas por "sin respaldo" con las cuatro
+    // cifras adentro.
+    const evidencia = investigacion
+      ? investigacion.fuentes
+      : buildSourceContext(
+          assignedItem ? [assignedItem] : declaradas.length > 0 ? declaradas : recentNews,
+        );
 
     const createdDraft = (await strapi.documents("api::post.post").create({
       data: {
@@ -435,6 +510,7 @@ export async function runRedactor(
         authorName: agent.name,
         generatedByAgent: agent.documentId,
         sourceContext: evidencia,
+        ...(investigacion ? { researchNotes: recortarEnLinea(investigacion.apuntes, 6000) } : {}),
         // La etiqueta viaja desde la configuración del agente: es lo que
         // agrupa las secciones por área en la home. Determinista a propósito
         // —no la elige el modelo— para que la sección no dependa de que el
@@ -479,7 +555,7 @@ async function runDirector(
   const promptSettings = await getPromptSettings(strapi);
   const client = getOpenAIClient(textKey);
   // Resolve the OpenRouter key up front, but a missing key must not abort the whole
-  // director run — generateCoverImage surfaces it as a per-draft cover_failed.
+  // director run — the cover pipeline surfaces it as a per-draft cover_failed.
   let openrouterKey: string | undefined;
   if (isOpenRouterModel(imageModel)) {
     try {
@@ -512,6 +588,7 @@ async function runDirector(
     excerpt: string | null;
     content: string | null;
     sourceContext: unknown;
+    researchNotes: string | null;
   }>;
 
   const publishedIds = new Set(
@@ -586,20 +663,17 @@ async function runDirector(
         );
       }
 
-      const result = await reviewPost(
-        client,
-        textModel,
-        agent.instructions,
-        {
+      const result = await reviewPost(client, textModel, promptSettings, {
+        directorInstructions: agent.instructions,
+        draft: {
           title: draft.title,
           excerpt: draft.excerpt ?? "",
           content: draft.content ?? "",
         },
-        newsContextForReview,
-        promptSettings.fabricationProneFacts,
-        promptSettings.brandName,
-        formatSourceContext(writerSources),
-      );
+        newsContext: newsContextForReview,
+        writerSources: formatSourceContext(writerSources),
+        researchNotes: draft.researchNotes ?? undefined,
+      });
 
       if (result.rejected) {
         strapi.log.warn(
@@ -635,41 +709,25 @@ async function runDirector(
       let chosenPrompt: string | null = null;
       if (imgAgent) {
         try {
-          // Fetch the last 10 cover prompts so the new one is forced to differ.
-          const recent = (await strapi.documents("api::post.post").findMany({
-            filters: { coverPrompt: { $notNull: true } },
-            sort: { createdAt: "desc" },
-            fields: ["coverPrompt"],
-            limit: 10,
-          } as never)) as unknown as Array<{ coverPrompt: string | null }>;
-          const recentDescriptions = recent.map((r) => r.coverPrompt!).filter(Boolean);
-
-          chosenPrompt = await chooseImagePrompt(getOpenAIClient(textKey), textModel, {
-            title: refined.title,
-            excerpt: refined.excerpt,
-            seedKey: `${draft.documentId}|${refined.title}`,
-            recentDescriptions,
-            systemInstructions: imgAgent.imagePromptTemplate?.trim() || promptSettings.imageSystemInstructions,
-            themeGuide: promptSettings.imageThemeGuide,
-            anchorTaxonomy: promptSettings.imageAnchorTaxonomy,
-          });
-          const imageBuffer = await generateCoverImage(
-            { openaiImageKey: imageKey, openrouterKey },
-            imageModel,
-            chosenPrompt,
+          // El primer intento usa la semilla de siempre (`documentId|title`):
+          // la misma nota sigue saliendo con la misma portada. Si Gemini
+          // devuelve un 200 vacío, reintenta con otra; antes publicaba sin
+          // imagen.
+          const cover = await generateCoverForPost(
+            strapi,
+            { documentId: draft.documentId, title: refined.title, excerpt: refined.excerpt },
             {
-              size: imgAgent.imageSize ?? undefined,
-              quality: imgAgent.imageQuality ?? undefined,
+              textClient: getOpenAIClient(textKey),
+              textModel,
+              imageModel,
+              keys: { openaiImageKey: imageKey, openrouterKey },
+              imgAgent,
+              promptSettings,
+              logTag: "[agent-runner]",
             },
           );
-          const ext = isOpenRouterModel(imageModel) ? "png" : "jpg";
-          const filename = `cover-${draft.documentId}-${Date.now()}.${ext}`;
-          coverImageId = await uploadImageToStrapi(
-            strapi as Parameters<typeof uploadImageToStrapi>[0],
-            imageBuffer,
-            filename,
-            refined.title,
-          );
+          coverImageId = cover.coverImageId;
+          chosenPrompt = cover.coverPrompt;
           strapi.log.info(`[agent-runner] Cover image generated for: ${refined.title}`);
           await logAgentAction(strapi, {
             agentRole: "image-generator",
@@ -682,6 +740,9 @@ async function runDirector(
             metadata: { model: imageModel, triggeredBy: agent.name, trigger: "director" },
           });
         } catch (imgErr) {
+          // El prompt se guarda aunque la imagen falle, como antes: Social
+          // Studio lo reusa para los fondos de las placas.
+          chosenPrompt = imgErr instanceof CoverPipelineError ? imgErr.prompt : null;
           strapi.log.warn(`[agent-runner] Image generation failed (publishing without image):`, imgErr);
           await logAgentAction(strapi, {
             agentRole: "image-generator",
@@ -718,7 +779,7 @@ async function runDirector(
         try {
           await strapi.db
             .connection("posts")
-            .where({ document_id: draft.documentId, locale: "es" })
+            .where({ document_id: draft.documentId, locale: project.defaultLocale })
             .whereNotNull("published_at")
             .update({ published_at: staggered });
         } catch (staggerErr) {
@@ -831,6 +892,134 @@ export async function runDueAgents(strapi: Core.Strapi): Promise<void> {
   }
 }
 
+/**
+ * Recorta en el último salto de línea antes del tope.
+ *
+ * Los apuntes del Explorador son una lista de hechos, uno por línea con su
+ * fuente. Cortarlos a mitad de oración deja al Director con una evidencia que
+ * termina en el aire —"En 2023, el 30% de los vinos varietales elaborados con
+ * To"— y eso invita a desconfiar del bloque entero. Mejor menos hechos,
+ * enteros.
+ */
+function recortarEnLinea(texto: string, tope: number): string {
+  if (texto.length <= tope) return texto;
+  const corte = texto.slice(0, tope);
+  const ultimaLinea = corte.lastIndexOf("\n");
+  return (ultimaLinea > tope * 0.5 ? corte.slice(0, ultimaLinea) : corte).trim();
+}
+
+/**
+ * Títulos de los últimos 7 días, publicados y borradores.
+ *
+ * El Redactor tiene su propia copia adentro (cerrada sobre `strapi` y su
+ * ventana); ésta es para el Explorador, que necesita lo mismo antes de elegir
+ * tema: sin la lista propone siempre lo más obvio del área y el sitio repite.
+ */
+async function titulosRecientes(strapi: Core.Strapi): Promise<string[]> {
+  const desde = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const consulta = (status: "draft" | "published") =>
+    strapi.documents("api::post.post").findMany({
+      status,
+      fields: ["title", "documentId"],
+      filters: { createdAt: { $gte: desde } },
+      limit: 100,
+    }) as unknown as Promise<Array<{ title: string; documentId: string }>>;
+
+  const [borradores, publicados] = await Promise.all([consulta("draft"), consulta("published")]);
+  const porDoc = new Map<string, string>();
+  for (const d of [...publicados, ...borradores]) {
+    if (d.title && !porDoc.has(d.documentId)) porDoc.set(d.documentId, d.title);
+  }
+  return [...porDoc.values()];
+}
+
+/**
+ * El Explorador: elige un tema, lo investiga en la web y escribe.
+ *
+ * No mira el pool de RSS. Existe porque el resto del motor sólo puede escribir
+ * sobre lo que algún feed publicó: con fuentes lentas no escribe nada, y todo
+ * lo que no es estricta actualidad —una explicación, un oficio, una historia—
+ * queda afuera por definición.
+ *
+ * Su `topic` no es una bolsa de palabras para cruzar con titulares, como en el
+ * Redactor, sino el ÁREA dentro de la cual elegir: «vinos y bodegas»,
+ * «historias de cocineros».
+ */
+export async function runExplorador(
+  strapi: Core.Strapi,
+  agent: AgentDoc,
+  notesCount = 1,
+): Promise<void> {
+  const promptSettings = await getPromptSettings(strapi);
+  const area = (agent.topic ?? "").trim();
+  if (!area) {
+    strapi.log.warn(
+      `[agent-runner] Explorador "${agent.name}": sin área definida; no hay dónde buscar.`,
+    );
+    await logAgentAction(strapi, {
+      agentRole: agent.role,
+      action: "explorador_idle",
+      agentName: agent.name,
+      agentDocumentId: agent.documentId,
+      summary: `Explorador "${agent.name}" no corrió: le falta el área a explorar`,
+    });
+    return;
+  }
+
+  const model = await getOpenAITextModel(strapi);
+
+  for (let i = 0; i < notesCount; i++) {
+    // Los títulos recientes se releen en cada vuelta: si no, dos notas de la
+    // misma corrida salen sobre el mismo tema.
+    const yaPublicados = await titulosRecientes(strapi);
+
+    let investigacion: Awaited<ReturnType<typeof investigar>>;
+    try {
+      investigacion = await investigar({
+        apiKey: getOpenAITextKey(),
+        model,
+        dominio: promptSettings.domainDescription,
+        area,
+        instrucciones: agent.instructions ?? "",
+        idioma: promptSettings.writingLanguage,
+        evitar: yaPublicados,
+      });
+    } catch (err) {
+      strapi.log.error(`[agent-runner] Explorador "${agent.name}": ${(err as Error).message}`);
+      await logAgentAction(strapi, {
+        agentRole: agent.role,
+        action: "explorador_idle",
+        agentName: agent.name,
+        agentDocumentId: agent.documentId,
+        summary: `Explorador "${agent.name}" falló al investigar: ${(err as Error).message}`,
+      });
+      return;
+    }
+
+    if (!investigacion) {
+      strapi.log.warn(
+        `[agent-runner] Explorador "${agent.name}": la búsqueda no devolvió fuentes citables; no se escribe.`,
+      );
+      await logAgentAction(strapi, {
+        agentRole: agent.role,
+        action: "explorador_idle",
+        agentName: agent.name,
+        agentDocumentId: agent.documentId,
+        summary: `Explorador "${agent.name}" no escribió: la investigación volvió sin fuentes`,
+      });
+      return;
+    }
+
+    strapi.log.info(
+      `[agent-runner] Explorador "${agent.name}" investigó "${investigacion.tema}" ` +
+        `con ${investigacion.fuentes.length} fuentes`,
+    );
+    // Escribe por el camino del Redactor: misma voz, mismo formato, misma
+    // compuerta anti-calco y mismo dedup.
+    await runRedactor(strapi, agent, 1, undefined, investigacion);
+  }
+}
+
 // Despacho por rol: primero los del motor, después lo que aporte el vertical.
 // Un rol sin runner no es un error acá —image-generator no corre solo, sólo
 // aporta configuración—; devuelve false y el llamador decide qué hacer.
@@ -845,6 +1034,10 @@ async function dispatchAgent(
   }
   if (agent.role === "director") {
     await runDirector(strapi, agent, notesCount);
+    return true;
+  }
+  if (agent.role === "explorador") {
+    await runExplorador(strapi, agent, notesCount);
     return true;
   }
   const propio = verticalAgentRoles[agent.role];

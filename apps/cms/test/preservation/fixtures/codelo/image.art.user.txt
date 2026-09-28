@@ -1,0 +1,52 @@
+Create an editorial cover image description for this news article.
+
+Title: "El organismo publicó el nuevo régimen de inscripción"
+Summary: "La medida fija plazos y requisitos para quienes ya estaban inscriptos y para los que se sumen este año."
+
+HARD CONSTRAINTS for this specific cover (these override theme defaults if they conflict):
+- Medium: illustration / print — NOT a photograph
+- Treatment: annotated technical diagram: cross-sections, callout leader lines, schematic clarity
+- Composition: close third-person over-the-shoulder view
+- Ink and palette: pale washes with a single accent colour
+
+Because this cover is illustrated, your description MUST name the medium explicitly in its FIRST clause (e.g. "A linocut print of…", "A naturalist plate showing…"). Then describe it as artwork: name the marks, ink, texture and paper. Do NOT use photographic vocabulary (lens, depth of field, bokeh, exposure, shot on...). The scene cues below are WHAT to depict; the treatment above is HOW to render it.
+
+RECENTLY USED scenes (the last 2 covers — DO NOT replicate any of these; pick a clearly different visual angle):
+  1. A wide desk with stacked folders under warm window light.
+  2. An empty meeting room seen from the doorway.
+
+STEPS:
+1. Identify the core theme of THIS specific article.
+2. Choose the ONE category from THEME → SCENE CUES that matches it. Each category already
+   carries its scene cue for this cover — use that cue as given, this is the SUBJECT only.
+3. Render that subject in the medium and treatment specified above.
+4. Bake in the composition and ink/lighting constraints, plus any anchors.
+5. Output a single dense paragraph, 2-3 sentences max.
+
+THEME → SCENE CUES (pick exactly ONE category, then exactly ONE variant):
+
+CULTIVO / GUÍA DE CULTIVO:
+  row of young plants in fabric pots along a sunlit balcony wall
+
+COSECHA / SECADO / CURADO:
+  glass curing jars lined on a shelf, unlabeled, soft window light
+
+SALUD / REDUCCIÓN DE DAÑOS / USO MEDICINAL:
+  unlabeled amber dropper bottles and fresh leaves on a clean white surface
+
+LEGAL / REPROCANN / TRÁMITES:
+  hands signing a blank form at a wooden table, no face
+
+COMUNIDAD / ENCUENTROS / TALLERES:
+  a chalkboard with blurred diagrams beside potted plants in a bright room
+
+CULTIVO SOLIDARIO / DONACIONES:
+  two pairs of hands exchanging a small potted plant, close-up, no faces
+
+NOTICIAS / ACTUALIDAD / OPINIÓN:
+  newspaper-style blank broadsheet folded beside a leaf on a café table
+
+HISTORIA / MEMORIA / ANIVERSARIO:
+  old key and dried pressed leaves on parchment-toned paper
+
+Reminder: the medium MUST be an illustration, not a photograph, rendered as "annotated technical diagram: cross-sections, callout leader lines, schematic clarity", with composition "close third-person over-the-shoulder view". Do not drift.

@@ -4,6 +4,7 @@ import { ArrowClockwise, Check, Download } from "@strapi/icons";
 import { useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { AccentCard, GroupLabel } from "../../components/ui";
 import { OVERLAY_FIELDS, type ReelResult } from "./types";
+import { useT } from "../../i18n";
 
 // Preview + edición del reel. "Recomponer" reusa el clip ya generado
 // (clipFileId) → $0 de IA, solo overlay satori + ffmpeg de vuelta.
@@ -18,6 +19,7 @@ export default function ReelEditor({
   onRecompose: (overlay: { type: ReelResult["overlay"]["type"]; fields: Record<string, string> }, clipFileId: number) => void;
   onSaved: (url: string | null) => void;
 }) {
+  const t = useT();
   const { post } = useFetchClient();
   const { toggleNotification } = useNotification();
 
@@ -34,12 +36,12 @@ export default function ReelEditor({
     setSaving(true);
     try {
       const { data } = await post("/api/social-studio/save", { format: "reel", jobId });
-      toggleNotification({ type: "success", message: "Reel guardado en Medios." });
+      toggleNotification({ type: "success", message: t("ss.ok.reel") });
       onSaved((data as { url: string | null }).url ?? null);
     } catch (err) {
       toggleNotification({
         type: "danger",
-        message: (err as Error).message || "Error al guardar el reel. Probá recomponerlo (es gratis).",
+        message: (err as Error).message || t("ss.reel.err"),
       });
     } finally {
       setSaving(false);
@@ -48,8 +50,8 @@ export default function ReelEditor({
 
   return (
     <AccentCard
-      title={`Reel — ${result.seconds}s · 1080×1920`}
-      description="Editá los textos del overlay y recomponé: reusa el clip ya generado, así que no vuelve a gastar IA (solo ffmpeg)."
+      title={t("ss.reel.titulo", { s: result.seconds })}
+      description={t("ss.reel.ayuda")}
       accent="success"
       actions={
         <Button
@@ -58,7 +60,7 @@ export default function ReelEditor({
           disabled={!dirty}
           onClick={() => onRecompose({ type: result.overlay.type, fields }, result.clipFileId)}
         >
-          Recomponer (gratis)
+          {t("ss.recomponer")}
         </Button>
       }
     >
@@ -76,13 +78,13 @@ export default function ReelEditor({
           )}
         </Box>
         <Box style={{ flex: 1, minWidth: 260 }}>
-          <GroupLabel>Overlay · {result.overlay.type === "countdown" ? "Countdown" : "Título"}</GroupLabel>
+          <GroupLabel>{t("ss.overlay")} · {result.overlay.type === "countdown" ? t("ss.countdown") : t("comun.titulo")}</GroupLabel>
           <Flex direction="column" alignItems="stretch" gap={3} marginTop={2}>
             {OVERLAY_FIELDS[result.overlay.type].map((f) => (
               <Field.Root key={f.key}>
-                <Field.Label>{f.label}</Field.Label>
+                <Field.Label>{t(f.label)}</Field.Label>
                 <TextInput
-                  placeholder={f.placeholder}
+                  placeholder={f.placeholder ? t(f.placeholder) : undefined}
                   value={fields[f.key] ?? ""}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     setFields((prev) => ({ ...prev, [f.key]: e.target.value }));
@@ -91,9 +93,7 @@ export default function ReelEditor({
                 />
               </Field.Root>
             ))}
-            <Typography variant="pi" textColor="neutral500">
-              El clip quedó guardado en la carpeta AI Backgrounds — recomponer o regenerar overlays no vuelve a pagar IA.
-            </Typography>
+            <Typography variant="pi" textColor="neutral500">{t("ss.reel.nota")}</Typography>
             <Flex justifyContent="flex-end" gap={2} marginTop={2} wrap="wrap">
               <Button
                 size="L"
@@ -106,10 +106,10 @@ export default function ReelEditor({
                   a.remove();
                 }}
               >
-                Descargar video
+                {t("ss.descargarVideo")}
               </Button>
               <Button size="L" variant="secondary" startIcon={<Check />} loading={saving} onClick={save}>
-                Guardar en Medios
+                {t("ss.guardarMedios")}
               </Button>
             </Flex>
           </Flex>

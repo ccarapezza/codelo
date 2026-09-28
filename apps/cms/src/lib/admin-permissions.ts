@@ -6,7 +6,7 @@
 // que el token sea de un admin activo, sin mirar el rol. Un Editor o un Author
 // podía abrir Site Settings o Prompts IA y guardar.
 //
-// El prefijo es `nib` —el producto— y no `codelo`. Estas acciones son del motor
+// El prefijo es `nib` —el producto— y no el del proyecto. Estas acciones son del motor
 // compartido: el mismo uid tiene que valer en todos los proyectos montados
 // sobre él, o cada adopción del upstream rompería los permisos ya concedidos.
 // Es un identificador de producto, no de instalación.

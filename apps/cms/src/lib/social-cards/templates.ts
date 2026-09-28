@@ -1,6 +1,6 @@
 import { h, type SatoriNode } from "./hyperscript";
-import { BRAND, FIRE, type Size } from "./brand";
-import { logoMark } from "./assets";
+import { fireGradient, resolveBrand, rgba, type Brand, type Size } from "./brand";
+import { bundledLogoMark } from "./assets";
 
 const PAD = 96;
 
@@ -36,7 +36,7 @@ export interface Slide {
 // ---- piezas reutilizables -------------------------------------------------
 
 function fireBar(width: number | string = 132): SatoriNode {
-  return h("div", { style: { display: "flex", width, height: 14, borderRadius: 8, backgroundImage: FIRE } });
+  return h("div", { style: { display: "flex", width, height: 14, borderRadius: 8, backgroundImage: fireGradient(marca) } });
 }
 
 function kicker(text?: string): SatoriNode | null {
@@ -46,12 +46,12 @@ function kicker(text?: string): SatoriNode | null {
     {
       style: {
         display: "flex",
-        fontFamily: BRAND.fontBody,
+        fontFamily: marca.fontBody,
         fontWeight: 700,
         fontSize: 30,
         letterSpacing: 6,
         textTransform: "uppercase",
-        color: BRAND.greenLight,
+        color: marca.accentLight,
       },
     },
     text,
@@ -62,8 +62,8 @@ function footer(mode: "full" | "handle" | "none" = "full"): SatoriNode | null {
   if (mode === "none") return null;
   const handle = h(
     "div",
-    { style: { display: "flex", fontFamily: BRAND.fontBody, fontWeight: 600, fontSize: 30, color: BRAND.muted } },
-    "@" + BRAND.handle,
+    { style: { display: "flex", fontFamily: marca.fontBody, fontWeight: 600, fontSize: 30, color: marca.muted } },
+    handleActual ? "@" + handleActual : "",
   );
 
   if (mode === "handle") {
@@ -72,7 +72,7 @@ function footer(mode: "full" | "handle" | "none" = "full"): SatoriNode | null {
   return h(
     "div",
     { style: { display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" } },
-    h("img", { src: logoMark(), style: { height: 64 } }),
+    h("img", { src: logoActual, style: { height: 64 } }),
     handle,
   );
 }
@@ -115,8 +115,7 @@ function frame({
           width: size.width,
           height: size.height,
           display: "flex",
-          backgroundImage:
-            "linear-gradient(180deg, rgba(8,11,9,0.25) 0%, rgba(8,11,9,0.45) 45%, rgba(8,11,9,0.85) 100%)",
+          backgroundImage: `linear-gradient(180deg, ${rgba(marca.bg, 0.25)} 0%, ${rgba(marca.bg, 0.45)} 45%, ${rgba(marca.bg, 0.85)} 100%)`,
         },
       }),
     );
@@ -130,7 +129,7 @@ function frame({
           width: size.width,
           height: size.height,
           display: "flex",
-          backgroundColor: BRAND.bg,
+          backgroundColor: marca.bg,
         },
       }),
     );
@@ -152,7 +151,7 @@ function frame({
           width: size.width,
           height: size.height,
           display: "flex",
-          backgroundImage: `linear-gradient(180deg, rgba(8,11,9,${(scrim * 0.65).toFixed(2)}) 0%, rgba(8,11,9,${scrim.toFixed(2)}) 50%, rgba(8,11,9,0.97) 100%)`,
+          backgroundImage: `linear-gradient(180deg, ${rgba(marca.bg, +(scrim * 0.65).toFixed(2))} 0%, ${rgba(marca.bg, +scrim.toFixed(2))} 50%, ${rgba(marca.bg, 0.97)} 100%)`,
         },
       }),
     );
@@ -168,7 +167,7 @@ function frame({
           width: size.width,
           height: size.height,
           display: "flex",
-          backgroundImage: `radial-gradient(120% 90% at 50% 18%, ${tint} 0%, rgba(12,17,15,0) 60%)`,
+          backgroundImage: `radial-gradient(120% 90% at 50% 18%, ${tint} 0%, ${rgba(marca.bg, 0)} 60%)`,
         },
       }),
     );
@@ -177,7 +176,7 @@ function frame({
   // barra de acento arriba
   layers.push(
     h("div", {
-      style: { position: "absolute", top: 0, left: 0, width: size.width, height: 12, display: "flex", backgroundImage: FIRE },
+      style: { position: "absolute", top: 0, left: 0, width: size.width, height: 12, display: "flex", backgroundImage: fireGradient(marca) },
     }),
   );
 
@@ -219,8 +218,8 @@ function frame({
         position: "relative",
         width: size.width,
         height: size.height,
-        fontFamily: BRAND.fontBody,
-        color: BRAND.white,
+        fontFamily: marca.fontBody,
+        color: marca.title,
         overflow: "hidden",
       },
     },
@@ -251,19 +250,19 @@ const templates: Record<TemplateName, TemplateFn> = {
               {
                 style: {
                   display: "flex",
-                  fontFamily: BRAND.fontBody,
+                  fontFamily: marca.fontBody,
                   fontWeight: 700,
                   fontSize: 34,
                   letterSpacing: 8,
                   textTransform: "uppercase",
-                  color: BRAND.greenLight,
+                  color: marca.accentLight,
                   marginBottom: 18,
                 },
               },
               slide.kicker,
             )
           : null,
-        h("img", { src: logoMark(), style: { width: slide.logoSize || 780 } }),
+        h("img", { src: logoActual, style: { width: slide.logoSize || 780 } }),
         slide.tagline
           ? h(
               "div",
@@ -273,7 +272,7 @@ const templates: Record<TemplateName, TemplateFn> = {
                   marginTop: 24,
                   fontSize: 40,
                   fontWeight: 600,
-                  color: BRAND.offwhite,
+                  color: marca.body,
                   maxWidth: 860,
                   lineHeight: 1.2,
                   textAlign: "center",
@@ -286,7 +285,7 @@ const templates: Record<TemplateName, TemplateFn> = {
         slide.hint
           ? h(
               "div",
-              { style: { display: "flex", marginTop: 26, fontSize: 32, fontWeight: 600, color: BRAND.white } },
+              { style: { display: "flex", marginTop: 26, fontSize: 32, fontWeight: 600, color: marca.title } },
               slide.hint,
             )
           : null,
@@ -310,7 +309,7 @@ const templates: Record<TemplateName, TemplateFn> = {
           {
             style: {
               display: "flex",
-              fontFamily: BRAND.fontDisplay,
+              fontFamily: marca.fontDisplay,
               fontSize: slide.titleSize || 132,
               lineHeight: 0.95,
               textTransform: "uppercase",
@@ -325,7 +324,7 @@ const templates: Record<TemplateName, TemplateFn> = {
         slide.hint
           ? h(
               "div",
-              { style: { display: "flex", marginTop: 26, fontSize: 32, fontWeight: 600, color: BRAND.offwhite } },
+              { style: { display: "flex", marginTop: 26, fontSize: 32, fontWeight: 600, color: marca.body } },
               slide.hint,
             )
           : null,
@@ -341,7 +340,7 @@ const templates: Record<TemplateName, TemplateFn> = {
       transparent: slide._transparent,
       scrim: 0.6,
       justify: "center",
-      tint: !slide._bgUri ? "rgba(255,122,0,0.16)" : null,
+      tint: !slide._bgUri ? rgba(marca.accent, 0.16) : null,
       children: [
         kicker(slide.kicker),
         h(
@@ -349,10 +348,10 @@ const templates: Record<TemplateName, TemplateFn> = {
           {
             style: {
               display: "flex",
-              fontFamily: BRAND.fontDisplay,
+              fontFamily: marca.fontDisplay,
               fontSize: slide.numberSize || 380,
               lineHeight: 0.9,
-              color: BRAND.terracotta,
+              color: marca.accentLight,
               letterSpacing: 2,
             },
           },
@@ -366,7 +365,7 @@ const templates: Record<TemplateName, TemplateFn> = {
               display: "flex",
               fontSize: slide.labelSize || 50,
               fontWeight: 600,
-              color: BRAND.offwhite,
+              color: marca.body,
               maxWidth: "92%",
               lineHeight: 1.15,
             },
@@ -384,11 +383,11 @@ const templates: Record<TemplateName, TemplateFn> = {
         "div",
         { style: { display: "flex", alignItems: "flex-start", marginBottom: 30 } },
         h("div", {
-          style: { display: "flex", width: 14, height: 44, borderRadius: 6, backgroundImage: FIRE, marginRight: 26, marginTop: 6 },
+          style: { display: "flex", width: 14, height: 44, borderRadius: 6, backgroundImage: fireGradient(marca), marginRight: 26, marginTop: 6 },
         }),
         h(
           "div",
-          { style: { display: "flex", fontSize: 44, fontWeight: 500, color: BRAND.offwhite, lineHeight: 1.2, maxWidth: 760 } },
+          { style: { display: "flex", fontSize: 44, fontWeight: 500, color: marca.body, lineHeight: 1.2, maxWidth: 760 } },
           it,
         ),
       ),
@@ -407,7 +406,7 @@ const templates: Record<TemplateName, TemplateFn> = {
               {
                 style: {
                   display: "flex",
-                  fontFamily: BRAND.fontDisplay,
+                  fontFamily: marca.fontDisplay,
                   fontSize: slide.titleSize || 84,
                   textTransform: "uppercase",
                   lineHeight: 1,
@@ -432,13 +431,13 @@ const templates: Record<TemplateName, TemplateFn> = {
       scrim: 0.6,
       justify: "center",
       children: [
-        h("div", { style: { display: "flex", fontFamily: BRAND.fontDisplay, fontSize: 200, lineHeight: 0.7, color: BRAND.greenLight } }, "“"),
+        h("div", { style: { display: "flex", fontFamily: marca.fontDisplay, fontSize: 200, lineHeight: 0.7, color: marca.accentLight } }, "“"),
         h(
           "div",
           {
             style: {
               display: "flex",
-              fontFamily: BRAND.fontDisplay,
+              fontFamily: marca.fontDisplay,
               fontSize: slide.size || 96,
               lineHeight: 1.02,
               textTransform: "uppercase",
@@ -448,7 +447,7 @@ const templates: Record<TemplateName, TemplateFn> = {
           slide.text,
         ),
         slide.by
-          ? h("div", { style: { display: "flex", marginTop: 34, fontSize: 34, fontWeight: 600, color: BRAND.muted } }, "— " + slide.by)
+          ? h("div", { style: { display: "flex", marginTop: 34, fontSize: 34, fontWeight: 600, color: marca.muted } }, "— " + slide.by)
           : null,
       ],
     });
@@ -462,35 +461,35 @@ const templates: Record<TemplateName, TemplateFn> = {
       transparent: slide._transparent,
       scrim: 0.6,
       justify: "center",
-      tint: !slide._bgUri ? "rgba(229,57,47,0.18)" : null,
+      tint: !slide._bgUri ? rgba(marca.accentDeep, 0.18) : null,
       children: [
         h(
           "div",
           {
             style: {
               display: "flex",
-              fontFamily: BRAND.fontBody,
+              fontFamily: marca.fontBody,
               fontWeight: 700,
               fontSize: 56,
               letterSpacing: 10,
               textTransform: "uppercase",
-              color: BRAND.offwhite,
+              color: marca.body,
             },
           },
           slide.pre || "Faltan",
         ),
-        h("div", { style: { display: "flex", fontFamily: BRAND.fontDisplay, fontSize: 460, lineHeight: 0.85, color: BRAND.terracotta } }, String(slide.big)),
+        h("div", { style: { display: "flex", fontFamily: marca.fontDisplay, fontSize: 460, lineHeight: 0.85, color: marca.accentLight } }, String(slide.big)),
         h(
           "div",
           {
             style: {
               display: "flex",
-              fontFamily: BRAND.fontBody,
+              fontFamily: marca.fontBody,
               fontWeight: 700,
               fontSize: 56,
               letterSpacing: 10,
               textTransform: "uppercase",
-              color: BRAND.offwhite,
+              color: marca.body,
             },
           },
           slide.unit || "días",
@@ -498,7 +497,7 @@ const templates: Record<TemplateName, TemplateFn> = {
         slide.label
           ? h(
               "div",
-              { style: { display: "flex", marginTop: 30, fontSize: 40, fontWeight: 600, color: BRAND.white, textAlign: "center", maxWidth: "90%" } },
+              { style: { display: "flex", marginTop: 30, fontSize: 40, fontWeight: 600, color: marca.title, textAlign: "center", maxWidth: "90%" } },
               slide.label,
             )
           : null,
@@ -514,13 +513,13 @@ const templates: Record<TemplateName, TemplateFn> = {
       transparent: slide._transparent,
       scrim: 0.55,
       justify: "center",
-      tint: !slide._bgUri ? "rgba(255,122,0,0.18)" : null,
+      tint: !slide._bgUri ? rgba(marca.accent, 0.18) : null,
       children: [
         slide.title
           ? h(
               "div",
               {
-                style: { display: "flex", fontFamily: BRAND.fontDisplay, fontSize: slide.titleSize || 92, textTransform: "uppercase", lineHeight: 1, marginBottom: 24 },
+                style: { display: "flex", fontFamily: marca.fontDisplay, fontSize: slide.titleSize || 92, textTransform: "uppercase", lineHeight: 1, marginBottom: 24 },
               },
               slide.title,
             )
@@ -528,13 +527,13 @@ const templates: Record<TemplateName, TemplateFn> = {
         slide.subtitle
           ? h(
               "div",
-              { style: { display: "flex", fontSize: 42, fontWeight: 500, color: BRAND.offwhite, marginBottom: 40, maxWidth: "92%", lineHeight: 1.2 } },
+              { style: { display: "flex", fontSize: 42, fontWeight: 500, color: marca.body, marginBottom: 40, maxWidth: "92%", lineHeight: 1.2 } },
               slide.subtitle,
             )
           : null,
         fireBar(180),
-        h("div", { style: { display: "flex", marginTop: 44, fontFamily: BRAND.fontDisplay, fontSize: 96, color: BRAND.white } }, "@" + BRAND.handle),
-        h("div", { style: { display: "flex", marginTop: 8, fontSize: 38, fontWeight: 600, color: BRAND.greenLight } }, slide.url || BRAND.handle),
+        h("div", { style: { display: "flex", marginTop: 44, fontFamily: marca.fontDisplay, fontSize: 96, color: marca.title } }, handleActual ? "@" + handleActual : ""),
+        h("div", { style: { display: "flex", marginTop: 8, fontSize: 38, fontWeight: 600, color: marca.accentLight } }, slide.url || handleActual),
       ],
     });
   },
@@ -552,7 +551,41 @@ const TEXT_FIELDS: (keyof Slide)[] = ["kicker", "title", "tagline", "hint", "lab
 
 export const TEMPLATE_NAMES: TemplateName[] = Object.keys(templates) as TemplateName[];
 
-export function renderSlide(slide: Slide, size: Size): SatoriNode {
+/**
+ * Lo que la instalación aporta al render en curso: su marca, su logo y su
+ * `@handle`.
+ *
+ * Ninguna de las tres es una constante del motor. Los colores y el logo salen
+ * de `site-setting` (Identidad visual) y el handle de `socialHandle`, que
+ * además comparte con el caption: si el render leyera uno y el caption otro, la
+ * placa y el texto que la acompaña firmarían distinto.
+ *
+ * Se guardan en módulo y no se pasan por parámetro porque habría que
+ * enhebrarlos por las diez funciones de plantilla. Es seguro porque satori
+ * renderiza de forma SINCRÓNICA: `renderSlide` arma el árbol entero antes de
+ * devolver, así que no hay dos renders intercalados pisándose la marca. Si
+ * alguna vez una plantilla se vuelve asíncrona, esto deja de valer y hay que
+ * enhebrar de verdad.
+ */
+export interface RenderContext {
+  /** Sin el `@`. Vacío = no se imprime el pie. */
+  handle?: string;
+  /** Sin esto se dibuja con los colores del motor. */
+  brand?: Brand;
+  /** Data URI del logo subido. Sin esto, el bundleado. */
+  logo?: string | null;
+}
+
+let handleActual = "";
+// `resolveBrand(null)` es la marca del motor: no repetimos los nombres de
+// fuente acá, que ya viven en la costura.
+let marca: Brand = resolveBrand(null);
+let logoActual = "";
+
+export function renderSlide(slide: Slide, size: Size, ctx: RenderContext = {}): SatoriNode {
+  handleActual = ctx.handle ?? "";
+  if (ctx.brand) marca = ctx.brand;
+  logoActual = ctx.logo || bundledLogoMark();
   const fn = templates[slide.template];
   if (!fn) {
     throw new Error(`Plantilla desconocida: "${slide.template}". Disponibles: ${TEMPLATE_NAMES.join(", ")}`);

@@ -5,7 +5,7 @@
     "singularName": "tag",
     "pluralName": "tags",
     "displayName": "Tag",
-    "description": "Tags to relate posts to sections (cultivo, legal, comunidad…) or events."
+    "description": "Tags to relate posts to sections or events."
   },
   "options": {
     "draftAndPublish": false
@@ -25,7 +25,10 @@
     },
     "kind": {
       "type": "enumeration",
-      "enum": ["topic", "event"],
+      "enum": [
+        "topic",
+        "event"
+      ],
       "required": true,
       "default": "topic"
     },

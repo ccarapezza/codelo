@@ -1,0 +1,50 @@
+Create an editorial cover image description for this news article.
+
+Title: "El organismo publicó el nuevo régimen de inscripción"
+Summary: "La medida fija plazos y requisitos para quienes ya estaban inscriptos y para los que se sumen este año."
+
+HARD CONSTRAINTS for this specific cover (these override theme defaults if they conflict):
+- Medium: photograph
+- Treatment: archival 1970s film photograph: visible grain, faded dyes, slight vignette
+- Composition: wide environmental shot with leading lines
+- Lighting mood: single hard light source at night, deep shadows
+
+RECENTLY USED scenes (the last 2 covers — DO NOT replicate any of these; pick a clearly different visual angle):
+  1. A wide desk with stacked folders under warm window light.
+  2. An empty meeting room seen from the doorway.
+
+STEPS:
+1. Identify the core theme of THIS specific article.
+2. Choose the ONE category from THEME → SCENE CUES that matches it. Each category already
+   carries its scene cue for this cover — use that cue as given, this is the SUBJECT only.
+3. Render that subject in the medium and treatment specified above.
+4. Bake in the composition and ink/lighting constraints, plus any anchors.
+5. Output a single dense paragraph, 2-3 sentences max.
+
+THEME → SCENE CUES (pick exactly ONE category, then exactly ONE variant):
+
+CULTIVO / GUÍA DE CULTIVO:
+  gloved hands transplanting a seedling into fresh soil, close-up, no face
+
+COSECHA / SECADO / CURADO:
+  trimmed branches hanging to dry in a dim, tidy room, warm side light
+
+SALUD / REDUCCIÓN DE DAÑOS / USO MEDICINAL:
+  a calm bedside table with a plain oil bottle, glasses and a book
+
+LEGAL / REPROCANN / TRÁMITES:
+  a stamped-looking blank document under a desk lamp, folder and pen beside it
+
+COMUNIDAD / ENCUENTROS / TALLERES:
+  hands of several people around a table with cuttings and pots, workshop feel, no faces
+
+CULTIVO SOLIDARIO / DONACIONES:
+  a wooden crate of unlabeled jars packed with care on a table
+
+NOTICIAS / ACTUALIDAD / OPINIÓN:
+  stack of plain folders with a sprig of cannabis resting on top
+
+HISTORIA / MEMORIA / ANIVERSARIO:
+  weathered blank wooden sign hung on a garden fence with vines
+
+Reminder: the medium MUST be a photograph, rendered as "archival 1970s film photograph: visible grain, faded dyes, slight vignette", with composition "wide environmental shot with leading lines". Do not drift.

@@ -118,7 +118,9 @@ export interface JobState {
 }
 
 export interface CostLine {
+  /** Clave de traducción; se traduce al renderizar, con `params`. */
   label: string;
+  params?: Record<string, string | number>;
   usd: number;
 }
 
@@ -129,47 +131,55 @@ export function estimateCost(cfg: StudioConfig, s: StudioState): { lines: CostLi
   const img = cfg.imageModels[s.imageModel] ?? Object.values(cfg.imageModels)[0];
 
   const addImage = () => {
-    if (s.bgFile) lines.push({ label: "Fondo existente (sin IA)", usd: 0 });
-    else lines.push({ label: `1 imagen IA (${img.label})`, usd: img.costPerImage });
+    if (s.bgFile) lines.push({ label: "ss.costo.fondoExistente", usd: 0 });
+    else lines.push({ label: "ss.costo.imagen", params: { modelo: img.label }, usd: img.costPerImage });
   };
 
   switch (s.format) {
     case "portada":
-      if (fromPost) lines.push({ label: "3 llamadas LLM (prompt de imagen con memoria)", usd: 3 * cfg.llmCallEstimateUsd });
-      lines.push({ label: `1 imagen IA (${img.label})`, usd: img.costPerImage });
+      if (fromPost) lines.push({ label: "ss.costo.llmPortada", usd: 3 * cfg.llmCallEstimateUsd });
+      lines.push({ label: "ss.costo.imagen", params: { modelo: img.label }, usd: img.costPerImage });
       break;
     case "carrusel":
-      lines.push({ label: "1 llamada LLM (deck + caption)", usd: cfg.llmCallEstimateUsd });
+      lines.push({ label: "ss.costo.llmDeck", usd: cfg.llmCallEstimateUsd });
       addImage();
-      lines.push({ label: `Render de ${s.slideCount} placas (satori, sin IA)`, usd: 0 });
+      lines.push({ label: "ss.costo.render", params: { n: s.slideCount }, usd: 0 });
       break;
     case "historia":
       if (s.historiaOutput === "video") {
-        lines.push({ label: "1 llamada LLM (composición de la placa)", usd: cfg.llmCallEstimateUsd });
+        lines.push({ label: "ss.costo.llmPlaca", usd: cfg.llmCallEstimateUsd });
         if (s.clipFile) {
-          lines.push({ label: "Clip existente (sin IA)", usd: 0 });
+          lines.push({ label: "ss.costo.clipExistente", usd: 0 });
         } else {
           const vm = cfg.videoModels[s.videoModel] ?? Object.values(cfg.videoModels)[0];
           const seconds = Math.min(s.videoSeconds, vm.maxSeconds);
-          lines.push({ label: `Video IA: ${seconds}s × $${vm.pricePerSec}/s (${vm.label})`, usd: +(seconds * vm.pricePerSec).toFixed(3) });
+          lines.push({
+          label: "ss.costo.video",
+          params: { s: seconds, precio: vm.pricePerSec, modelo: vm.label },
+          usd: +(seconds * vm.pricePerSec).toFixed(3),
+        });
         }
-        lines.push({ label: "Placa overlay + ffmpeg (sin IA)", usd: 0 });
+        lines.push({ label: "ss.costo.placaOverlay", usd: 0 });
       } else {
-        lines.push({ label: "1 llamada LLM (composición de la placa)", usd: cfg.llmCallEstimateUsd });
+        lines.push({ label: "ss.costo.llmPlaca", usd: cfg.llmCallEstimateUsd });
         addImage();
-        lines.push({ label: "Render 1080×1920 (satori, sin IA)", usd: 0 });
+        lines.push({ label: "ss.costo.render1080", usd: 0 });
       }
       break;
     case "reel": {
-      if (fromPost) lines.push({ label: "1 llamada LLM (textos del overlay)", usd: cfg.llmCallEstimateUsd });
+      if (fromPost) lines.push({ label: "ss.costo.llmOverlay", usd: cfg.llmCallEstimateUsd });
       if (s.clipFile) {
-        lines.push({ label: "Clip existente (sin IA)", usd: 0 });
+        lines.push({ label: "ss.costo.clipExistente", usd: 0 });
       } else {
         const vm = cfg.videoModels[s.videoModel] ?? Object.values(cfg.videoModels)[0];
         const seconds = Math.min(s.videoSeconds, vm.maxSeconds);
-        lines.push({ label: `Video IA: ${seconds}s × $${vm.pricePerSec}/s (${vm.label})`, usd: +(seconds * vm.pricePerSec).toFixed(3) });
+        lines.push({
+          label: "ss.costo.video",
+          params: { s: seconds, precio: vm.pricePerSec, modelo: vm.label },
+          usd: +(seconds * vm.pricePerSec).toFixed(3),
+        });
       }
-      lines.push({ label: "Overlay + composición ffmpeg (sin IA)", usd: 0 });
+      lines.push({ label: "ss.costo.composicion", usd: 0 });
       break;
     }
   }
@@ -177,53 +187,54 @@ export function estimateCost(cfg: StudioConfig, s: StudioState): { lines: CostLi
   return { lines, totalUsd };
 }
 
+// Las etiquetas y los placeholders son CLAVES: se traducen al renderizar.
 // Editable fields per template, in display order (mirrors templates.ts).
 export const TEMPLATE_FIELDS: Record<string, Array<{ key: string; label: string; multiline?: boolean }>> = {
   hero: [
-    { key: "kicker", label: "Kicker" },
-    { key: "tagline", label: "Tagline" },
-    { key: "hint", label: "Hint" },
+    { key: "kicker", label: "ss.campo.kicker" },
+    { key: "tagline", label: "ss.campo.tagline" },
+    { key: "hint", label: "ss.campo.hint" },
   ],
   cover: [
-    { key: "kicker", label: "Kicker" },
-    { key: "title", label: "Título" },
-    { key: "hint", label: "Hint" },
+    { key: "kicker", label: "ss.campo.kicker" },
+    { key: "title", label: "ss.campo.titulo" },
+    { key: "hint", label: "ss.campo.hint" },
   ],
   stat: [
-    { key: "kicker", label: "Kicker" },
-    { key: "big", label: "Número grande" },
-    { key: "label", label: "Etiqueta" },
+    { key: "kicker", label: "ss.campo.kicker" },
+    { key: "big", label: "ss.campo.numero" },
+    { key: "label", label: "ss.campo.etiqueta" },
   ],
   bullets: [
-    { key: "kicker", label: "Kicker" },
-    { key: "title", label: "Título" },
+    { key: "kicker", label: "ss.campo.kicker" },
+    { key: "title", label: "ss.campo.titulo" },
   ],
   quote: [
-    { key: "text", label: "Frase", multiline: true },
-    { key: "by", label: "Autor" },
+    { key: "text", label: "ss.campo.frase", multiline: true },
+    { key: "by", label: "ss.campo.autor" },
   ],
   countdown: [
-    { key: "pre", label: "Texto previo" },
-    { key: "big", label: "Número grande" },
-    { key: "unit", label: "Unidad" },
-    { key: "label", label: "Etiqueta" },
+    { key: "pre", label: "ss.campo.previo" },
+    { key: "big", label: "ss.campo.numero" },
+    { key: "unit", label: "ss.campo.unidad" },
+    { key: "label", label: "ss.campo.etiqueta" },
   ],
   cta: [
-    { key: "title", label: "Título" },
-    { key: "subtitle", label: "Subtítulo" },
+    { key: "title", label: "ss.campo.titulo" },
+    { key: "subtitle", label: "ss.campo.subtitulo" },
     { key: "url", label: "URL" },
   ],
 };
 
 export const OVERLAY_FIELDS: Record<OverlayType, Array<{ key: string; label: string; placeholder?: string }>> = {
   title: [
-    { key: "kicker", label: "Kicker", placeholder: "Nueva nota" },
-    { key: "title", label: "Título", placeholder: "(de la nota, o escribilo)" },
+    { key: "kicker", label: "ss.campo.kicker", placeholder: "ss.ph.nuevaNota" },
+    { key: "title", label: "ss.campo.titulo", placeholder: "ss.ph.deLaNota" },
   ],
   countdown: [
-    { key: "pre", label: "Texto previo", placeholder: "Faltan" },
-    { key: "big", label: "Número grande", placeholder: "8" },
-    { key: "unit", label: "Unidad", placeholder: "días" },
-    { key: "label", label: "Etiqueta", placeholder: "para la Expo Cannabis" },
+    { key: "pre", label: "ss.campo.previo", placeholder: "ss.ph.faltan" },
+    { key: "big", label: "ss.campo.numero", placeholder: "8" },
+    { key: "unit", label: "ss.campo.unidad", placeholder: "ss.ph.dias" },
+    { key: "label", label: "ss.campo.etiqueta", placeholder: "ss.ph.evento" },
   ],
 };

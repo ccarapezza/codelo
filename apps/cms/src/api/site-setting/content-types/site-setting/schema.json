@@ -5,7 +5,7 @@
     "singularName": "site-setting",
     "pluralName": "site-settings",
     "displayName": "Site Settings",
-    "description": "Global site configuration: model names (non-secret) and AdSense params (public). OpenAI API keys are sourced from OPENAI_API_KEY / OPENAI_IMAGE_API_KEY env vars."
+    "description": "Global site configuration: model names (non-secret), brand colours and logo for the social cards, and AdSense params (public). OpenAI API keys are sourced from OPENAI_API_KEY / OPENAI_IMAGE_API_KEY env vars."
   },
   "options": {
     "draftAndPublish": false
@@ -24,13 +24,17 @@
       "default": "gpt-4o-mini",
       "private": true
     },
-    "openaiNormaModel": {
-      "type": "string"
-    },
     "openaiImageModel": {
       "type": "string",
       "default": "gpt-image-1-mini",
       "private": true
+    },
+    "openaiNormaModel": {
+      "type": "string"
+    },
+    "autoTranslate": {
+      "type": "boolean",
+      "default": true
     },
     "adsensePublisherId": {
       "type": "string"
@@ -67,6 +71,54 @@
       "default": false,
       "required": true,
       "description": "Global toggle for self-promotional banners. When true, house-ad entries override AdSense per slot; when false, all slots fall back to AdSense."
+    },
+    "brandBg": {
+      "type": "string",
+      "description": "Fondo de la placa cuando no hay imagen. De acá salen también el velo sobre la foto y el degradé de los overlays de video. Vacío = el del motor: el default NO va en el schema, porque una columna con default no se distingue de una configurada a mano y la semilla del proyecto la saltearía por no estar vacía."
+    },
+    "brandTitle": {
+      "type": "string",
+      "description": "Titulares. El texto de mayor contraste de la placa. Vacío = el del motor: el default NO va en el schema, porque una columna con default no se distingue de una configurada a mano y la semilla del proyecto la saltearía por no estar vacía."
+    },
+    "brandBody": {
+      "type": "string",
+      "description": "Cuerpo, bajadas y citas. Vacío = el del motor: el default NO va en el schema, porque una columna con default no se distingue de una configurada a mano y la semilla del proyecto la saltearía por no estar vacía."
+    },
+    "brandMuted": {
+      "type": "string",
+      "description": "Pie, atribución y etiquetas. Vacío = el del motor: el default NO va en el schema, porque una columna con default no se distingue de una configurada a mano y la semilla del proyecto la saltearía por no estar vacía."
+    },
+    "brandAccent": {
+      "type": "string",
+      "description": "Acento principal. Centro del degradé de marca. Vacío = el del motor: el default NO va en el schema, porque una columna con default no se distingue de una configurada a mano y la semilla del proyecto la saltearía por no estar vacía."
+    },
+    "brandAccentLight": {
+      "type": "string",
+      "description": "Variante clara del acento, para números y destacados. Vacío = el del motor: el default NO va en el schema, porque una columna con default no se distingue de una configurada a mano y la semilla del proyecto la saltearía por no estar vacía."
+    },
+    "brandAccentDeep": {
+      "type": "string",
+      "description": "Variante profunda del acento, para el cierre del degradé y los velos de color. Vacío = el del motor: el default NO va en el schema, porque una columna con default no se distingue de una configurada a mano y la semilla del proyecto la saltearía por no estar vacía."
+    },
+    "brandLogo": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": [
+        "images"
+      ],
+      "description": "Logo que imprimen las placas. Sin esto se usa el de assets/logo/. PNG con fondo transparente."
+    },
+    "defaultPostTagSlug": {
+      "type": "string",
+      "description": "Slug de una etiqueta existente. Se le pone a las notas creadas a mano cuando el editor no elige ninguna. Sin default a propósito: la semilla escribe sólo lo vacío."
+    },
+    "ingestWindowDays": {
+      "type": "integer",
+      "default": 7,
+      "min": 1,
+      "max": 90,
+      "description": "Cuántos días hacia atrás se ingieren noticias de los feeds, y cuánto se conservan. Subilo si tus fuentes publican poco: con 7 días, un feed que saca una nota por mes no aporta nunca. Bajarlo NO borra lo ya guardado hasta el próximo ciclo."
     }
   }
 }

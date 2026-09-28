@@ -1,0 +1,11 @@
+## CURRENT ARTICLE
+{
+  "title": "El organismo publicó el nuevo régimen de inscripción",
+  "excerpt": "La medida fija plazos y requisitos para quienes ya estaban inscriptos y para los que se sumen este año.",
+  "content": "## Qué cambia\n\nEl texto ordena en un solo trámite lo que antes estaba repartido en tres ventanillas.\n\n> La transición se hace en etapas y con plazos escalonados.\n\n- Un registro único para todas las categorías.\n- Plazos de 30 días para la primera renovación."
+}
+
+## MODIFICATION INSTRUCTION
+Hacela más corta y sacá la repetición del segundo párrafo.
+
+Return only the revised JSON.

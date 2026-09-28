@@ -13,7 +13,7 @@
 // la migración que sí es peligrosa.
 
 /** Valor por defecto para desarrollo; en producción lo impone el compose. */
-const SLUG_POR_DEFECTO = "codelo";
+const SLUG_POR_DEFECTO = "nib";
 
 /** true si el slug vino de la configuración y no del default de desarrollo. */
 export const slugExplicito = Boolean(process.env.PROJECT_SLUG?.trim());
@@ -22,7 +22,7 @@ export const slugExplicito = Boolean(process.env.PROJECT_SLUG?.trim());
 export const slug = process.env.PROJECT_SLUG?.trim() || SLUG_POR_DEFECTO;
 
 /** Nombre visible de la marca. El de la voz editorial vive en prompt-settings. */
-export const name = process.env.PROJECT_NAME?.trim() || "Cogollos del Oeste";
+export const name = process.env.PROJECT_NAME?.trim() || "Nib";
 
 /** Origen público del sitio, para los headers que piden identificarse. */
 export const siteUrl = (
@@ -38,6 +38,21 @@ export const siteUrl = (
  * parametrizar esto: son filas que YA existen en la base y que marcan
  * migraciones cumplidas. Cambiarlo equivale a decir "ninguna migración corrió".
  */
+/**
+ * Idioma en el que escribe el sitio y al que se traduce.
+ *
+ * Son CÓDIGOS de locale (es, en, pt-BR), no los nombres que ven los prompts:
+ * esos son `writingLanguage` y `translationLanguage`, que se editan desde el
+ * panel. Van por env y no por ajuste porque Strapi los usa para crear y publicar
+ * localizaciones: cambiarlos con contenido cargado exige una migración, no un
+ * click.
+ */
+export const defaultLocale = process.env.DEFAULT_LOCALE?.trim() || "es";
+export const translationLocale = process.env.TRANSLATION_LOCALE?.trim() || "en";
+
+/** Zona horaria de los schedules y de los crons del motor. */
+export const scheduleTz = process.env.AGENT_SCHEDULE_TZ?.trim() || "America/Argentina/Buenos_Aires";
+
 export function coreStoreKey(key: string): string {
   return `${slug}:${key}`;
 }

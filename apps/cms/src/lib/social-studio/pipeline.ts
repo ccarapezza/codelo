@@ -21,6 +21,7 @@ import {
   getOpenRouterImageKey,
 } from "../openai-config";
 import { getPromptSettings } from "../prompt-settings";
+import type { PromptSettings } from "../prompt-defaults";
 import * as project from "../project";
 import { generateOpenRouterImage } from "../openrouter-image";
 import { logAgentAction } from "../audit";
@@ -28,9 +29,11 @@ import {
   composeCarousel,
   dataUriFromBuffer,
   dataUriFromFile,
+  getRenderContext,
   renderSlide,
   renderToPng,
   SIZES,
+  type RenderContext,
   type Slide,
 } from "../social-cards";
 import { sanitizeSlide } from "../social-cards/composer";
@@ -54,16 +57,22 @@ import { generateClip } from "../social-video/openrouter-video";
 import { renderOverlayNode, type OverlayType } from "../social-video/overlays";
 import { composeReel } from "../social-video/compose";
 
-// Estilo del prompt de video (b-roll vertical sin texto, en clave de marca).
-export const VIDEO_BG_STYLE =
-  "Estilo: video editorial botanico y documental, atmosfera cinematografica, luz natural suave, " +
-  "tonos verdes profundos y tierra con destellos calidos, camara lenta sutil y movimiento leve y continuo. " +
-  "Formato vertical 9:16. Dejar el centro y la mitad inferior mas oscuros y despejados para sobreimprimir texto. " +
-  "MUY IMPORTANTE: sin ningun texto, sin letras, sin numeros, sin logos, sin marcas de agua.";
+/**
+ * El prompt del clip: lo que pidió el editor más el estilo de la casa.
+ *
+ * Las dos partes salían de constantes de este archivo y describían un tema
+ * concreto —"video editorial botanico", "macro de hojas verdes con rocio"— así
+ * que cualquier instancia del motor producía b-roll de ese tema. Ahora son
+ * ajustes y se editan desde el panel.
+ */
+export function buildClipPrompt(ps: PromptSettings, videoPrompt?: string): string {
+  return `${videoPrompt?.trim() || ps.videoDefaultPrompt}. ${ps.videoStyle}`;
+}
 
-export const DEFAULT_VIDEO_PROMPT =
-  "Macro de hojas verdes moviendose apenas con la brisa a contraluz, gotas de rocio, " +
-  "profundidad de campo corta, luz dorada de la manana, sin personas ni rostros";
+/** La imagen de fondo de la portada cuando el modelo no devolvió un prompt. */
+export function buildCoverFallbackPrompt(ps: PromptSettings, title: string): string {
+  return `${title}. ${ps.coverFallbackPrompt}`;
+}
 
 export function stepsForFormat(format: StudioFormat, output?: "image" | "video"): Array<{ key: string; label: string }> {
   switch (format) {
@@ -139,6 +148,8 @@ export async function renderDeck(
   sizeKey: SizeKey,
   bgUri: string | null,
   scale = 1,
+  /** La marca, el logo y el @handle de la instalación. Vacío = los del motor. */
+  ctx: RenderContext = {},
 ): Promise<Buffer[]> {
   const size = SIZES[sizeKey];
   const out: Buffer[] = [];
@@ -147,7 +158,7 @@ export async function renderDeck(
     delete slide.bg;
     delete slide._bgUri;
     if (bgUri) slide._bgUri = bgUri;
-    out.push(await renderToPng(renderSlide(slide, size), size, scale));
+    out.push(await renderToPng(renderSlide(slide, size, ctx), size, scale));
   }
   return out;
 }
@@ -201,6 +212,22 @@ async function generateBgImage(strapi: any, model: string, prompt: string): Prom
 // ---------------------------------------------------------------------------
 // Reel overlay texts (LLM only when sourcing from a post)
 
+/**
+ * Exportado para poder compararlo sin red (test/preservation).
+ *
+ * Usaba `project.name` (la env de la instalación) donde el resto de las piezas
+ * de redes usa `brandName`, así que el mismo sitio se firmaba de dos formas
+ * distintas según la pantalla.
+ */
+export function buildOverlaySystemPrompt(ps: PromptSettings, ask: string): string {
+  return [
+    `You are the social-media editor for ${ps.brandName}.`,
+    ps.socialVoice,
+    `Write in ${ps.writingLanguage}. No emojis. Use ONLY information from the material; invent nothing.`,
+    ask,
+  ].join("\n");
+}
+
 async function generateOverlayFields(
   strapi: any,
   material: SourceMaterial,
@@ -214,10 +241,11 @@ async function generateOverlayFields(
 
   const client = getOpenAIClient(getOpenAITextKey());
   const textModel = await getOpenAITextModel(strapi);
+  const ps = await getPromptSettings(strapi);
   const ask =
     type === "title"
-      ? 'Devolvé JSON { "kicker": "<etiqueta corta, <=22 chars, MAYÚSCULAS implícitas>", "title": "<gancho de la nota, <=55 chars>" }'
-      : 'Devolvé JSON { "label": "<contexto corto del countdown, <=55 chars>" }';
+      ? 'Return JSON { "kicker": "<short label, <=22 chars>", "title": "<hook from the article, <=55 chars>" }'
+      : 'Return JSON { "label": "<short countdown context, <=55 chars>" }';
   const completion = await client.chat.completions.create({
     model: textModel,
     temperature: 0.7,
@@ -225,9 +253,7 @@ async function generateOverlayFields(
     messages: [
       {
         role: "system",
-        content:
-          `Sos el editor de redes de ${project.name}. Tono rioplatense claro, sin emojis. ` +
-          "Usá SOLO información del material; no inventes datos. " + ask,
+        content: buildOverlaySystemPrompt(ps, ask),
       },
       { role: "user", content: `Título: ${material.title}\nResumen: ${material.excerpt}\n\n${material.content.slice(0, 3000)}` },
     ],
@@ -267,7 +293,7 @@ async function resolveClip(
     fs.copyFileSync(abs, clipPath);
     updateStep(job, "clip", { status: "done", detail: "clip existente (sin IA)" });
   } else {
-    const prompt = `${req.options.videoPrompt?.trim() || DEFAULT_VIDEO_PROMPT}. ${VIDEO_BG_STYLE}`;
+    const prompt = buildClipPrompt(await getPromptSettings(strapi), req.options.videoPrompt);
     await generateClip({
       apiKey: getOpenRouterImageKey(),
       model: vmKey,
@@ -333,7 +359,10 @@ async function runStoryVideo(
   updateStep(job, "overlay", { status: "running" });
   const overlayPng = path.join(job.tmpDir, "overlay.png");
   const overlaySlide: Slide = { ...slide, _transparent: true };
-  fs.writeFileSync(overlayPng, await renderToPng(renderSlide(overlaySlide, SIZES.story), SIZES.story));
+  fs.writeFileSync(
+    overlayPng,
+    await renderToPng(renderSlide(overlaySlide, SIZES.story, await getRenderContext(strapi)), SIZES.story),
+  );
   updateStep(job, "overlay", { status: "done" });
 
   updateStep(job, "ffmpeg", { status: "running" });
@@ -374,6 +403,7 @@ export async function runGenerateJob(strapi: any, job: StudioJob): Promise<void>
             systemInstructions: promptSettings.imageSystemInstructions,
             themeGuide: promptSettings.imageThemeGuide,
             anchorTaxonomy: promptSettings.imageAnchorTaxonomy,
+        brandPalette: promptSettings.brandPalette,
           });
         } else {
           imagePrompt = material.content;
@@ -456,8 +486,10 @@ export async function runGenerateJob(strapi: any, job: StudioJob): Promise<void>
         // negro de marca (antes la portada quedaba oscura si el modelo lo omitía).
         const bgPrompt =
           coverPrompt ||
-          `${material.postTitle || material.title}. Editorial botanical image, cinematic, ` +
-            `deep blue-black tones with amber highlights, no consumption imagery, no text, no logos, no faces.`;
+          buildCoverFallbackPrompt(
+            await getPromptSettings(strapi),
+            material.postTitle || material.title,
+          );
         if (req.options.bgFileId) {
           bgFileId = req.options.bgFileId;
           bgUri = await bgUriFromFile(strapi, bgFileId);
@@ -480,7 +512,7 @@ export async function runGenerateJob(strapi: any, job: StudioJob): Promise<void>
         }
 
         updateStep(job, "render", { status: "running" });
-        const previews = (await renderDeck(slides, sizeKey, bgUri, PREVIEW_SCALE)).map((b) =>
+        const previews = (await renderDeck(slides, sizeKey, bgUri, PREVIEW_SCALE, await getRenderContext(strapi))).map((b) =>
           dataUriFromBuffer(b, "image/png"),
         );
         updateStep(job, "render", { status: "done" });
@@ -518,7 +550,13 @@ export async function runGenerateJob(strapi: any, job: StudioJob): Promise<void>
 
         updateStep(job, "overlay", { status: "running" });
         const overlayPng = path.join(job.tmpDir, "overlay.png");
-        fs.writeFileSync(overlayPng, await renderToPng(renderOverlayNode(overlayType, fields, SIZES.story), SIZES.story));
+        fs.writeFileSync(
+          overlayPng,
+          await renderToPng(
+            renderOverlayNode(overlayType, fields, SIZES.story, await getRenderContext(strapi)),
+            SIZES.story,
+          ),
+        );
         updateStep(job, "overlay", { status: "done" });
 
         updateStep(job, "ffmpeg", { status: "running" });

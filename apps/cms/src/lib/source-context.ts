@@ -111,12 +111,19 @@ export function parseSourceContext(raw: unknown): SourceItem[] {
 /**
  * Renderiza la evidencia para el prompt de revisión.
  *
- * Se le dan 600 caracteres por ítem, contra los 300 del contexto de relleno:
+ * Se le dan 2600 caracteres por ítem, contra los 300 del contexto de relleno:
  * es la fuente sobre la que se decide publicar o descartar, así que conviene
  * que entre el hecho completo y no sólo la bajada.
+ *
+ * ⚠️ El tope estaba en 600 y eso rechazaba notas buenas sin dejar rastro. Los
+ * apuntes del Explorador se guardan en la primera fuente y son largos: en la
+ * nota del Torrontés la cifra de producción estaba en la posición 1270, el
+ * render la cortaba en 600, y el Director la rechazaba por "dato sin respaldo"
+ * cuando el respaldo estaba guardado y él no podía verlo. Los resúmenes de RSS
+ * se guardan con tope 800, así que subirlo no les cambia nada.
  */
 export function formatSourceContext(items: readonly SourceItem[], startIndex = 1): string {
   return items
-    .map((n, i) => `[${startIndex + i}] ${n.source} | ${n.title}\n${n.summary.slice(0, 600)}`)
+    .map((n, i) => `[${startIndex + i}] ${n.source} | ${n.title}\n${n.summary.slice(0, 2600)}`)
     .join("\n");
 }

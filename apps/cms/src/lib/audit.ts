@@ -13,7 +13,13 @@ const UID = "api::agent-action.agent-action";
 
 // Los tres del motor + "system", más los que registre el vertical: el motor no
 // conoce los roles de cada proyecto (ver src/verticals/agent-roles.ts).
-export type AgentRole = "director" | "redactor" | "image-generator" | "system" | (string & {});
+export type AgentRole =
+  | "director"
+  | "redactor"
+  | "explorador"
+  | "image-generator"
+  | "system"
+  | (string & {});
 
 export type AgentAction =
   | "draft_created"
@@ -30,6 +36,8 @@ export type AgentAction =
   | "agent_failed"
   | "redactor_idle"
   | "director_idle"
+  /** El Explorador no encontró qué escribir, o la búsqueda web falló. */
+  | "explorador_idle"
   | "studio_portada"
   | "studio_carrusel"
   | "studio_historia"

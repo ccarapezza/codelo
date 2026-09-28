@@ -5,7 +5,7 @@
     "singularName": "prompt-setting",
     "pluralName": "prompt-settings",
     "displayName": "Prompt Settings",
-    "description": "Vertical-level (domain-specific) overrides for the AI agent prompts. The generic scaffolding lives in code; these fields make the vertical-specific parts editable so the same codebase can be retargeted to other verticals. Empty fields fall back to DEFAULT_PROMPT_SETTINGS (src/lib/prompt-defaults.ts)."
+    "description": "Editorial configuration for this instance: voice, domain, cover rules, social and translation. Lives in the DB and is edited from the admin; the engine only ships neutral defaults (src/lib/prompt-defaults.ts). An empty field falls back to that default."
   },
   "options": {
     "draftAndPublish": false
@@ -28,6 +28,9 @@
     "writingLanguage": {
       "type": "string"
     },
+    "socialHandle": {
+      "type": "string"
+    },
     "fabricationProneFacts": {
       "type": "text"
     },
@@ -35,6 +38,15 @@
       "type": "text"
     },
     "bodyStructureGuide": {
+      "type": "text"
+    },
+    "officialSources": {
+      "type": "text"
+    },
+    "dedupExamples": {
+      "type": "text"
+    },
+    "brandGuardrails": {
       "type": "text"
     },
     "imageSystemInstructions": {
@@ -45,6 +57,39 @@
     },
     "imageAnchorTaxonomy": {
       "type": "text"
+    },
+    "brandPalette": {
+      "type": "string"
+    },
+    "socialVoice": {
+      "type": "text"
+    },
+    "socialCoverStyle": {
+      "type": "text"
+    },
+    "socialHashtags": {
+      "type": "text"
+    },
+    "socialCta": {
+      "type": "string"
+    },
+    "coverFallbackPrompt": {
+      "type": "text"
+    },
+    "videoStyle": {
+      "type": "text"
+    },
+    "videoDefaultPrompt": {
+      "type": "text"
+    },
+    "translationLanguage": {
+      "type": "string"
+    },
+    "translationGlossary": {
+      "type": "text"
+    },
+    "sourceDrafts": {
+      "type": "json"
     },
     "boletinAnalysisInstructions": {
       "type": "text"

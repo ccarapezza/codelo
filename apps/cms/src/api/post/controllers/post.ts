@@ -5,14 +5,15 @@ import { requireAdmin } from "../../../lib/admin-auth";
 import { logAgentAction } from "../../../lib/audit";
 import { republishPreservingDate } from "../../../lib/post-publish";
 import {
-  chooseImagePrompt,
-  generateCoverImage,
   generatePost,
   getOpenAIClient,
   isOpenRouterModel,
   uploadImageToStrapi,
 } from "../../../lib/openai";
+import { generateCoverForPost, type ImageGeneratorAgentDoc } from "../../../lib/cover-pipeline";
 import { makeSlug } from "../../../lib/agent-runner";
+import { getDefaultPostTag } from "../../../lib/tags";
+import { echoFeedback, findEchoedHeadline } from "../../../lib/headline-similarity";
 import {
   researchWithWebSearch,
   buildNewsSystemPrompt,
@@ -33,17 +34,12 @@ import { generateOpenRouterImage } from "../../../lib/openrouter-image";
 import {
   composeCarousel,
   dataUriFromBuffer,
+  getRenderContext,
   renderSlide,
   renderToPng,
   SIZES,
   type Slide,
 } from "../../../lib/social-cards";
-
-type ImageGeneratorAgentDoc = {
-  imagePromptTemplate: string | null;
-  imageSize: string | null;
-  imageQuality: string | null;
-};
 
 type PostRow = {
   documentId: string;
@@ -85,24 +81,6 @@ async function regenerateCoverFor(
     return;
   }
 
-  const textClient = getOpenAIClient(textKey);
-
-  // Pull the last 10 cover prompts (excluding this post's own) for memory.
-  const recent = (await strapi.documents("api::post.post").findMany({
-    filters: { coverPrompt: { $notNull: true }, documentId: { $ne: documentId } },
-    sort: { createdAt: "desc" },
-    fields: ["coverPrompt"],
-    limit: 10,
-  })) as unknown as Array<{ coverPrompt: string | null }>;
-  const recentDescriptions = recent.map(r => r.coverPrompt!).filter(Boolean);
-
-  // Some generated prompts make the Gemini image model return an empty 200
-  // deterministically (no image, no error) — retrying the same text never
-  // recovers. So if the image comes back empty, regenerate a FRESH prompt
-  // (different seed → different composition) and try again.
-  let imagePrompt = "";
-  let imageBuffer: Buffer | undefined;
-  const MAX_PROMPT_TRIES = 3;
   // El seedKey lleva un componente que cambia en cada corrida. Antes era
   // `documentId|title|tryN`: como ninguno de los tres varía entre regeneradas,
   // el hash daba siempre el mismo número y por lo tanto SIEMPRE el mismo
@@ -111,47 +89,26 @@ async function regenerateCoverFor(
   // El hash sigue repartiendo parejo entre notas; lo que se pierde es la
   // reproducibilidad por nota, que acá no aporta: regenerar ES pedir otra.
   const rotation = Date.now();
-  for (let tryN = 1; tryN <= MAX_PROMPT_TRIES; tryN++) {
-    imagePrompt = await chooseImagePrompt(textClient, textModel, {
+  const { coverImageId: newImageId, coverPrompt: imagePrompt } = await generateCoverForPost(
+    strapi,
+    {
+      documentId,
       title: post.title,
-      excerpt: post.excerpt ?? "",
-      seedKey: `${documentId}|${post.title}|${rotation}|${tryN}`,
-      recentDescriptions,
-      systemInstructions:
-        imgAgent.imagePromptTemplate?.trim() || promptSettings.imageSystemInstructions,
-      themeGuide: promptSettings.imageThemeGuide,
-      anchorTaxonomy: promptSettings.imageAnchorTaxonomy,
-    });
-    try {
-      imageBuffer = await generateCoverImage(
-        { openaiImageKey: imageKey, openrouterKey },
-        imageModel,
-        imagePrompt,
-        {
-          size: imgAgent.imageSize ?? undefined,
-          quality: imgAgent.imageQuality ?? undefined,
-        },
-      );
-      break;
-    } catch (err) {
-      const empty = ((err as Error).message ?? "").includes("no inline image data");
-      if (!empty || tryN === MAX_PROMPT_TRIES) {
-        // Log the offending prompt before giving up: a moderation rejection is
-        // otherwise undiagnosable, since the prompt is only persisted on success.
-        strapi.log.error(
-          `[post] cover generation failed for ${documentId}; prompt was: ${imagePrompt}`,
-        );
-        throw err;
-      }
-      strapi.log.warn(
-        `[post] cover image came back empty for ${documentId}; regenerating prompt (try ${tryN}/${MAX_PROMPT_TRIES})`,
-      );
-    }
-  }
-  if (!imageBuffer) throw new Error("Cover image generation failed after retries.");
-  const ext = isOpenRouterModel(imageModel) ? "png" : "jpg";
-  const filename = `cover-${documentId}-${Date.now()}.${ext}`;
-  const newImageId = await uploadImageToStrapi(strapi, imageBuffer, filename, post.title);
+      excerpt: post.excerpt,
+      seedKey: `${documentId}|${post.title}|${rotation}`,
+    },
+    {
+      textClient: getOpenAIClient(textKey),
+      textModel,
+      imageModel,
+      keys: { openaiImageKey: imageKey, openrouterKey },
+      imgAgent,
+      promptSettings,
+      // La portada que se está reemplazando no cuenta como "reciente".
+      excludeDocumentId: documentId,
+      logTag: "[post]",
+    },
+  );
 
   await strapi.documents("api::post.post").update({
     documentId,
@@ -229,10 +186,11 @@ async function buildCarouselFor(
   }
 
   // 3) Render + upload each slide sequentially (keeps the memory pool stable).
+  const ctxRender = await getRenderContext(strapi);
   const uploadIds: number[] = [];
   const planSlides: Array<{ index: number; uploadId: number; slide: Slide }> = [];
   for (let i = 0; i < slides.length; i++) {
-    const png = await renderToPng(renderSlide(slides[i], SIZES.portrait), SIZES.portrait);
+    const png = await renderToPng(renderSlide(slides[i], SIZES.portrait, ctxRender), SIZES.portrait);
     const n = String(i + 1).padStart(2, "0");
     const filename = `slide-${n}-${documentId}-${Date.now()}.png`;
     const uploadId = await uploadImageToStrapi(
@@ -566,7 +524,7 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
     }
 
     const candidates = (await strapi.documents("api::post.post").findMany({
-      locale: "es",
+      locale: project.defaultLocale,
       status: "published",
       sort: { publishedAt: "desc" },
       fields: ["documentId", "title"],
@@ -726,13 +684,37 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
 
     try {
       const research = webSearch ? await researchWithWebSearch(client, model, prompt) : null;
-      const generated = await generatePost(
-        client,
-        model,
-        buildNewsSystemPrompt(settings),
-        buildGenerateUserPrompt(settings, prompt, research),
-      );
-      ctx.body = { ...generated, sources: research?.sources ?? [] };
+      const system = buildNewsSystemPrompt(settings);
+      const userPrompt = buildGenerateUserPrompt(settings, prompt, research);
+      let generated = await generatePost(client, model, system, userPrompt);
+
+      // La misma compuerta anti-calco que el redactor. Con búsqueda web el
+      // modelo tiene titulares de medios delante, y el editor recibía el de la
+      // fuente apenas retocado. Sin búsqueda no hay fuentes y no hace nada.
+      const sourceHeadlines = (research?.sources ?? []).map((s) => s.title).filter(Boolean);
+      for (let retry = 0; retry < 2; retry++) {
+        const echoed = findEchoedHeadline(generated.title, sourceHeadlines);
+        if (!echoed) break;
+        strapi.log.warn(
+          `[post] newsGenerate: título calcado de la fuente ("${generated.title}" ≈ "${echoed}"); ` +
+            `regenerando (${retry + 1}/2)`,
+        );
+        generated = await generatePost(
+          client,
+          model,
+          system,
+          `${userPrompt}\n\n${echoFeedback(generated.title, echoed)}`,
+        );
+      }
+      // Si sigue calcado, la nota se entrega igual —la escribe un editor, no un
+      // agente— pero con el aviso. Estructurado y no en castellano: el texto lo
+      // pone el panel en el idioma de quien lo usa.
+      const stillEchoed = findEchoedHeadline(generated.title, sourceHeadlines);
+      ctx.body = {
+        ...generated,
+        sources: research?.sources ?? [],
+        titleWarning: stillEchoed ? { echoedHeadline: stillEchoed } : null,
+      };
     } catch (err) {
       strapi.log.error("[post] newsGenerate failed:", err);
       return ctx.internalServerError("Failed to generate article.");
@@ -819,60 +801,27 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
       imgAgent = { imagePromptTemplate: null, imageSize: null, imageQuality: null };
     }
 
-    const textClient = getOpenAIClient(textKey);
     try {
-      const recent = (await strapi.documents("api::post.post").findMany({
-        filters: { coverPrompt: { $notNull: true } },
-        sort: { createdAt: "desc" },
-        fields: ["coverPrompt"],
-        limit: 10,
-      })) as unknown as Array<{ coverPrompt: string | null }>;
-      const recentDescriptions = recent.map(r => r.coverPrompt!).filter(Boolean);
-
-      const custom = customPrompt?.trim();
-      let imagePrompt = "";
-      let imageBuffer: Buffer | undefined;
-      // A custom prompt is used as-is (no re-seeding); an auto prompt can retry
-      // with a fresh seed when Gemini returns an empty 200 ("no inline image data").
-      const MAX_TRIES = custom ? 1 : 3;
-      for (let tryN = 1; tryN <= MAX_TRIES; tryN++) {
-        imagePrompt = custom
-          ? custom
-          : await chooseImagePrompt(textClient, textModel, {
-              title,
-              excerpt: excerpt ?? "",
-              seedKey: `news-${Date.now()}|${title}|${tryN}`,
-              recentDescriptions,
-              systemInstructions:
-                imgAgent.imagePromptTemplate?.trim() || settings.imageSystemInstructions,
-              themeGuide: settings.imageThemeGuide,
-              anchorTaxonomy: settings.imageAnchorTaxonomy,
-            });
-        try {
-          imageBuffer = await generateCoverImage(
-            { openaiImageKey: imageKey, openrouterKey },
-            imageModel,
-            imagePrompt,
-            {
-              size: imgAgent.imageSize ?? undefined,
-              quality: imgAgent.imageQuality ?? undefined,
-            },
-          );
-          break;
-        } catch (err) {
-          const empty = ((err as Error).message ?? "").includes("no inline image data");
-          if (!empty || tryN === MAX_TRIES) throw err;
-          strapi.log.warn(`[post] newsImage empty image; retrying prompt (${tryN}/${MAX_TRIES})`);
-        }
-      }
-      if (!imageBuffer) throw new Error("Image generation failed after retries.");
-
-      const ext = isOpenRouterModel(imageModel) ? "png" : "jpg";
-      const mediaId = await uploadImageToStrapi(
+      // Un prompt escrito a mano se usa tal cual, en un solo intento; uno
+      // automático reintenta con otra semilla ante el 200 vacío de Gemini.
+      const { coverImageId: mediaId, coverPrompt: imagePrompt } = await generateCoverForPost(
         strapi,
-        imageBuffer,
-        `news-cover-${Date.now()}.${ext}`,
-        title,
+        {
+          documentId: null,
+          title,
+          excerpt: excerpt ?? "",
+          seedKey: `news-${Date.now()}|${title}`,
+          customPrompt,
+        },
+        {
+          textClient: getOpenAIClient(textKey),
+          textModel,
+          imageModel,
+          keys: { openaiImageKey: imageKey, openrouterKey },
+          imgAgent,
+          promptSettings: settings,
+          logTag: "[post] newsImage",
+        },
       );
       const file = (await strapi.db
         .query("plugin::upload.file")
@@ -917,6 +866,12 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
     };
     if (!title?.trim() || !content?.trim()) return ctx.badRequest("title and content are required");
 
+    // Sin etiquetas elegidas, la de Ajustes del sitio (si hay una). Sólo al
+    // crear: al editar, dejar una nota sin etiquetas es una decisión del editor.
+    const eligio = Array.isArray(tags) && tags.length > 0;
+    const porDefecto = eligio ? null : await getDefaultPostTag(strapi);
+    const tagsFinales = eligio ? tags : porDefecto ? [porDefecto.id] : tags;
+
     try {
       const created = (await strapi.documents("api::post.post").create({
         data: {
@@ -926,7 +881,7 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
           content,
           ...(coverImageId ? { coverImage: coverImageId } : {}),
           ...(coverPrompt ? { coverPrompt } : {}),
-          ...(Array.isArray(tags) ? { tags } : {}),
+          ...(Array.isArray(tagsFinales) ? { tags: tagsFinales } : {}),
           ...(typeof featured === "boolean" ? { featured } : {}),
           // Admin-authored: no generatedByAgent → the Director's draft pool
           // (filters generatedByAgent != null) will never re-touch it.
@@ -978,7 +933,7 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
     const doc = (await strapi.documents("api::post.post").findOne({
       documentId,
       status: "draft",
-      locale: "es",
+      locale: project.defaultLocale,
       populate: {
         coverImage: { fields: ["url", "formats"] },
         tags: { fields: ["name"] },
@@ -1040,14 +995,14 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
       const existing = (await strapi.documents("api::post.post").findOne({
         documentId,
         status: "draft",
-        locale: "es",
+        locale: project.defaultLocale,
         fields: ["publishedAt"],
       })) as unknown as { publishedAt: string | null } | null;
       const wasPublished = Boolean(existing?.publishedAt);
 
       const updated = (await strapi.documents("api::post.post").update({
         documentId,
-        locale: "es",
+        locale: project.defaultLocale,
         data: {
           title,
           slug: makeSlug(slug?.trim() || title),
@@ -1061,6 +1016,14 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
               : {}),
           ...(Array.isArray(tags) ? { tags } : {}),
           ...(typeof featured === "boolean" ? { featured } : {}),
+          // Editar una nota la DEVUELVE al pool del Director. El filtro de
+          // candidatos excluye todo borrador con `directorRejectionReason`
+          // cargado —para no re-revisar y re-rechazar lo mismo en cada
+          // corrida—, pero como nada volvía a limpiarlo, un rechazo era
+          // definitivo: el usuario leía el motivo, corregía exactamente eso, y
+          // el Director contestaba "no hay borradores". El ciclo natural
+          // (rechaza → corrijo → que revise de nuevo) no existía.
+          directorRejectionReason: null,
         } as never,
       })) as unknown as { documentId: string; slug: string };
 
@@ -1098,8 +1061,16 @@ export default factories.createCoreController("api::post.post", ({ strapi }) => 
       fields: ["name", "kind"],
       sort: "name:asc",
       limit: 500,
-    })) as unknown as Array<{ id: number; name: string; kind: string | null }>;
-    ctx.body = tags.map(t => ({ id: t.id, name: t.name, kind: t.kind ?? null }));
+    })) as unknown as Array<{ id: number; documentId: string; name: string; kind: string | null }>;
+    // `documentId` además del `id`: el editor de notas guarda las etiquetas por
+    // id numérico, pero una RELACIÓN de la API de documentos se asigna por
+    // documentId. Sin él, el selector de etiqueta del agente no tenía con qué.
+    ctx.body = tags.map(t => ({
+      id: t.id,
+      documentId: t.documentId,
+      name: t.name,
+      kind: t.kind ?? null,
+    }));
   },
 
   // POST /news-generator/upload (multipart, campo "file") -> { mediaId, url }

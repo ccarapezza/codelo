@@ -1,6 +1,9 @@
 import OpenAI from "openai";
 import { generateOpenRouterImage } from "./openrouter-image";
-import { DEFAULT_PROMPT_SETTINGS } from "./prompt-defaults";
+import { DEFAULT_PROMPT_SETTINGS, type PromptSettings } from "./prompt-defaults";
+import { ENGINE_POOLS, type CoverPools, type Mood, type Treatment } from "./cover-pools";
+import { verticalCoverPools } from "../verticals/cover-pools";
+import { applyAnchorEnrichers } from "./anchor-enrichment";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -9,6 +12,13 @@ export type GeneratedPost = {
   title: string;
   excerpt: string;
   content: string;
+  /**
+   * Índices 1-based, sobre el bloque de contexto numerado, de las noticias que
+   * el Redactor dice haber usado. Opcional: en modo asignado no hay bloque
+   * numerado, y un modelo puede no devolverlo. Sirve para guardar como
+   * evidencia la fuente REAL y no el pool entero — ver `buildSourceContext`.
+   */
+  sourceIndexes?: number[];
 };
 
 export function getOpenAIClient(apiKey: string): OpenAI {
@@ -62,10 +72,21 @@ async function callJson(
     throw new Error("OpenAI response missing required fields (title, content)");
   }
 
+  // Defensivo: el modelo puede mandar strings, floats, índices fuera de rango o
+  // nada. Lo que no sea un entero positivo se descarta acá, y el llamador cae
+  // al pool completo como antes.
+  const crudos: unknown[] = Array.isArray(parsed.sourceIndexes) ? parsed.sourceIndexes : [];
+  const sourceIndexes: number[] = [
+    ...new Set(
+      crudos.map((n) => Math.trunc(Number(n))).filter((n) => Number.isFinite(n) && n >= 1),
+    ),
+  ];
+
   return {
     title: stripInlineMarkdown(String(parsed.title)),
     excerpt: stripInlineMarkdown(String(parsed.excerpt ?? "")),
     content: String(parsed.content).trim(),
+    ...(sourceIndexes.length > 0 ? { sourceIndexes } : {}),
   };
 }
 
@@ -83,7 +104,13 @@ export async function generatePost(
 // in the editable imageSystemInstructions field) guarantees the no-faces /
 // no-logos likeness rule can never be removed by an admin edit.
 const SAFETY_SUFFIX =
-  "Hard constraint: NO recognizable real faces — hide identity from behind, at distance, backlit or cropped by the frame, NEVER by removing a head or showing detached limbs. End with: No text, no watermarks, no logos.";
+  "Hard constraint: NO recognizable real faces — hide identity from behind, at distance, backlit or cropped by the frame, NEVER by removing a head or showing detached limbs. " +
+  // Citar el titular hacía que el modelo de imagen lo dibujara como cartel:
+  // la descripción abría con «For the editorial cover image of "<titular>"» y
+  // la portada salía con el título impreso encima, mal escrito.
+  "NEVER quote or restate the article headline in your description — not even in quotation marks, not as context. " +
+  "Describe ONLY what is physically in the frame. " +
+  "End with: No text, no watermarks, no logos.";
 
 // The domain-specific image system instructions and the THEME → SCENE CUES guide
 // now live in the editable `prompt-setting` single type (defaults in
@@ -94,76 +121,20 @@ const SAFETY_SUFFIX =
 // from a per-article seed so the same post regenerated twice yields identical
 // constraints, but different posts (different seeds) yield different combos.
 
-// OJO: acá no puede entrar ninguna composición partida. El pool se elige por
-// seed, así que una entrada tipo "split two-panel" le tocaba a 1 de cada 8 notas
-// y peleaba de frente con la HARD RULE de imagen única y con SINGLE_FRAME_SUFFIX
-// (openrouter-image.ts): el modelo obedecía a la composición y devolvía diptychs
-// con costura al medio. Toda composición nueva tiene que ser de un solo cuadro.
-const COMPOSITIONS = [
-  "macro close-up with shallow depth of field",
-  "aerial top-down flat lay",
-  "wide environmental shot with leading lines",
-  "through-window or doorway framed composition",
-  "centred symmetric composition with a single subject",
-  "diagonal low-angle perspective",
-  "backlit silhouette against a bright ground",
-  "close third-person over-the-shoulder view",
-] as const;
-
-// ─── Visual treatment (the anti-monotony dimension) ──────────────────────
-// Covers used to be uniformly photorealistic because photorealism was asserted
-// in three places at once: the system instructions, the user prompt, and a
-// STYLES pool whose every entry was a photographic style. The treatment is now
-// the thing the seed rotates, and it decides whether the cover is a photograph
-// at all. Roughly a third stay photographic — a news portal still needs
-// credible photo covers — and the rest are drawn, printed or diagrammatic.
-type TreatmentKind = "photo" | "art";
-interface Treatment {
-  kind: TreatmentKind;
-  value: string;
+/**
+ * El pool del vertical si declara uno con algo adentro; si no, el del motor.
+ * Un array vacío se ignora: `pool[seed % 0]` es `undefined` y la portada
+ * saldría sin tratamiento.
+ */
+function pool<K extends "compositions" | "treatments" | "moods">(k: K): CoverPools[K] {
+  const propio = verticalCoverPools[k];
+  return propio && propio.length > 0 ? (propio as CoverPools[K]) : ENGINE_POOLS[k];
 }
 
-const TREATMENTS: ReadonlyArray<Treatment> = [
-  { kind: "photo", value: "documentary photojournalism: natural light, unstaged, reportage framing" },
-  { kind: "photo", value: "modern minimalist editorial photography with generous negative space" },
-  { kind: "photo", value: "macro nature photography with scientific clarity and fine texture detail" },
-  { kind: "photo", value: "archival 1970s film photograph: visible grain, faded dyes, slight vignette" },
-  { kind: "art",   value: "19th-century botanical plate: precise ink linework, hand-tinted watercolour washes, herbarium-sheet layout" },
-  { kind: "art",   value: "risograph print: two or three spot inks, visible misregistration, paper tooth showing through" },
-  { kind: "art",   value: "linocut relief print: bold carved strokes, stark high contrast, two-colour palette" },
-  { kind: "art",   value: "flat vector editorial illustration: geometric shapes, limited palette, poster-like clarity" },
-  { kind: "art",   value: "annotated technical diagram: cross-sections, callout leader lines, schematic clarity" },
-  { kind: "art",   value: "cut-paper collage: layered textured papers, hard-edged shapes, soft drop shadows" },
-  { kind: "art",   value: "ink wash brushwork: gestural strokes, controlled bleed, wide areas of empty paper" },
-  { kind: "art",   value: "engraved etching from an old scientific journal: fine cross-hatching, sepia ink on cream stock" },
-];
-
-// A photograph's variable axis is light; a drawing's is ink, palette and mark-
-// making. Feeding "golden hour with long shadows" to a linocut just produces a
-// confused hybrid, so each treatment kind draws from its own pool.
-type MoodTone = "warm" | "cool" | "harsh" | "night" | "muted" | "vivid";
-const MOODS: ReadonlyArray<{ tone: MoodTone; value: string }> = [
-  { tone: "warm",  value: "golden hour warm light with long shadows" },
-  { tone: "cool",  value: "blue hour cold light, melancholy mood" },
-  { tone: "harsh", value: "harsh midday sun, high contrast" },
-  { tone: "night", value: "single hard light source at night, deep shadows" },
-  { tone: "muted", value: "overcast diffused light, desaturated palette" },
-  { tone: "warm",  value: "dusk amber light with dramatic clouds" },
-  { tone: "cool",  value: "dawn pale blue light, mist in the air" },
-  { tone: "vivid", value: "raking side light, saturated colours" },
-  { tone: "muted", value: "monochrome / duotone editorial treatment" },
-];
-
-const ART_RENDERS: ReadonlyArray<{ tone: MoodTone; value: string }> = [
-  { tone: "warm",  value: "warm ochre and terracotta inks on cream stock" },
-  { tone: "cool",  value: "indigo and slate inks with cold negative space" },
-  { tone: "vivid", value: "two saturated spot colours overprinted where they overlap" },
-  { tone: "muted", value: "muted earth palette, heavy paper texture, soft edges" },
-  { tone: "harsh", value: "stark black ink on bare paper, no midtones" },
-  { tone: "warm",  value: "amber and deep-blue duotone, matching the house palette" },
-  { tone: "cool",  value: "pale washes with a single accent colour" },
-  { tone: "muted", value: "sepia monochrome with fine hatching for shading" },
-];
+function acabados(brandPalette: string): readonly Mood[] {
+  const propios = verticalCoverPools.artRenders?.(brandPalette);
+  return propios && propios.length > 0 ? propios : ENGINE_POOLS.artRenders(brandPalette);
+}
 
 function hashSeed(s: string): number {
   // djb2 — fast, low collision for short strings.
@@ -208,14 +179,15 @@ export interface PromptConstraints {
 export function resolvePromptConstraints(
   seedKey: string,
   anchors: ArticleAnchors,
+  brandPalette: string = DEFAULT_PROMPT_SETTINGS.brandPalette,
 ): PromptConstraints {
   const seed = hashSeed(seedKey);
-  const treatment = pickFromPool(TREATMENTS, seed, 13);
+  const treatment = pickFromPool(pool("treatments"), seed, 13);
   // The mood pool follows the treatment: lighting for photographs, ink and
   // palette for everything drawn or printed.
-  const moodPool = treatment.kind === "photo" ? MOODS : ART_RENDERS;
+  const moodPool = treatment.kind === "photo" ? pool("moods") : acabados(brandPalette);
   return {
-    composition: pickFromPool(COMPOSITIONS, seed, 0),
+    composition: pickFromPool(pool("compositions"), seed, 0),
     // Offsets are coprime with each pool size to de-correlate the picks.
     mood: pickFromPool(moodPool, seed, 7).value,
     treatment,
@@ -226,7 +198,7 @@ export function resolvePromptConstraints(
 
 // El catálogo de escenas trae cuatro variantes por categoría —(a) a (d)— y hasta
 // ahora elegía el modelo de texto. Los LLM se quedan con la primera de una lista:
-// medido en fulbo sobre 478 prompts de producción, la variante (a) de una misma
+// medido sobre 478 prompts de producción, la variante (a) de una misma
 // categoría salió 122 veces contra 12 de las otras tres juntas. De ahí que todas
 // las tapas de una categoría terminen siendo la misma escena. Así que la variante
 // se sortea con el mismo seed que composición/humor/tratamiento y al modelo le
@@ -266,26 +238,66 @@ export function fixThemeVariants(themeGuide: string, seed: number): string {
 // ─── Article anchors (Fase D) ────────────────────────────────────────────
 // One cheap text-model call to extract entities the cover MUST feature.
 
-// These fields MUST stay in sync with IMAGE_ANCHOR_TAXONOMY in prompt-defaults:
-// the taxonomy tells the model what to return, this shape decides what we keep.
-// They drifted once — the taxonomy asked for topic/palette/season while the
-// parser still read the football-era teamColors/jerseyNumber, so three of five
-// anchors were silently dropped on every cover.
-export interface ArticleAnchors {
-  topic: string | null;          // e.g. "cultivo", "legal", "salud"
-  palette: string | null;        // e.g. "warm greens and wood tones"
-  eventType: string | null;      // "taller", "trámite", "fallo", etc.
-  venue: string | null;          // place / neighbourhood if explicitly mentioned
-  season: string | null;         // growing-cycle stage, if mentioned
+/**
+ * Las anclas visuales de un artículo: un mapa, no una forma fija.
+ *
+ * ⚠️ Las claves las define la TAXONOMÍA, que es editable desde el panel. Antes
+ * esta interfaz las tenía escritas y tenía que "mantenerse sincronizada" con el
+ * texto — un contrato que sólo existía en un comentario y que se rompió: la
+ * taxonomía de un proyecto pedía `topic`/`palette`/`season` mientras el parser
+ * seguía leyendo las claves de otro, y 3 de 5 anclas se descartaban en silencio
+ * en cada portada. Ahora el parser lee lo que la taxonomía declara y no hay nada
+ * que sincronizar.
+ */
+export type ArticleAnchors = Record<string, string | null>;
+
+/**
+ * Las claves que declara la taxonomía, en orden.
+ *
+ * Una clave es una línea que arranca con viñeta y termina en dos puntos:
+ * `- topic: el tema principal…`. Lo que no matchea se ignora, así que un texto
+ * libre de más entre las reglas no rompe nada.
+ */
+export function parseAnchorKeys(taxonomy: string): string[] {
+  const claves: string[] = [];
+  for (const linea of taxonomy.split("\n")) {
+    const m = linea.match(/^\s*[-*]\s*`?([A-Za-z][A-Za-z0-9_]*)`?\s*:/);
+    if (m && !claves.includes(m[1])) claves.push(m[1]);
+  }
+  return claves;
 }
 
-const EMPTY_ANCHORS: ArticleAnchors = {
-  topic: null,
-  palette: null,
-  eventType: null,
-  venue: null,
-  season: null,
+/** Etiquetas de las claves conocidas; el resto se humaniza desde el camelCase. */
+const ANCHOR_LABELS: Record<string, string> = {
+  topic: "Topic to depict",
+  palette: "Colour palette",
+  eventType: "Event type to depict",
+  venue: "Place context",
 };
+
+export function anchorLabel(key: string): string {
+  if (ANCHOR_LABELS[key]) return ANCHOR_LABELS[key];
+  const palabras = key.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase();
+  return palabras.charAt(0).toUpperCase() + palabras.slice(1);
+}
+
+/** Exportado para poder compararlo sin red (test/preservation). */
+export function buildAnchorSystemPrompt(taxonomy: string): { system: string; keys: string[] } | null {
+  const keys = parseAnchorKeys(taxonomy);
+  if (keys.length === 0) return null;
+  const forma = `{ ${keys.map((k) => `"${k}": string|null`).join(", ")} }`;
+  return {
+    keys,
+    system: [
+      "You extract concrete visual anchors from a news article to guide cover-image generation.",
+      "Return STRICT JSON matching exactly this shape (use null when the article does not mention the field):",
+      forma,
+      "",
+      "Rules:",
+      taxonomy,
+    ].join("\n"),
+  };
+}
 
 export async function extractArticleAnchors(
   client: OpenAI,
@@ -294,39 +306,39 @@ export async function extractArticleAnchors(
   excerpt: string,
   anchorTaxonomy: string = DEFAULT_PROMPT_SETTINGS.imageAnchorTaxonomy,
 ): Promise<ArticleAnchors> {
-  // Header + JSON shape are fixed scaffolding; the per-field rules are the
-  // domain-specific, admin-editable part (anchorTaxonomy).
-  const system = [
-    "You extract concrete visual anchors from a news article to guide cover-image generation.",
-    "Return STRICT JSON matching exactly this shape (use null when the article does not mention the field):",
-    `{ "topic": string|null, "palette": string|null, "eventType": string|null, "venue": string|null, "season": string|null }`,
-    "",
-    "Rules:",
-    anchorTaxonomy,
-  ].join("\n");
+  const armado = buildAnchorSystemPrompt(anchorTaxonomy);
+  // Sin claves declaradas no hay nada que extraer: se ahorra la llamada en vez
+  // de pedirle al modelo un objeto vacío.
+  if (!armado) return {};
 
   try {
     const res = await client.chat.completions.create({
       model,
       messages: [
-        { role: "system", content: system },
+        { role: "system", content: armado.system },
         { role: "user", content: `Title: ${title}\nExcerpt: ${excerpt.slice(0, 600)}\n\nReturn only the JSON.` },
       ],
       response_format: { type: "json_object" },
       temperature: 0.2,
     });
     const raw = res.choices[0]?.message?.content ?? "{}";
-    const parsed = JSON.parse(raw) as Partial<ArticleAnchors>;
-    return {
-      topic: typeof parsed.topic === "string" ? parsed.topic.trim() : null,
-      palette: typeof parsed.palette === "string" ? parsed.palette.trim() : null,
-      eventType: typeof parsed.eventType === "string" ? parsed.eventType.trim() : null,
-      venue: typeof parsed.venue === "string" ? parsed.venue.trim() : null,
-      season: typeof parsed.season === "string" ? parsed.season.trim() : null,
-    };
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const anchors: ArticleAnchors = {};
+    for (const k of armado.keys) {
+      const v = parsed[k];
+      // Los números se conservan como texto: una taxonomía puede pedir un
+      // dorsal o un año, y descartarlos por no ser string los perdía.
+      anchors[k] =
+        typeof v === "string" && v.trim() !== ""
+          ? v.trim()
+          : typeof v === "number"
+            ? String(v)
+            : null;
+    }
+    return anchors;
   } catch {
     // Anchor extraction is enrichment — never block the cover on its failure.
-    return { ...EMPTY_ANCHORS };
+    return {};
   }
 }
 
@@ -338,20 +350,32 @@ export async function extractArticleAnchors(
  * different teams doing the same kind of thing, or a genuine follow-up — cases
  * where a Jaccard threshold is simultaneously too strict and too loose.
  */
+/** Exportado para poder compararlo sin red (test/preservation). */
+/**
+ * Las dos líneas de ejemplos (qué es el mismo hecho y qué no) vienen del
+ * ajuste `dedupExamples`: son del dominio, y estaban escritas acá con los de un
+ * solo proyecto.
+ */
+export function buildDedupSystemPrompt(
+  s: Pick<PromptSettings, "domainDescription" | "dedupExamples">,
+): string {
+  return [
+    `You are a news-desk de-duplication checker for ${s.domainDescription}.`,
+    "Decide whether a CANDIDATE headline reports the SAME specific event as any EXISTING headline.",
+    s.dedupExamples,
+    'Return STRICT JSON: { "duplicateIndex": number } — the 1-based index of the EXISTING headline that is the same event, or 0 if none match.',
+  ].join("\n");
+}
+
 export async function findDuplicateSubject(
   client: OpenAI,
   model: string,
   candidateTitle: string,
   recentTitles: string[],
+  settings: Pick<PromptSettings, "domainDescription" | "dedupExamples"> = DEFAULT_PROMPT_SETTINGS,
 ): Promise<string | null> {
   if (recentTitles.length === 0) return null;
-  const system = [
-    "You are a news-desk de-duplication checker for a non-profit info portal covering cannabis, hemp, drug policy, health and the environment.",
-    "Decide whether a CANDIDATE headline reports the SAME specific event as any EXISTING headline.",
-    "Same event = same subject AND the same concrete happening: e.g. the same published regulation, the same court ruling, the same study, the same licence granted to the same organisation.",
-    "These are NOT duplicates: a bill's INTRODUCTION vs its later SANCTION; two DIFFERENT organisations each obtaining their own licence or registry; the same law cited as background in two unrelated articles; an explainer about a procedure vs news of that procedure changing; a follow-up that adds genuinely new facts.",
-    'Return STRICT JSON: { "duplicateIndex": number } — the 1-based index of the EXISTING headline that is the same event, or 0 if none match.',
-  ].join("\n");
+  const system = buildDedupSystemPrompt(settings);
   const list = recentTitles.map((t, i) => `${i + 1}. ${t}`).join("\n");
   try {
     const res = await client.chat.completions.create({
@@ -416,16 +440,19 @@ function buildUserPrompt(
     );
     if (!isPhoto) {
       sections.push(
-        `Because this cover is illustrated, your description MUST name the medium explicitly in its FIRST clause (e.g. "A linocut print of…", "A botanical plate showing…"). Then describe it as artwork: name the marks, ink, texture and paper. Do NOT use photographic vocabulary (lens, depth of field, bokeh, exposure, shot on...). The scene cues below are WHAT to depict; the treatment above is HOW to render it.`,
+        `Because this cover is illustrated, your description MUST name the medium explicitly in its FIRST clause (e.g. "A linocut print of…", "A naturalist plate showing…"). Then describe it as artwork: name the marks, ink, texture and paper. Do NOT use photographic vocabulary (lens, depth of field, bokeh, exposure, shot on...). The scene cues below are WHAT to depict; the treatment above is HOW to render it.`,
         ``,
       );
     }
-    const anchorLines: string[] = [];
-    if (anchors.topic) anchorLines.push(`- Topic to depict: ${anchors.topic}`);
-    if (anchors.palette) anchorLines.push(`- Colour palette: ${anchors.palette}`);
-    if (anchors.eventType) anchorLines.push(`- Event type to depict: ${anchors.eventType}`);
-    if (anchors.venue) anchorLines.push(`- Place context: ${anchors.venue}`);
-    if (anchors.season) anchorLines.push(`- Growing-cycle stage: ${anchors.season}`);
+    // Se recorre lo que haya: las claves las decide la taxonomía, no este código.
+    // El vertical puede sumar líneas y descartar anclas (verticals/anchor-enrichers.ts).
+    const extra = applyAnchorEnrichers(anchors);
+    const anchorLines = [
+      ...Object.entries(anchors)
+        .filter(([k, v]) => Boolean(v) && !extra.drop.has(k))
+        .map(([k, v]) => `- ${anchorLabel(k)}: ${v}`),
+      ...extra.lines,
+    ];
     if (anchorLines.length > 0) {
       sections.push(`MUST FEATURE (anchors from this article):`, ...anchorLines, ``);
     }
@@ -596,10 +623,12 @@ export async function chooseImagePrompt(
     themeGuide?: string;
     /** Vertical anchor-extraction rules. */
     anchorTaxonomy?: string;
+    /** Dos colores de la casa para el acabado duotono del pool de ilustración. */
+    brandPalette?: string;
   },
 ): Promise<string> {
   const anchors = await extractArticleAnchors(client, textModel, args.title, args.excerpt, args.anchorTaxonomy);
-  const constraints = resolvePromptConstraints(args.seedKey, anchors);
+  const constraints = resolvePromptConstraints(args.seedKey, anchors, args.brandPalette);
   const candidates = await generateImagePromptCandidates(client, textModel, args.title, args.excerpt, {
     systemInstructions: args.systemInstructions,
     themeGuide: args.themeGuide,
@@ -739,24 +768,60 @@ export type ReviewResult =
   | ({ rejected: false } & GeneratedPost)
   | { rejected: true; reason: string };
 
-export async function reviewPost(
-  client: OpenAI,
-  model: string,
-  directorInstructions: string,
-  draft: GeneratedPost,
-  newsContext: string,
-  fabricationProneFacts: string = DEFAULT_PROMPT_SETTINGS.fabricationProneFacts,
-  brandName: string = DEFAULT_PROMPT_SETTINGS.brandName,
+export interface ReviewPostInput {
+  directorInstructions: string;
+  draft: GeneratedPost;
+  newsContext: string;
   /**
    * Las fuentes que el Redactor REALMENTE tuvo a la vista, guardadas con el
    * borrador. Vacío en los borradores anteriores a este cambio, y ahí el
    * revisor cae al contexto reconstruido como antes.
    */
-  writerSources: string = "",
-): Promise<ReviewResult> {
-  const systemPrompt = [
+  writerSources?: string;
+  /**
+   * Fecha de la revisión en ISO (YYYY-MM-DD). Se inyecta en el prompt porque
+   * el modelo no tiene reloj: sin esto leía "hasta fin de año" y "hasta finales
+   * de 2026" como una contradicción, y rechazaba notas correctas. Es un
+   * parámetro y no un `new Date()` adentro para que el prompt sea comparable
+   * en los tests.
+   */
+  today?: string;
+  /**
+   * Los apuntes de la investigación del Explorador, cuando la nota vino de ahí.
+   *
+   * Van en su PROPIO bloque y no disfrazados del resumen de una fuente. Se
+   * probó lo otro: los apuntes se metían enteros en `writerSources[0].summary`
+   * y las demás fuentes quedaban con resumen vacío, así que el revisor veía
+   * una fuente que decía todo y tres que no decían nada. Rechazó cuatro notas
+   * seguidas por «ningún dato lo respalda» con las cuatro cifras presentes en
+   * ese bloque (24/09/2026: 9.850 ha de Torrontés, 16.360 de Bonarda, $9.776
+   * el kilo de carne, $1.823 el de vacío).
+   */
+  researchNotes?: string;
+}
+
+/**
+ * Exportado para poder compararlo sin red (test/preservation).
+ *
+ * Recibe los ajustes enteros y no strings sueltos: la firma vieja ya venía con
+ * siete posicionales y sumarle tres más era pedir que alguien corriera un valor
+ * de lugar sin que el tipo se quejara.
+ */
+export function buildReviewSystemPrompt(s: PromptSettings, input: ReviewPostInput): string {
+  const { fabricationProneFacts, brandName, domainDescription, officialSources, writingLanguage } =
+    s;
+  const { directorInstructions, newsContext } = input;
+  const writerSources = input.writerSources ?? "";
+  const hoy = input.today ?? new Date().toISOString().slice(0, 10);
+  return [
     "You are a strict editor-in-chief whose ONLY job is to prevent hallucinated news from being published.",
     "Hallucinations almost always come from titles that distort or invent facts, even when the body is reasonable.",
+    "",
+    `## TODAY IS ${hoy}`,
+    "",
+    "Resolve EVERY relative time expression against that date before judging it: 'this year', 'the end of the year',",
+    "'the current campaign', 'next month'. A title saying 'until the end of the year' and a body saying 'until the end",
+    `of ${hoy.slice(0, 4)}' state THE SAME FACT — that is not a contradiction and is not grounds for rejection.`,
     "",
     "## STEP 1 — TITLE VALIDATION (mandatory, do this FIRST)",
     "",
@@ -768,7 +833,7 @@ export async function reviewPost(
     "",
     "REJECT the article if ANY of the following is true:",
     "  - The title makes a claim about a person or organisation that no source mentions (e.g. 'Province X approved licences' when no source mentions X).",
-    "  - The title contradicts a source (e.g. title says 'the ruling denied self-cultivation' but the source says it recognised the right).",
+    "  - The title contradicts a source (e.g. title says 'the court rejected the appeal' but the source says it upheld it).",
     "  - The title contradicts the body (e.g. body says 'the bill was introduced' but title says 'the bill was passed').",
     "  - The title combines two unrelated subjects into one claim (e.g. 'X and Y obtained licences' when only Y did).",
     "  - The title states as fact something that is only speculation/opinion in the body.",
@@ -785,6 +850,28 @@ export async function reviewPost(
     "If a title claim is supported IN SUBSTANCE by the writer's sources but its wording is stronger, broader or more specific than the source's, do NOT reject: REWRITE the title so it matches what the source actually says, and approve.",
     "Reject a claim ONLY when it is ABSENT from every source, or CONTRADICTS one. 'The source words it differently' is a rewrite, not a rejection.",
     "",
+    // El revisor rechazaba donde su propia regla de arriba manda reescribir.
+    // Visto dos veces en verticales distintos: "Producir biocombustibles es
+    // clave para el futuro" (la fuente lo decía, atribuido) y "la variedad
+    // emblemática de Argentina" (un adjetivo, no un hecho). El motivo es el
+    // orden de lectura: el STEP 1 abre con una lista de RECHAZÁ, y el modelo
+    // se compromete antes de llegar al 1.5. Esta sección invierte la carga.
+    "## STEP 1.6 — ARREGLAR PRIMERO, RECHAZAR ÚLTIMO (mandatory)",
+    "",
+    "Rejecting costs the site an article. Rewriting costs you one sentence. So:",
+    "",
+    "  1. Is the problem confined to the TITLE, with a sound body? → REWRITE the title and APPROVE.",
+    "  2. Is the claim supported in substance but worded too strongly? → SOFTEN it and APPROVE.",
+    "  3. Only if the BODY itself asserts something no source supports, or something a source",
+    "     contradicts, do you REJECT.",
+    "",
+    "An evaluative word in a headline is NOT a factual claim and is NEVER grounds for rejection:",
+    "'emblematic', 'key', 'historic', 'leading', 'beloved'. These are editorial voice. If one",
+    "overstates what the sources support, tone it down in your rewrite — do not reject over it.",
+    "",
+    "Before you reject, answer this to yourself: 'could I make this publishable by changing only",
+    "the title?' If the answer is yes, you are not allowed to reject.",
+    "",
     "## STEP 2 — BODY FACT-CHECK",
     "",
     `REJECT if the body contains a SPECIFIC claim about an already-occurred event (${fabricationProneFacts})`,
@@ -793,23 +880,26 @@ export async function reviewPost(
     "",
     "## STEP 2.5 — BRAND GUARDRAIL (mandatory)",
     "",
-    `We are ${brandName}, an independent non-profit outlet with our own editorial voice. A source can INFORM an article, but the article must never be ABOUT another outlet or republish its work. REJECT if ANY of these is true:`,
-    "  - The title or article names/credits another media outlet as its subject or as the authority for a claim (e.g. 'según Infobae', 'el informe de Perfil').",
+    `We are ${brandName}, ${domainDescription}, with our own editorial voice. A source can INFORM an article, but the article must never be ABOUT another outlet or republish its work. REJECT if ANY of these is true:`,
+    "  - The title or article names/credits another media outlet as its subject or as the authority for a claim (e.g. 'according to <outlet>', 'the <outlet> report').",
     "  - The article's CONTENT is another outlet's list, ranking or compilation, reproduced or attributed.",
     "  - The piece reads as coverage of what another media said/published rather than of the underlying fact itself.",
     "  - It reads as promotional copy for a company, brand, shop or product rather than as journalism.",
+    // Las viñetas propias del proyecto van después de las del motor. Se quita
+    // sólo el final: un `.trim()` se comería la sangría de la primera viñeta.
+    ...(s.brandGuardrails?.trim() ? [s.brandGuardrails.replace(/^\s*\n/, "").trimEnd()] : []),
     `Reword to report the underlying fact in ${brandName}'s own voice with no outlet name; if the story has no substance once the outlet is removed, REJECT it.`,
-    "NOTE: an official source is NOT a rival outlet. Citing the Boletín Oficial, a law, a court ruling, a regulator (ARICCAME, ANMAT) or a peer-reviewed journal is REQUIRED, not a violation.",
+    `NOTE: an official source is NOT a rival outlet. Citing an official source (${officialSources}), a law or a court ruling is REQUIRED, not a violation.`,
     "",
     "## STEP 3 — REFINE (only if everything passes)",
     "",
     "Apply the editorial guidelines. Improve clarity, voice, and structure. Keep all facts accurate.",
-    "You MAY rewrite the title to be safer/more literal if the current one is borderline — but never by drifting closer to a source headline's wording, and you should still REJECT if it's actually wrong.",
+    "You SHOULD rewrite the title whenever it is borderline — that is the expected outcome, not a last resort — but never by drifting closer to a source headline's wording. Reject only when the body, not the title, is the problem.",
     "",
     "## Output",
     `Return STRICT JSON with one of these two schemas:`,
     `- Approved: { "rejected": false, "title": string, "excerpt": string, "content": string (HTML allowed) }`,
-    `- Rejected: { "rejected": true, "reason": string (in Spanish, cite the specific title-claim that fails and which source contradicts it OR confirms no source mentions it) }`,
+    `- Rejected: { "rejected": true, "reason": string (in ${writingLanguage}: name the specific claim IN THE BODY that fails, say which source contradicts it or that no source carries it, AND state why rewriting the title would not have been enough) }`,
     "",
     "## Editorial guidelines:",
     directorInstructions,
@@ -818,6 +908,15 @@ export async function reviewPost(
     // segundo es material de época que puede no tener nada que ver. Cuando
     // estaban mezclados, el revisor trataba la ausencia de una noticia en el
     // relleno como prueba de invención y rechazaba notas bien fundadas.
+    ...(input.researchNotes?.trim()
+      ? [
+          "## RESEARCH NOTES — the writer gathered these facts from the sources below, with their attribution.",
+          "This is PRIMARY evidence for this draft: a figure, date or name that appears here IS sourced.",
+          "Do not reject a claim that appears in these notes.",
+          input.researchNotes.trim(),
+          "",
+        ]
+      : []),
     "## SOURCES THE WRITER ACTUALLY USED — this is the evidence for THIS draft. Judge it against these.",
     writerSources ||
       "(not recorded for this draft — it predates source tracking. Fall back to the context below, and give the draft the benefit of the doubt on sourcing.)",
@@ -826,6 +925,16 @@ export async function reviewPost(
     "A claim missing from THIS block is NOT evidence of fabrication: these items were not necessarily about this story.",
     newsContext || "(empty)",
   ].join("\n");
+}
+
+export async function reviewPost(
+  client: OpenAI,
+  model: string,
+  settings: PromptSettings,
+  input: ReviewPostInput,
+): Promise<ReviewResult> {
+  const { draft } = input;
+  const systemPrompt = buildReviewSystemPrompt(settings, input);
 
   const userPrompt = `Review this draft and return only the JSON.\n\n${JSON.stringify(draft, null, 2)}`;
 
@@ -859,24 +968,41 @@ export async function reviewPost(
 
 export type TranslatedPost = GeneratedPost & { slug: string };
 
+/**
+ * Exportado para poder compararlo sin red (test/preservation).
+ *
+ * El glosario es una LÍNEA ENTERA del prompt, no una lista de términos: cada
+ * dominio decide qué no se traduce y con qué matices (una institución, un
+ * binomio en latín, el apodo de un club), y eso no entra en un `join(", ")`.
+ */
+export function buildTranslatorSystemPrompt(s: {
+  domainDescription: string;
+  writingLanguage: string;
+  translationLanguage: string;
+  translationGlossary: string;
+}): string {
+  return [
+    `You are an editorial translator for ${s.domainDescription}. Translate the article below from ${s.writingLanguage} to ${s.translationLanguage}.`,
+    "",
+    "## Rules",
+    "- Preserve the Markdown structure EXACTLY: same headings (##), blockquotes, bold, italics, lists, links. Translate only the text inside them.",
+    s.translationGlossary,
+    "- Keep all numbers, dates, article/law numbers and statistics exactly as they are.",
+    `- Write natural, idiomatic editorial ${s.translationLanguage} — not a literal word-for-word translation.`,
+    "- Do not add, remove or reorder information.",
+    "",
+    "## Output",
+    `Return STRICT JSON: { "title": string, "excerpt": string, "content": string (Markdown), "slug": string (URL slug in ${s.translationLanguage}, lowercase kebab-case derived from the translated title) }`,
+  ].join("\n");
+}
+
 export async function translatePost(
   client: OpenAI,
   model: string,
   source: GeneratedPost,
+  settings: PromptSettings = DEFAULT_PROMPT_SETTINGS,
 ): Promise<TranslatedPost> {
-  const systemPrompt = [
-    "You are an editorial translator for a non-profit info portal covering ethnobotany, cannabis and hemp, drug policy, health and the environment. Translate the article below from Spanish to English.",
-    "",
-    "## Rules",
-    "- Preserve the Markdown structure EXACTLY: same headings (##), blockquotes, bold, italics, lists, links. Translate only the text inside them.",
-    "- Do NOT translate proper nouns: organisation names, institutions and programmes (e.g. 'REPROCANN', 'ARICCAME', 'Boletín Oficial'), law and decree names, place names. Keep botanical binomials in Latin (Cannabis sativa).",
-    "- Keep all numbers, dates, article/law numbers and statistics exactly as they are.",
-    "- Write natural, idiomatic editorial English — not a literal word-for-word translation.",
-    "- Do not add, remove or reorder information.",
-    "",
-    "## Output",
-    'Return STRICT JSON: { "title": string, "excerpt": string, "content": string (Markdown), "slug": string (URL slug in English, lowercase kebab-case derived from the translated title) }',
-  ].join("\n");
+  const systemPrompt = buildTranslatorSystemPrompt(settings);
 
   const userPrompt = `Translate this article and return only the JSON.\n\n${JSON.stringify(source, null, 2)}`;
 
