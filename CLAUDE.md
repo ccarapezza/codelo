@@ -56,7 +56,12 @@ que sobra se borra a mano.
 
 **Agentes.** Cuatro roles en el motor: redactor, director, explorador (elige
 un tema dentro de su área, lo investiga en la web y escribe por el camino del
-redactor) e image-generator. El runner despacha por nombre y busca en
+redactor) e image-generator. En ese camino compartido, `runRedactor` tiene
+tres modos —investigación, asignado, libre— y sólo el libre mira el pool de
+RSS: en el de investigación los apuntes SON el contexto. Cuando el Explorador
+decidía "hay contexto" por el RSS, un área sin noticias recibía las reglas del
+modo análisis encima de sus apuntes, y `requireNewsContext` tiraba la
+investigación ya pagada. El runner despacha por nombre y busca en
 `verticals/agent-roles.ts` lo que no reconoce. Un rol nuevo va en TRES lugares:
 el runner, la etiqueta del panel (`admin/verticals.ts`) y el enum de los
 `schema.json` de `agent` y `agent-action`. Postgres no respalda el enum

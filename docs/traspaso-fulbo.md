@@ -616,6 +616,10 @@ apagada por defecto, sólo en el camino del rechazo y con la URL sumada al
   formato de salida) y aparece `director.recheck` (`.system` idéntico al del
   Director, `.user` con el pedido de relectura). Nada más.
 - **Nada que sembrar.** El modelo del Director se elige en el panel.
+- **Baja también un arreglo del Explorador** (commit aparte): escribía decidiendo
+  "hay contexto" por el pool de RSS y no por su investigación. Si fulbo usa
+  exploradores, sus notas ahora se registran en la Auditoría con rol
+  `explorador` y modo `research`, no como de un Redactor en modo `free`.
 
 ## Cómo medirlo
 
