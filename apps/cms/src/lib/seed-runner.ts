@@ -17,7 +17,12 @@
 import type { Core } from "@strapi/strapi";
 import * as project from "./project";
 
-export type SeedValue = string | boolean;
+/**
+ * Números incluidos: un campo numérico con default en el schema (la ventana de
+ * ingesta) queda en NULL en una fila que ya existía —el default sólo se aplica
+ * a filas nuevas—, así que la semilla sí puede cargarlo.
+ */
+export type SeedValue = string | boolean | number;
 
 export interface ProjectSeed {
   /**

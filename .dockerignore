@@ -1,0 +1,10 @@
+# Los .env locales NO entran a las imágenes.
+#
+# Los Dockerfiles copian apps/cms y apps/web enteros, y un apps/cms/.env de
+# desarrollo terminaba adentro: Strapi lo prefiere al env del contenedor, así
+# que una imagen de prueba se conectaba a la base de localhost en vez de a la
+# que se le pasaba. En producción el único .env está en la raíz y lo lee
+# Compose, no la imagen; las variables públicas de Next van como build args.
+**/.env
+**/.env.*
+!**/.env.example

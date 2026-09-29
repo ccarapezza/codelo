@@ -432,3 +432,56 @@ son las suyas, y estaban escritas en el motor. Para que el deduplicador no le
 cambie al mergear, codelo las carga en su semilla (el valor está en
 `test/preservation/settings.codelo.ts`). Lo mismo que fulbo: una semilla nueva,
 con otra clave.
+
+---
+
+# Respuesta de fulbo (29-sep): parte 3 hecha
+
+Merge `ba5da9d2` en fulbo (rama `feat/nib-parte-3`), verificado con typecheck,
+261 tests, `check-neutral.sh` con su `check-neutral.ignore`, el build de la
+imagen y el arranque de esa imagen sobre una copia de la base de prod: las dos
+migraciones internas de 5.54, la semilla `fulbo-editorial-2026-10` completa y
+el panel y la API arriba. Cuatro cosas que le tocan al motor:
+
+1. **El arnés de preservación no aísla las costuras de código.** Los pools de
+   portada y los enriquecedores de anclas son globales al proceso: con los de
+   fulbo cargados, `test/preservation` reescribía también los prompts de imagen
+   congelados de **codelo**. Fulbo agregó en `test/preservation/prompts.test.ts`,
+   después de los imports:
+   ```ts
+   vi.mock("../../src/verticals/cover-pools", () => ({ verticalCoverPools: {} }));
+   vi.mock("../../src/verticals/anchor-enrichers", () => ({ anchorEnrichers: [] }));
+   ```
+   (y `vi` en el import de vitest). Si Nib aplica exactamente esas líneas, el
+   próximo merge no conflictúa.
+2. **`ingestWindowDays` sí está vacío en una base existente.** El default del
+   schema sólo se aplica a filas nuevas: la fila de `site_settings` que ya
+   existía queda en NULL después de la migración, y `getIngestWindowDays` cae
+   al default del motor (7). La semilla podría cargarlo si `SeedValue` aceptara
+   números; hoy es `string | boolean`. Fulbo lo pone en 1 a mano.
+3. **No hay `.dockerignore`.** Un `apps/cms/.env` local entra a la imagen y
+   Strapi lo prefiere al env del contenedor: la imagen de prueba se conectaba a
+   `localhost` en vez de a la base que se le pasaba. En el VPS no pasa (no hay
+   `apps/cms/.env`), pero un `.dockerignore` con `**/.env` en el motor lo evita.
+4. **Un solo rol para volantas y números.** `accentLight` pinta las volantas,
+   las comillas, la url y los números grandes. Fulbo tenía dos colores (naranja
+   y ámbar) y sembró ámbar. Si el motor quiere reproducir un diseño así, hace
+   falta un rol aparte para los números.
+
+## Respuesta de Nib (29-sep)
+
+1. **Hecho** en `ee671ae`, con las mismas líneas que fulbo.
+2. **Hecho**: `SeedValue` acepta números. Una semilla nueva puede cargar
+   `ingestWindowDays` donde quedó en NULL, y no pisa uno ya cargado. Fulbo ya
+   lo puso en 1 a mano, así que no le hace falta.
+3. **Hecho**: `.dockerignore` en la raíz con `**/.env` y `**/.env.*` (salvo
+   `.env.example`). Llega por merge; ni fulbo ni codelo tenían uno propio.
+4. **Queda abierto**: separar los números grandes de `accentLight` es sumar
+   un rol a la paleta de las placas. Es una decisión de diseño y no se toca sin
+   ella.
+
+Además, fulbo mantiene copias propias de `scripts/backup-postgres.sh` y
+`scripts/generate-prod-secrets.sh`, que son del motor. La versión de Nib da
+el mismo resultado en fulbo, porque lee `PROJECT_SLUG`, `POSTGRES_DB` y
+`POSTGRES_USER` del `.env` de `/opt/fulbo`; los tres están. Conviene tomarla
+en el próximo merge para que esos dos archivos dejen de divergir.
