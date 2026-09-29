@@ -12,7 +12,7 @@ function fakeStrapi(filas: Record<string, Record<string, unknown> | null> = {}) 
   const store = new Map<string, unknown>();
   const atributos: Record<string, Record<string, unknown>> = {
     [UID_PROMPT]: { brandName: {}, domainDescription: {}, socialVoice: {} },
-    [UID_SITE]: { openaiTextModel: {}, autoTranslate: {} },
+    [UID_SITE]: { openaiTextModel: {}, autoTranslate: {}, ingestWindowDays: {} },
   };
   const escrituras: Array<{ uid: string; tipo: "update" | "create"; data: Record<string, unknown> }> = [];
 
@@ -78,6 +78,18 @@ describe("applyProjectSeeds", () => {
     const f = fakeStrapi({ [UID_SITE]: { id: 1, autoTranslate: false } });
     await applyProjectSeeds(f.strapi, [{ key: "s", siteSettings: { autoTranslate: true } }]);
     expect(f.escrituras.filter((e) => e.uid === UID_SITE)).toHaveLength(0);
+  });
+
+  it("siembra un número en una columna que quedó en NULL, y no pisa uno cargado", async () => {
+    // El default del schema sólo se aplica a filas nuevas: una fila que ya
+    // existía queda con la ventana de ingesta en NULL después de la migración.
+    const vacia = fakeStrapi({ [UID_SITE]: { id: 1, ingestWindowDays: null } });
+    await applyProjectSeeds(vacia.strapi, [{ key: "s", siteSettings: { ingestWindowDays: 1 } }]);
+    expect(vacia.filas[UID_SITE]).toMatchObject({ ingestWindowDays: 1 });
+
+    const cargada = fakeStrapi({ [UID_SITE]: { id: 1, ingestWindowDays: 30 } });
+    await applyProjectSeeds(cargada.strapi, [{ key: "s", siteSettings: { ingestWindowDays: 1 } }]);
+    expect(cargada.escrituras.filter((e) => e.uid === UID_SITE)).toHaveLength(0);
   });
 
   it("corre una sola vez", async () => {

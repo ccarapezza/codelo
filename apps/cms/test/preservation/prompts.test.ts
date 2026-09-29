@@ -8,7 +8,7 @@
 // re-captura con CAPTURE=1 y el diff de los fixtures es lo que se revisa. Lo que
 // NO se hace nunca es re-capturar para que un test deje de molestar.
 
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -19,6 +19,14 @@ import { resolvePromptConstraints, type ArticleAnchors } from "../../src/lib/ope
 import { NEUTRAL_PROMPT_SETTINGS } from "../../src/lib/prompt-defaults";
 import * as I from "./inputs";
 import type { Grabado } from "./recorder";
+
+// Lo que se congela es el MOTOR con los ajustes de cada proyecto. Las costuras
+// de código (pools de portada, enriquecedores de anclas) se aíslan: en el repo
+// de un proyecto traen lo suyo, y como son globales al proceso cambiarían los
+// prompts de TODOS los proyectos a la vez —en fulbo, sus pools y sus camisetas
+// reescribían también los fixtures de codelo—.
+vi.mock("../../src/verticals/cover-pools", () => ({ verticalCoverPools: {} }));
+vi.mock("../../src/verticals/anchor-enrichers", () => ({ anchorEnrichers: [] }));
 
 const SIN_ANCLAS: ArticleAnchors = {
   topic: null,
