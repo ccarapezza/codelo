@@ -53,6 +53,8 @@
         "agent_failed",
         "redactor_idle",
         "director_idle",
+        "director_recheck",
+        "director_trimmed",
         "explorador_idle",
         "studio_portada",
         "studio_carrusel",

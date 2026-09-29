@@ -49,6 +49,19 @@ export async function getOpenAITextModel(strapi: StrapiLike, fallback = "gpt-4o-
   return process.env.OPENAI_TEXT_MODEL?.trim() || fallback;
 }
 
+/**
+ * El modelo con el que revisa el Director. Vacío = el de texto, que es lo que
+ * usaba siempre.
+ *
+ * Es aparte porque el Director es el control de calidad: corre una vez por
+ * borrador, lee un prompt largo contra la evidencia, y ahí es donde un modelo
+ * chico se equivoca leyendo —dio por ausentes frases que estaban textuales en
+ * una fuente—. Subirlo sólo a él cuesta una fracción de subir la redacción.
+ */
+export async function getOpenAIDirectorModel(strapi: StrapiLike): Promise<string> {
+  return (await readSettingModel(strapi, "openaiDirectorModel")) ?? getOpenAITextModel(strapi);
+}
+
 
 // Holds an OpenAI (gpt-image-* / dall-e-3) OR an OpenRouter ("google/gemini-*")
 // model id; the provider is inferred from the id downstream (see isOpenRouterModel).

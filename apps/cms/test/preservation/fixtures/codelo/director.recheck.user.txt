@@ -1,0 +1,15 @@
+## SECOND READING — the engine checked your "unsupportedClaims" against the evidence
+
+You rejected this draft saying these claims appear in no source. The engine searched the
+evidence you were given and found their words in it:
+
+1. Your claim: "un solo trámite lo que antes estaba repartido en tres ventanillas"
+   In source [1] Agencia Central: «El organismo publicó el nuevo régimen de inscripción / El texto unifica en un solo trámite lo que estaba repartido en tres ventanillas.»
+
+Read each excerpt LITERALLY, word by word:
+- If it states your claim, the claim IS supported: it is no ground to reject, nor to delete.
+- If it differs in a detail that changes the fact (a number, a date, a name, who did what,
+  a negation), the claim is still unsupported: keep it in "unsupportedClaims" and say in
+  "reason" what differs.
+
+Then review the draft again from the top, with every rule above, and return the JSON (either schema).

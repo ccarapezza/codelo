@@ -9,6 +9,8 @@
 export const ENGINE_SETTING_KEYS = [
   "openaiTextModel",
   "openaiImageModel",
+  /** El modelo del Director. Vacío = el de texto (ver getOpenAIDirectorModel). */
+  "openaiDirectorModel",
   /** Traducir cada nota al publicarla. Apagado, una instancia monolingüe no paga esos tokens. */
   "autoTranslate",
   "adsensePublisherId",

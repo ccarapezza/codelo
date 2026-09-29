@@ -3,9 +3,7 @@ import {
   generatePost,
   getOpenAIClient,
   isOpenRouterModel,
-  reviewPost,
   findDuplicateSubject,
-  type GeneratedPost,
 } from "./openai";
 import {
   CoverPipelineError,
@@ -22,11 +20,18 @@ import {
 import { echoFeedback, findEchoedHeadline, TITLE_ORIGINALITY_RULES } from "./headline-similarity";
 import {
   getOpenRouterImageKey,
+  getOpenAIDirectorModel,
   getOpenAIImageKey,
   getOpenAIImageModel,
   getOpenAITextKey,
   getOpenAITextModel,
 } from "./openai-config";
+import {
+  buildReviewEvidence,
+  enforceRemovalCap,
+  findClaimsInEvidence,
+  reviewWithRecheck,
+} from "./director-review";
 import { getPromptSettings } from "./prompt-settings";
 import { logAgentAction } from "./audit";
 import {
@@ -260,6 +265,15 @@ export async function runRedactor(
         "- Every specific fact you mention must appear in the context above.",
         "- If uncertain about a fact, omit it or write 'según fuentes' without fabricating details.",
         "",
+        // El relleno era la otra mitad de los rechazos: se pedían ~600 palabras
+        // a partir de resúmenes de 200-300 caracteres, y para llegar el modelo
+        // cosía noticias sin relación o completaba de memoria —una fuente
+        // mencionaba "varios frentes abiertos" y la nota los enumeraba—.
+        "## ONE STORY, AS LONG AS ITS FACTS (no padding)",
+        "- Develop ONE story: the one your title announces. Another item of the context may add background ONLY if it is about that same story; never stitch unrelated items into one article.",
+        "- Length follows the facts: when the sources are brief, the article is brief. Stop when you run out of sourced facts — a short, fully sourced article gets published; a long one with filler gets rejected.",
+        "- Never expand a detail beyond what the source says: if a source mentions 'several pending projects' without naming them, do not name them; if it gives a total without a breakdown, do not invent the breakdown.",
+        "",
         "## TITLE RULES (CRITICAL — most hallucinations come from bad titles)",
         "- The title MUST describe ONE single concrete fact that appears in ONE single source above.",
         "- NEVER combine two unrelated facts into one title (e.g. if source A says 'X resigned' and source B says 'Y was appointed', DO NOT write 'X and Y were appointed').",
@@ -285,6 +299,8 @@ export async function runRedactor(
         `- TITLE: must be ${promptSettings.analysisModeFraming}`,
       ].join("\n");
 
+  const largoConFuentes = "as long as the sourced facts allow: usually 250-600 words, never padded";
+
   const buildSystemPrompt = (newsBlock: string): string =>
     [
       `You are a journalist writing in ${promptSettings.writingLanguage} for ${promptSettings.domainDescription}.`,
@@ -298,10 +314,12 @@ export async function runRedactor(
       contentTypeGuidance,
       `\n${promptSettings.bodyStructureGuide}`,
       // `sourceIndexes` sólo se pide cuando existe el bloque numerado: en modo
-      // asignado la fuente ya se conoce y no hay números que citar.
+      // asignado la fuente ya se conoce y no hay números que citar. El largo
+      // sale de los hechos cuando hay fuentes; el modo análisis, que no las
+      // tiene, conserva el largo fijo de siempre.
       !isAssignedMode && hasContext
-        ? `\nReturn STRICT JSON: { "title": string, "excerpt": string (1-2 sentences), "content": string (rich GitHub-Flavored Markdown, ~600 words), "sourceIndexes": number[] — the [n] numbers of the context items you ACTUALLY used for the facts in this article. List only those. Do NOT list items you did not use. }`
-        : `\nReturn STRICT JSON: { "title": string, "excerpt": string (1-2 sentences), "content": string (rich GitHub-Flavored Markdown, ~600 words) }`,
+        ? `\nReturn STRICT JSON: { "title": string, "excerpt": string (1-2 sentences), "content": string (rich GitHub-Flavored Markdown, ${largoConFuentes}), "sourceIndexes": number[] — the [n] numbers of the context items you ACTUALLY used for the facts in this article. List only those. Do NOT list items you did not use. }`
+        : `\nReturn STRICT JSON: { "title": string, "excerpt": string (1-2 sentences), "content": string (rich GitHub-Flavored Markdown, ${hasContext || investigacion ? largoConFuentes : "~600 words"}) }`,
     ]
       .filter(Boolean)
       .join("\n");
@@ -551,6 +569,8 @@ async function runDirector(
   const textKey = getOpenAITextKey();
   const imageKey = getOpenAIImageKey();
   const textModel = await getOpenAITextModel(strapi);
+  // La revisión puede ir con un modelo propio; la portada sigue con el de texto.
+  const reviewModel = await getOpenAIDirectorModel(strapi);
   const imageModel = await getOpenAIImageModel(strapi);
   const promptSettings = await getPromptSettings(strapi);
   const client = getOpenAIClient(textKey);
@@ -648,13 +668,20 @@ async function runDirector(
       for (const n of [...keywordNews, ...broadNews]) {
         if (!yaEnEvidencia.has(n.url) && !byUrl.has(n.url)) byUrl.set(n.url, n);
       }
-      const finalNews = Array.from(byUrl.values()).slice(0, 50);
-      const newsContextForReview = finalNews
-        .map(
-          (n, i) =>
-            `[${writerSources.length + i + 1}] ${n.source} | ${n.title}\n${(n.summary ?? "").slice(0, 300)}`,
-        )
+      // Recortado UNA vez: el mismo texto arma el bloque del prompt y la
+      // evidencia donde la guarda busca, para que nunca le señale al Director
+      // algo que él no tuvo delante.
+      const extraNews = Array.from(byUrl.values())
+        .slice(0, 50)
+        .map((n) => ({ source: n.source, title: n.title, summary: (n.summary ?? "").slice(0, 300) }));
+      const newsContextForReview = extraNews
+        .map((n, i) => `[${writerSources.length + i + 1}] ${n.source} | ${n.title}\n${n.summary}`)
         .join("\n");
+      const evidence = buildReviewEvidence({
+        researchNotes: draft.researchNotes,
+        writerSources,
+        extraNews,
+      });
 
       if (writerSources.length === 0) {
         strapi.log.info(
@@ -663,19 +690,55 @@ async function runDirector(
         );
       }
 
-      const result = await reviewPost(client, textModel, promptSettings, {
-        directorInstructions: agent.instructions,
-        draft: {
-          title: draft.title,
-          excerpt: draft.excerpt ?? "",
-          content: draft.content ?? "",
+      const { result: veredicto, recheck } = await reviewWithRecheck(
+        client,
+        reviewModel,
+        promptSettings,
+        {
+          directorInstructions: agent.instructions,
+          draft: {
+            title: draft.title,
+            excerpt: draft.excerpt ?? "",
+            content: draft.content ?? "",
+          },
+          newsContext: newsContextForReview,
+          writerSources: formatSourceContext(writerSources),
+          researchNotes: draft.researchNotes ?? undefined,
         },
-        newsContext: newsContextForReview,
-        writerSources: formatSourceContext(writerSources),
-        researchNotes: draft.researchNotes ?? undefined,
-      });
+        evidence,
+      );
 
-      if (result.rejected) {
+      if (recheck) {
+        const desenlace = recheck.error
+          ? "falló la relectura; vale el primer rechazo"
+          : veredicto.rejected
+            ? "sostuvo el rechazo"
+            : "la aprobó";
+        strapi.log.info(
+          `[agent-runner] Director: "${draft.title}" — ${recheck.found.length} afirmación(es) ` +
+            `dada(s) por ausente(s) estaba(n) en la evidencia; segunda lectura: ${desenlace}.`,
+        );
+        await logAgentAction(strapi, {
+          agentRole: "director",
+          action: "director_recheck",
+          agentName: agent.name,
+          agentDocumentId: agent.documentId,
+          postDocumentId: draft.documentId,
+          postTitle: draft.title,
+          summary: `Director "${agent.name}" releyó "${draft.title}": ${desenlace}`,
+          metadata: {
+            found: recheck.found,
+            firstReason: recheck.firstReason,
+            outcome: recheck.error ? "failed" : veredicto.rejected ? "rejected" : "approved",
+            ...(recheck.error ? { error: recheck.error } : {}),
+            model: reviewModel,
+          },
+        });
+      }
+
+      const result = enforceRemovalCap(veredicto);
+
+      if (result.rejected === true) {
         strapi.log.warn(
           `[agent-runner] Director REJECTED draft "${draft.title}": ${result.reason}`,
         );
@@ -687,7 +750,11 @@ async function runDirector(
           postDocumentId: draft.documentId,
           postTitle: draft.title,
           summary: `Director "${agent.name}" rechazó: "${draft.title}"`,
-          metadata: { reason: result.reason },
+          metadata: {
+            reason: result.reason,
+            unsupportedClaims: result.unsupportedClaims,
+            model: reviewModel,
+          },
         });
         // Archive instead of delete: the Director's news-fabrication check has
         // false positives (a TRUE result simply absent from the RSS feed reads
@@ -703,7 +770,7 @@ async function runDirector(
         continue;
       }
 
-      const refined = result as GeneratedPost;
+      const refined = result;
 
       let coverImageId: number | null = null;
       let chosenPrompt: string | null = null;
@@ -801,6 +868,29 @@ async function runDirector(
         );
       }
 
+      // Lo que el Director quitó para poder publicarla. `alsoInEvidence` son
+      // las quitadas que la guarda SÍ encuentra en las fuentes: el mismo error
+      // de lectura que la segunda lectura corrige en los rechazos, acá sin
+      // costo extra. Es para medir, no para actuar.
+      if (refined.removedClaims.length > 0) {
+        await logAgentAction(strapi, {
+          agentRole: "director",
+          action: "director_trimmed",
+          agentName: agent.name,
+          agentDocumentId: agent.documentId,
+          postDocumentId: draft.documentId,
+          postTitle: refined.title,
+          summary:
+            `Director "${agent.name}" quitó ${refined.removedClaims.length} frase(s) ` +
+            `sin respaldo de: "${refined.title}"`,
+          metadata: {
+            removedClaims: refined.removedClaims,
+            alsoInEvidence: findClaimsInEvidence(refined.removedClaims, evidence),
+            model: reviewModel,
+          },
+        });
+      }
+
       strapi.log.info(`[agent-runner] Director "${agent.name}" published: ${refined.title}`);
       await logAgentAction(strapi, {
         agentRole: "director",
@@ -814,6 +904,8 @@ async function runDirector(
           hasCover: Boolean(coverImageId),
           staggered: publishedCount > 1,
           position: publishedCount,
+          removedClaims: refined.removedClaims.length,
+          model: reviewModel,
         },
       });
     } catch (err) {

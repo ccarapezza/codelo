@@ -485,3 +485,143 @@ Además, fulbo mantiene copias propias de `scripts/backup-postgres.sh` y
 el mismo resultado en fulbo, porque lee `PROJECT_SLUG`, `POSTGRES_DB` y
 `POSTGRES_USER` del `.env` de `/opt/fulbo`; los tres están. Conviene tomarla
 en el próximo merge para que esos dos archivos dejen de divergir.
+
+---
+
+# Pedido de fulbo (29-sep): que el Director arregle el cuerpo y verifique en la web antes de rechazar
+
+**Evidencia (prod de fulbo, 29-sep, con `8f062e9`):** 6 borradores, 2 publicados,
+4 rechazados. El caso que motiva esto es "Boca eliminó a Racing en Rosario y se
+metió en semifinales de la Copa Argentina". El Director mismo escribió que el
+dato central (Racing anunció el fin de ciclo de Vojvoda) "sí está respaldado
+por las fuentes", y rechazó la nota entera por dos frases del cuerpo:
+
+- "cuatro frentes abiertos": **está textual** en el resumen de la fuente [1]
+  ("Con cuatro frentes abiertos, el cuadro de La Ribera…"). Error de lectura
+  del Director.
+- "sigue en carrera en la Libertadores": no está en ninguna fuente. Es una
+  frase periférica, sacarla dejaba la nota publicable.
+
+**Causa:** STEP 1.6 sólo le permite corregir el TÍTULO o suavizar una
+afirmación. Una frase del CUERPO sin respaldo lo obliga a rechazar (punto 3 de
+1.6 y STEP 2): no puede quitarla.
+
+**Lo que pedimos:**
+
+1. **Arreglar el cuerpo.** Si lo que no tiene respaldo es periférico (una o dos
+   frases, no el hecho central del título y la bajada), el Director quita o
+   reescribe esas frases y APRUEBA. Rechaza sólo si lo no respaldado es el
+   núcleo, o si la nota cose historias sin relación (ese rechazo de hoy, "La
+   salida de Vojvoda amplió la lista…" con la fusión de tres clubes adentro,
+   estuvo bien).
+2. **Verificar en la web como última instancia.** Antes de rechazar o de quitar
+   algo por "no está en las fuentes", el Director enumera las afirmaciones en
+   duda (tope de 2 o 3) y el motor las chequea con búsqueda web, con lo mismo
+   que usa el Explorador (`investigar`, Responses API con `web_search`). Si una
+   fuente confiable lo confirma, la frase queda y la URL se suma al
+   `sourceContext`, así la Auditoría sigue pudiendo responder de dónde salió.
+   Si no, se quita. Sólo en el camino de rechazo, para acotar el costo, y con
+   un ajuste en Sitio e integraciones para activarlo.
+3. **Auditoría:** acciones para "afirmación verificada en la web" y "frase
+   quitada", para poder medir cuántas notas se salvan y a qué costo.
+4. **Lectura literal:** que el prompt le recuerde buscar la afirmación textual
+   en los resúmenes antes de darla por no respaldada (el caso de los "cuatro
+   frentes").
+
+---
+
+# Respuesta de Nib (29-sep): el Director recorta, relee, y puede tener su propio modelo
+
+Entran los puntos 1, 3 y 4, y dos cosas más que salieron de mirar la base de
+fulbo. El punto 2 queda para después de medir.
+
+## Lo que mostró la base de producción (sólo lectura)
+
+El pedido tiene razón en lo central. El caso que lo motiva tiene un matiz:
+
+- **El Director lee mal su propia evidencia.** "cuatro frentes abiertos" estaba
+  textual en la [1], como dice la nota. Y no es un caso aislado: en "Marcos Rojo
+  le pedirá…" negó que Vojvoda dirigiera a Racing, y las fuentes [3] y [5] lo
+  dicen literalmente. No fue un recorte: esos resúmenes tienen unos 200
+  caracteres y le llegaron enteros.
+- **La frase de la Libertadores no era un descuido periférico.** El Redactor
+  inventó QUÉ son los cuatro frentes: una lista con la Libertadores, el torneo
+  local y un "objetivo general" que ni es una competencia. Ahí el Director
+  tenía razón en marcarla.
+- **La causa de fondo está en el Redactor.** Se le pedían ~600 palabras a partir
+  de resúmenes de 200-300 caracteres, y para llegar cosía noticias sin relación
+  (los rechazos 1987, 1989 y 1991) o completaba de memoria.
+- **El Director usaba el mismo modelo que el Redactor** (`gpt-5.4-mini`).
+
+## Lo que entró en el motor
+
+1. **El Director arregla el cuerpo (punto 1).** STEP 1.6 tiene un caso nuevo:
+   una frase periférica sin fuente —no el hecho del título y la bajada, ni
+   aquel sobre el que se arma la nota— se QUITA, se lista en `removedClaims` y
+   se aprueba. Hasta tres; con más, el motor lo trata como rechazo
+   (`enforceRemovalCap`). Rechaza sólo si lo que no tiene fuente es el núcleo,
+   si la nota cose historias sin relación o si necesitaría más de tres
+   recortes. Quitar es quitar: nunca reemplazar por otro dato ni mover al
+   título. Se eligió quitar y no "reescribir" a propósito: reescribir sin
+   fuente es exactamente lo que hizo el Redactor.
+2. **Lectura literal (punto 4).** STEP 2 le pide buscar las palabras exactas de
+   la afirmación en cada fuente, resumen incluido, antes de darla por no
+   respaldada.
+3. **Una guarda en código, además del prompt.** Un recordatorio más no alcanza
+   para un error de lectura, así que se verifica: al rechazar, el Director cita
+   lo que da por ausente (`unsupportedClaims`), y `lib/director-review.ts` lo
+   busca en la evidencia que él tuvo delante —misma normalización que el
+   anti-calco, pero conservando los números, y dentro de una ventana corta para
+   que un texto largo no "contenga" cualquier frase—. Si aparece, se le pide
+   UNA segunda lectura en la misma conversación, mostrándole el fragmento. El
+   motor no aprueba nada solo: encontrar las palabras no prueba que la fuente
+   diga lo mismo, así que el veredicto sigue siendo del Director. Con el caso de
+   los cuatro frentes, la guarda encuentra la frase en la [1], el Director
+   relee, y con el punto 1 puede quitar la de la Libertadores y publicar.
+4. **Auditoría (punto 3).** Dos acciones nuevas: `director_recheck` ("Segunda
+   lectura": qué encontró la guarda, el motivo del primer rechazo, cómo terminó
+   y con qué modelo) y `director_trimmed` ("Frases quitadas": las frases, y en
+   `alsoInEvidence` las que la guarda SÍ encuentra en las fuentes, que es el
+   mismo error de lectura pagado con texto correcto). `draft_published` y
+   `draft_rejected` suman el modelo del Director.
+5. **Un modelo propio para el Director.** Sitio e integraciones → Modelos de IA
+   → "Modelo del Director" (`openaiDirectorModel`; vacío = el de texto). Corre
+   una vez por borrador: en fulbo, con unos 25 por semana, pasarlo a `gpt-5.4`
+   cuesta del orden de un dólar semanal.
+6. **El Redactor no rellena.** Bloque nuevo "ONE STORY, AS LONG AS ITS FACTS":
+   una sola historia —la del título—, el largo sale de los hechos (250-600
+   palabras, nunca relleno) y no se expande un detalle más allá de lo que dice
+   la fuente (si menciona "varios frentes" sin nombrarlos, no se nombran). Las
+   "~600 words" fijas quedan sólo en el modo análisis, que no tiene fuentes.
+
+## Lo que no entró: la verificación web (punto 2)
+
+Tiene un caso real —datos de contexto como quién dirige a qué club, que en los
+rechazos de Arruabarrena ni el Director sabía resolver—, pero afloja una regla
+dura: hoy, lo que el Redactor pone de memoria se rechaza; con la búsqueda, se
+rescataría si una web lo confirma. Para fulbo puede servir; en codelo, con
+requisitos legales y de salud, iría apagado. Antes conviene ver cuánto resuelven
+la segunda lectura y el recorte. Si en una o dos semanas siguen apareciendo
+rechazos por datos de contexto verdaderos, entra como opción por proyecto,
+apagada por defecto, sólo en el camino del rechazo y con la URL sumada al
+`sourceContext`, como lo describe el pedido.
+
+## Al mergear
+
+- **Schemas:** `agent-action` suma `director_recheck` y `director_trimmed` al
+  enum de acciones (conservar `analyst` en el de roles); `site-setting` suma
+  `openaiDirectorModel`. Revisar los borrados silenciosos como siempre, y
+  `ts:generate-types`.
+- **Fixtures:** se mueve `director.system.txt` (STEP 1.6, STEP 2, STEP 3 y el
+  formato de salida) y aparece `director.recheck` (`.system` idéntico al del
+  Director, `.user` con el pedido de relectura). Nada más.
+- **Nada que sembrar.** El modelo del Director se elige en el panel.
+
+## Cómo medirlo
+
+Auditoría, filtrando por "Segunda lectura" y "Frases quitadas". Lo que dice si
+funcionó: rechazos por semana antes y después; de las segundas lecturas,
+cuántas terminan aprobando; de las frases quitadas, cuántas estaban en la
+evidencia. Si se quiere separar el efecto del prompt y la guarda del efecto del
+modelo, conviene una semana con el modelo de texto y recién después subir el
+del Director.

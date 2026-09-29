@@ -63,7 +63,21 @@ el runner, la etiqueta del panel (`admin/verticals.ts`) y el enum de los
 —Strapi 5.54 no crea CHECK—; lo valida `strapi.documents()`, que rechaza el
 alta de un agente con un rol fuera del enum. La auditoría escribe por
 `strapi.db.query`, que no valida: una fila con un rol sin registrar entra igual
-y el panel la muestra sin etiqueta.
+y el panel la muestra sin etiqueta. Una ACCIÓN nueva de auditoría va en cuatro:
+el tipo `AgentAction` (`lib/audit.ts`), el enum de `agent-action`, y
+`ACTION_LABEL`/`ACTION_COLOR` de `AuditPage` con su clave en los catálogos.
+
+**Director.** No sólo aprueba o rechaza: puede reescribir el título y quitar
+del cuerpo hasta tres frases periféricas sin fuente (`removedClaims`); más que
+eso, `enforceRemovalCap` lo convierte en rechazo. Al rechazar cita lo que da por
+ausente (`unsupportedClaims`) y `lib/director-review.ts` lo busca en la
+evidencia que él tuvo delante: si aparece, le pide UNA segunda lectura en la
+misma conversación, mostrándole dónde. El motor nunca aprueba solo —encontrar
+las palabras no prueba que la fuente diga lo mismo—; muestra y relee. La
+búsqueda tiene que mirar exactamente lo que el revisor leyó (mismos cortes,
+mismas etiquetas `[n]`): si no, le señala un texto que nunca vio. Revisa con
+`openaiDirectorModel` si está, o con el modelo de texto. En la auditoría quedan
+`director_recheck` y `director_trimmed`, con lo encontrado y lo quitado.
 
 **Crons.** `config/cron-tasks.ts` tiene los dos del motor (agentes y RSS) y
 spreadea `verticals/cron.ts`. Agregar una tarea propia no toca el archivo del

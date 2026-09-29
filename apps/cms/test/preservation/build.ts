@@ -19,6 +19,7 @@ import {
   buildNewsSystemPrompt,
   refinePost,
 } from "../../src/lib/news-generator";
+import { buildReviewEvidence, reviewWithRecheck } from "../../src/lib/director-review";
 import { buildCarouselSystemPrompt, composeCarousel } from "../../src/lib/social-cards/composer";
 import { composeSingleSlide } from "../../src/lib/social-studio/compose-single";
 import {
@@ -54,6 +55,14 @@ export async function construirPrompts(
   vi.setSystemTime(new Date(I.HOY));
   try {
 
+  const revision = {
+    directorInstructions: I.DIRECTOR_INSTRUCTIONS,
+    draft: I.DRAFT,
+    newsContext: I.NEWS_CONTEXT,
+    writerSources: I.WRITER_SOURCES,
+    today: I.TODAY,
+  };
+
   const portada = async (seed: string): Promise<Grabado> =>
     capture((c) =>
       generateImagePromptCandidates(c, "m", I.TITLE, I.EXCERPT, {
@@ -72,14 +81,16 @@ export async function construirPrompts(
 
     translate: await capture((c) => translatePost(c, "m", I.DRAFT, s)),
 
-    director: await capture((c) =>
-      reviewPost(c, "m", s, {
-        directorInstructions: I.DIRECTOR_INSTRUCTIONS,
-        draft: I.DRAFT,
-        newsContext: I.NEWS_CONTEXT,
-        writerSources: I.WRITER_SOURCES,
-        today: I.TODAY,
-      }),
+    director: await capture((c) => reviewPost(c, "m", s, revision)),
+
+    // La segunda lectura, por el camino real: el grabador contesta el rechazo
+    // enlatado, la guarda encuentra la primera afirmación en la fuente [1] y
+    // el motor vuelve a llamar. Lo grabado es ESA llamada. Si la guarda dejara
+    // de encontrarla no habría segunda llamada, y el fixture compararía el
+    // pedido original: el test fallaría, que es lo que tiene que pasar.
+    "director.recheck": await capture(
+      (c) => reviewWithRecheck(c, "m", s, revision, buildReviewEvidence(I.REVIEW_EVIDENCE)),
+      JSON.stringify(I.DIRECTOR_REJECTION),
     ),
 
     anchors: await capture((c) =>

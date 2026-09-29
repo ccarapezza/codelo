@@ -124,6 +124,13 @@ export function parseSourceContext(raw: unknown): SourceItem[] {
  */
 export function formatSourceContext(items: readonly SourceItem[], startIndex = 1): string {
   return items
-    .map((n, i) => `[${startIndex + i}] ${n.source} | ${n.title}\n${n.summary.slice(0, 2600)}`)
+    .map((n, i) => `[${startIndex + i}] ${n.source} | ${n.title}\n${n.summary.slice(0, REVIEW_SUMMARY_MAX)}`)
     .join("\n");
 }
+
+/**
+ * Cuánto de cada resumen ve el revisor. Exportado porque la guarda del
+ * Director (director-review.ts) tiene que buscar en lo mismo que él leyó: si
+ * buscara más allá del corte, le señalaría un texto que nunca tuvo delante.
+ */
+export const REVIEW_SUMMARY_MAX = 2600;

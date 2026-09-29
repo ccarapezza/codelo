@@ -97,6 +97,8 @@ const ACTION_LABEL: Record<string, string> = {
   agent_failed: "audit.acc.error",
   redactor_idle: "audit.sinFuentes",
   director_idle: "audit.sinDrafts",
+  director_recheck: "audit.acc.relectura",
+  director_trimmed: "audit.acc.recortada",
   explorador_idle: "audit.sinInvestigacion",
   studio_portada: "audit.acc.studioPortada",
   studio_carrusel: "audit.acc.studioCarrusel",
@@ -120,6 +122,9 @@ const ACTION_COLOR: Record<string, "success" | "danger" | "neutral" | "warning">
   agent_failed: "danger",
   redactor_idle: "neutral",
   director_idle: "neutral",
+  director_recheck: "neutral",
+  // Publicada, pero con frases quitadas: vale una mirada humana.
+  director_trimmed: "warning",
   explorador_idle: "neutral",
   studio_portada: "success",
   studio_carrusel: "success",

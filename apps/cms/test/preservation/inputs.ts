@@ -39,6 +39,43 @@ export const WRITER_SOURCES = [
   "El texto unifica en un solo trámite lo que estaba repartido en tres ventanillas.",
 ].join("\n");
 
+/**
+ * La misma evidencia, como la guarda del Director la busca: la fuente del
+ * Redactor ([1], la de WRITER_SOURCES) y un ítem de contexto adicional ([2]).
+ */
+export const REVIEW_EVIDENCE = {
+  writerSources: [
+    {
+      title: "El organismo publicó el nuevo régimen de inscripción",
+      source: "Agencia Central",
+      url: "https://example.com/regimen",
+      summary: "El texto unifica en un solo trámite lo que estaba repartido en tres ventanillas.",
+    },
+  ],
+  extraNews: [
+    {
+      title: "El organismo publicó el nuevo régimen de inscripción",
+      source: "Agencia Central",
+      summary: "La medida unifica el trámite y fija plazos escalonados para la renovación.",
+    },
+  ],
+};
+
+/**
+ * El primer veredicto de la segunda lectura. Rechaza por dos afirmaciones que
+ * da por ausentes: la primera está en la fuente [1] con otras palabras
+ * alrededor —el error de lectura que la guarda atrapa—; la segunda no está en
+ * ninguna, y por eso no aparece en el pedido de relectura.
+ */
+export const DIRECTOR_REJECTION = {
+  rejected: true,
+  reason: "El cuerpo afirma datos que no están en ninguna fuente.",
+  unsupportedClaims: [
+    "un solo trámite lo que antes estaba repartido en tres ventanillas",
+    "Plazos de 30 días para la primera renovación",
+  ],
+};
+
 export const RECENT_TITLES = [
   "Se aprobó el presupuesto anual del área",
   "El organismo unificó el trámite de inscripción",

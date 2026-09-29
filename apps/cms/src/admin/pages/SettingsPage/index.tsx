@@ -45,6 +45,7 @@ type Settings = {
   [extra: string]: string | boolean;
   openaiTextModel: string;
   openaiImageModel: string;
+  openaiDirectorModel: string;
   adsensePublisherId: string;
   adsenseSidebarLeftSlot: string;
   adsenseSidebarRightSlot: string;
@@ -70,6 +71,8 @@ type Settings = {
 const EMPTY: Settings = {
   openaiTextModel: "gpt-4o-mini",
   openaiImageModel: "gpt-image-1-mini",
+  // Vacío = el Director revisa con el modelo de texto.
+  openaiDirectorModel: "",
   adsensePublisherId: "",
   adsenseSidebarLeftSlot: "",
   adsenseSidebarRightSlot: "",
@@ -215,6 +218,7 @@ function SettingsPage() {
         const next: Settings = {
           openaiTextModel: data.openaiTextModel ?? "gpt-4o-mini",
           openaiImageModel: data.openaiImageModel ?? "gpt-image-1-mini",
+          openaiDirectorModel: data.openaiDirectorModel ?? "",
           adsensePublisherId: data.adsensePublisherId ?? "",
           adsenseSidebarLeftSlot: data.adsenseSidebarLeftSlot ?? "",
           adsenseSidebarRightSlot: data.adsenseSidebarRightSlot ?? "",
@@ -372,10 +376,11 @@ function SettingsPage() {
           description={t("ajustes.modelos.desc")}
         >
           <Flex direction="column" alignItems="stretch" gap={4}>
-            {/* Los dos modelos van a la par: son la misma decisión tomada dos
-                veces —con qué se escribe, con qué se dibuja— y apilados
-                estiraban la tarjeta sin ganar nada. Colapsan a una columna
-                cuando no entran. */}
+            {/* Los modelos van a la par: son la misma decisión tomada varias
+                veces —con qué se escribe, con qué se revisa, con qué se
+                dibuja— y apilados estiraban la tarjeta sin ganar nada. El del
+                Director va al lado del de texto porque es su alternativa.
+                Colapsan a una columna cuando no entran. */}
             <Box
               style={{
                 display: "grid",
@@ -389,6 +394,22 @@ function SettingsPage() {
                   value={form.openaiTextModel}
                   onChange={(val: string | number) => set("openaiTextModel", String(val))}
                 >
+                  {TEXT_MODELS.map((m) => (
+                    <SingleSelectOption key={m.value} value={m.value}>
+                      {etiquetaModelo(m.label, t)}
+                    </SingleSelectOption>
+                  ))}
+                </SingleSelect>
+                <Field.Hint />
+              </Field.Root>
+
+              <Field.Root hint={t("ajustes.modeloDirector.hint")}>
+                <Field.Label>{t("ajustes.modeloDirector.label")}</Field.Label>
+                <SingleSelect
+                  value={form.openaiDirectorModel}
+                  onChange={(val: string | number) => set("openaiDirectorModel", String(val))}
+                >
+                  <SingleSelectOption value="">{t("ajustes.modeloDirector.mismo")}</SingleSelectOption>
                   {TEXT_MODELS.map((m) => (
                     <SingleSelectOption key={m.value} value={m.value}>
                       {etiquetaModelo(m.label, t)}

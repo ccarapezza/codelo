@@ -36,6 +36,13 @@ export type AgentAction =
   | "agent_failed"
   | "redactor_idle"
   | "director_idle"
+  /**
+   * El Director rechazó por afirmaciones "sin fuente" que el motor encontró en
+   * la evidencia, y se le pidió una segunda lectura (director-review.ts).
+   */
+  | "director_recheck"
+  /** El Director quitó frases sin fuente del cuerpo y publicó la nota. */
+  | "director_trimmed"
   /** El Explorador no encontró qué escribir, o la búsqueda web falló. */
   | "explorador_idle"
   | "studio_portada"
