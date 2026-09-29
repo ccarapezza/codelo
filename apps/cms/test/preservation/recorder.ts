@@ -21,8 +21,13 @@ export type Grabador = {
   ultima(): Grabado;
 };
 
+/**
+ * El ÚLTIMO mensaje del rol: en una conversación de varios turnos —la segunda
+ * lectura del Director— lo que se congela es el pedido nuevo. En las de un
+ * turno, primero y último son el mismo.
+ */
 function textoDe(mensajes: Array<{ role: string; content: unknown }>, rol: string): string {
-  const m = mensajes.find((x) => x.role === rol);
+  const m = [...mensajes].reverse().find((x) => x.role === rol);
   if (!m) return "";
   return typeof m.content === "string" ? m.content : JSON.stringify(m.content);
 }

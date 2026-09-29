@@ -91,6 +91,12 @@ vista), si se traduce automáticamente cada nota —en un sitio monolingüe conv
 apagarlo, es una llamada al modelo por nota que no se usa—, y AdSense, Analytics
 y Clarity si corresponden.
 
+El **modelo del Director** es aparte y por defecto es el de texto. Si vas a
+gastar en un modelo mejor, empezá por ese: el Director revisa cada borrador
+contra sus fuentes, que es justo donde un modelo chico lee mal —rechaza notas
+buenas por datos que estaban en la fuente—, y corre una vez por borrador, así
+que subirlo cuesta una fracción de subir la redacción.
+
 En **Publicación** están además:
 
 - **La ventana de ingesta**, en días (7 por defecto): cuánto hacia atrás se leen
@@ -150,6 +156,16 @@ Las etiquetas se cargan desde el Content Manager.
 En un redactor, **Correr ahora**. Después en el Director. Mirá **Auditoría**: ahí
 está por qué se publicó o se rechazó cada nota, con las fuentes citadas. Si algo
 no salió como esperabas, ese texto te dice qué campo de la configuración ajustar.
+
+Dos acciones del Director merecen una mirada de vez en cuando:
+
+- **Frases quitadas**: publicó la nota después de sacarle frases que ninguna
+  fuente respaldaba. En el detalle están las frases; si alguna era correcta, la
+  podés reponer a mano.
+- **Segunda lectura**: rechazó por algo que "no estaba en ninguna fuente", el
+  motor lo encontró en la evidencia y le pidió que releyera. El detalle muestra
+  qué encontró y si terminó aprobando o sostuvo el rechazo. Muchas seguidas
+  suelen querer decir que el modelo del Director lee mal: probá uno mejor.
 
 Cuando el checklist queda en verde, los schedules se encargan solos.
 

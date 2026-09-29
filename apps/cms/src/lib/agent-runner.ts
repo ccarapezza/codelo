@@ -3,9 +3,7 @@ import {
   generatePost,
   getOpenAIClient,
   isOpenRouterModel,
-  reviewPost,
   findDuplicateSubject,
-  type GeneratedPost,
 } from "./openai";
 import {
   CoverPipelineError,
@@ -22,11 +20,18 @@ import {
 import { echoFeedback, findEchoedHeadline, TITLE_ORIGINALITY_RULES } from "./headline-similarity";
 import {
   getOpenRouterImageKey,
+  getOpenAIDirectorModel,
   getOpenAIImageKey,
   getOpenAIImageModel,
   getOpenAITextKey,
   getOpenAITextModel,
 } from "./openai-config";
+import {
+  buildReviewEvidence,
+  enforceRemovalCap,
+  findClaimsInEvidence,
+  reviewWithRecheck,
+} from "./director-review";
 import { getPromptSettings } from "./prompt-settings";
 import { logAgentAction } from "./audit";
 import {
@@ -55,7 +60,7 @@ type AgentDoc = {
   documentId: string;
   name: string;
   /**
-   * Los tres del motor, más los que registre el vertical. Es `string` y no una
+   * Los cuatro del motor, más los que registre el vertical. Es `string` y no una
    * unión cerrada a propósito: el motor no conoce los roles de cada proyecto
    * (ver src/verticals/agent-roles.ts).
    */
@@ -205,44 +210,57 @@ export async function runRedactor(
   const director = await findActiveDirector(strapi);
   const promptSettings = await getPromptSettings(strapi);
 
-  // Two modes:
-  //  - "assigned" mode (assignedItems provided): each iteration covers ONE
-  //    specific pre-assigned news item. Used by run-batch for deterministic
-  //    distribution that prevents two redactors from picking the same subject.
-  //  - "free" mode (no assignedItems): legacy behavior — fetch a pool of news
-  //    and let the LLM pick what to write about (with dedup hints).
+  // Tres modos, según de dónde salen los hechos:
+  //  - "research": el Explorador ya investigó en la web, y sus apuntes y sus
+  //    páginas SON el contexto. El pool de RSS no participa. Antes sí: el
+  //    "hay contexto" se decidía por el pool, así que un área sin noticias en
+  //    el RSS recibía las reglas del modo análisis encima de los apuntes, y con
+  //    requireNewsContext la investigación ya pagada se tiraba sin escribir.
+  //  - "assigned": cada vuelta cubre UNA noticia preasignada. Lo usa run-batch
+  //    para repartir sin que dos redactores tomen el mismo tema.
+  //  - "free": el pool de noticias del tema, y el modelo elige (con avisos de
+  //    dedup).
   const isAssignedMode = assignedItems !== undefined && assignedItems.length > 0;
+  const modo: "research" | "assigned" | "free" = investigacion
+    ? "research"
+    : isAssignedMode
+      ? "assigned"
+      : "free";
+  const quien = modo === "research" ? "Explorador" : "Redactor";
 
-  // Pool used only in free mode.
-  const rawNews = !isAssignedMode && agent.topic
+  // El pool, sólo en modo libre.
+  const rawNews = modo === "free" && agent.topic
     ? await getRecentNewsForTopic(strapi, agent.topic, 50)
     : [];
   // `getRecentNewsForTopic` ordena por parecido con el tema del AGENTE; el
   // alcance editorial del SITIO (verticals/rss-scope.ts) es otro filtro: una
   // palabra del tema matchea también notas de un generalista que no son del
   // sitio. Sin alcance declarado pasa todo, como antes.
-  const libre = isAssignedMode ? null : selectFreePool(rawNews, 10);
+  const libre = modo === "free" ? selectFreePool(rawNews, 10) : null;
   if (libre?.fellBack) {
     strapi.log.warn(
       `[agent-runner] Redactor "${agent.name}": ningún ítem del pool matchea el alcance ` +
         `editorial; se usa el pool completo (${rawNews.length} ítems).`,
     );
   }
-  const recentNews = isAssignedMode ? assignedItems! : libre!.items;
+  const recentNews = modo === "assigned" ? assignedItems! : (libre?.items ?? []);
 
-  const hasContext = recentNews.length > 0;
+  const hasContext = modo === "research" || recentNews.length > 0;
   // La ventana REAL del pool (la de ingesta, 7 días por defecto). El prompt
   // decía "last 24h" fijo, y el modelo trataba como del día noticias que
   // tenían una semana.
   const dias = await getIngestWindowDays(strapi);
-  if (!isAssignedMode && agent.topic && !hasContext) {
+  if (modo === "free" && agent.topic && !hasContext) {
     strapi.log.info(
       `[agent-runner] Redactor "${agent.name}": sin noticias de los últimos ${dias} ` +
-        `día${dias === 1 ? "" : "s"} que matcheen su topic; no se genera nota en esta corrida.`,
+        `día${dias === 1 ? "" : "s"} que matcheen su topic; ` +
+        (agent.requireNewsContext
+          ? "no se genera nota en esta corrida."
+          : "escribe en modo análisis."),
     );
   }
 
-  const sharedNewsContextBlock = !isAssignedMode && hasContext
+  const sharedNewsContextBlock = modo === "free" && hasContext
     ? [
         `\nVerified news context (${ingestWindowLabel(dias)}) — base your article EXCLUSIVELY on these facts:`,
         ...recentNews.map(
@@ -255,10 +273,21 @@ export async function runRedactor(
   const contentTypeGuidance = hasContext
     ? [
         "\n## STRICT FACTUAL RULES",
-        "- Write a news/recap article based ONLY on the verified context above.",
+        modo === "research"
+          ? "- Write the article based ONLY on the research notes above."
+          : "- Write a news/recap article based ONLY on the verified context above.",
         `- NEVER invent ${promptSettings.fabricationProneFacts}.`,
         "- Every specific fact you mention must appear in the context above.",
         "- If uncertain about a fact, omit it or write 'según fuentes' without fabricating details.",
+        "",
+        // El relleno era la otra mitad de los rechazos: se pedían ~600 palabras
+        // a partir de resúmenes de 200-300 caracteres, y para llegar el modelo
+        // cosía noticias sin relación o completaba de memoria —una fuente
+        // mencionaba "varios frentes abiertos" y la nota los enumeraba—.
+        "## ONE STORY, AS LONG AS ITS FACTS (no padding)",
+        "- Develop ONE story: the one your title announces. Another item of the context may add background ONLY if it is about that same story; never stitch unrelated items into one article.",
+        "- Length follows the facts: when the sources are brief, the article is brief. Stop when you run out of sourced facts — a short, fully sourced article gets published; a long one with filler gets rejected.",
+        "- Never expand a detail beyond what the source says: if a source mentions 'several pending projects' without naming them, do not name them; if it gives a total without a breakdown, do not invent the breakdown.",
         "",
         "## TITLE RULES (CRITICAL — most hallucinations come from bad titles)",
         "- The title MUST describe ONE single concrete fact that appears in ONE single source above.",
@@ -285,6 +314,8 @@ export async function runRedactor(
         `- TITLE: must be ${promptSettings.analysisModeFraming}`,
       ].join("\n");
 
+  const largoConFuentes = "as long as the sourced facts allow: usually 250-600 words, never padded";
+
   const buildSystemPrompt = (newsBlock: string): string =>
     [
       `You are a journalist writing in ${promptSettings.writingLanguage} for ${promptSettings.domainDescription}.`,
@@ -297,11 +328,14 @@ export async function runRedactor(
       newsBlock,
       contentTypeGuidance,
       `\n${promptSettings.bodyStructureGuide}`,
-      // `sourceIndexes` sólo se pide cuando existe el bloque numerado: en modo
-      // asignado la fuente ya se conoce y no hay números que citar.
-      !isAssignedMode && hasContext
-        ? `\nReturn STRICT JSON: { "title": string, "excerpt": string (1-2 sentences), "content": string (rich GitHub-Flavored Markdown, ~600 words), "sourceIndexes": number[] — the [n] numbers of the context items you ACTUALLY used for the facts in this article. List only those. Do NOT list items you did not use. }`
-        : `\nReturn STRICT JSON: { "title": string, "excerpt": string (1-2 sentences), "content": string (rich GitHub-Flavored Markdown, ~600 words) }`,
+      // `sourceIndexes` sólo se pide sobre el pool numerado del modo libre: en
+      // modo asignado la fuente ya se conoce, y en el de investigación se
+      // guardan las páginas que citó la búsqueda. El largo sale de los hechos
+      // cuando hay fuentes; el modo análisis, que no las tiene, conserva el
+      // largo fijo de siempre.
+      modo === "free" && hasContext
+        ? `\nReturn STRICT JSON: { "title": string, "excerpt": string (1-2 sentences), "content": string (rich GitHub-Flavored Markdown, ${largoConFuentes}), "sourceIndexes": number[] — the [n] numbers of the context items you ACTUALLY used for the facts in this article. List only those. Do NOT list items you did not use. }`
+        : `\nReturn STRICT JSON: { "title": string, "excerpt": string (1-2 sentences), "content": string (rich GitHub-Flavored Markdown, ${hasContext ? largoConFuentes : "~600 words"}) }`,
     ]
       .filter(Boolean)
       .join("\n");
@@ -336,14 +370,15 @@ export async function runRedactor(
   }
 
   // Corte duro para beats sensibles: sin fuentes no se escribe. Evita que el
-  // modo análisis produzca notas "de memoria" con datos no verificables.
-  if (!isAssignedMode && !hasContext && agent.requireNewsContext) {
+  // modo análisis produzca notas "de memoria" con datos no verificables. Sólo
+  // en modo libre: una investigación trae sus propias fuentes.
+  if (modo === "free" && !hasContext && agent.requireNewsContext) {
     strapi.log.info(
       `[agent-runner] Redactor "${agent.name}": requireNewsContext activo y sin ` +
         `noticias que matcheen su topic — no se genera nota (evita modo análisis).`,
     );
     await logAgentAction(strapi, {
-      agentRole: "redactor",
+      agentRole: agent.role,
       agentName: agent.name,
       agentDocumentId: agent.documentId,
       action: "redactor_idle",
@@ -352,11 +387,11 @@ export async function runRedactor(
     return;
   }
 
-  const iterations = isAssignedMode ? assignedItems!.length : notesCount;
+  const iterations = modo === "assigned" ? assignedItems!.length : notesCount;
 
   for (let i = 0; i < iterations; i++) {
     const today = new Date().toISOString().slice(0, 10);
-    const assignedItem = isAssignedMode ? assignedItems![i] : null;
+    const assignedItem = modo === "assigned" ? assignedItems![i] : null;
 
     const newsBlock = investigacion
       ? [
@@ -386,7 +421,7 @@ export async function runRedactor(
     const recentTitles = await fetchRecentTitles();
 
     let dedupBlock = "";
-    if (!isAssignedMode && recentTitles.length > 0) {
+    if (modo === "free" && recentTitles.length > 0) {
       dedupBlock = [
         "\n## ALREADY-COVERED SUBJECTS — DO NOT REPEAT",
         "These titles already exist as drafts. Write about a DIFFERENT subject from the news context above (a different person, organisation, event, or angle).",
@@ -411,8 +446,13 @@ export async function runRedactor(
     // de un medio del sector, publicado casi idéntico). Se compara contra los
     // titulares del contexto y se regenera con feedback explícito; si tras los
     // reintentos sigue calcado, la nota NO se crea (mismo criterio que el gate
-    // de duplicados: mejor un slot vacío que un titular ajeno).
-    const sourceHeadlines = recentNews.map((n) => n.title);
+    // de duplicados: mejor un slot vacío que un titular ajeno). En modo
+    // investigación, los titulares a no calcar son los de las páginas que se
+    // consultaron, no los del RSS.
+    const sourceHeadlines =
+      modo === "research"
+        ? investigacion!.fuentes.map((f) => f.title)
+        : recentNews.map((n) => n.title);
     for (let retry = 0; retry < 2; retry++) {
       const echoed = findEchoedHeadline(generated.title, sourceHeadlines);
       if (!echoed) break;
@@ -434,11 +474,11 @@ export async function runRedactor(
           `el titular fuente "${stillEchoed}" tras 2 reintentos`,
       );
       await logAgentAction(strapi, {
-        agentRole: "redactor",
-        action: "redactor_idle",
+        agentRole: agent.role,
+        action: modo === "research" ? "explorador_idle" : "redactor_idle",
         agentName: agent.name,
         agentDocumentId: agent.documentId,
-        summary: `Redactor "${agent.name}" no generó: título calcaba el titular fuente`,
+        summary: `${quien} "${agent.name}" no generó: título calcaba el titular fuente`,
         metadata: { title: generated.title, sourceHeadline: stillEchoed },
       });
       continue;
@@ -477,11 +517,15 @@ export async function runRedactor(
     // Auditoría mostraba las mismas 10 URLs en cada nota, de modo que "¿de
     // dónde salió este dato?" no tenía respuesta. Si el modelo no declara nada
     // utilizable se cae al pool completo, que es el comportamiento anterior.
-    const declaradas = (generated.sourceIndexes ?? [])
-      .map((n) => recentNews[n - 1])
-      .filter((item): item is NewsItem => Boolean(item));
+    // Los índices sólo significan algo sobre el pool numerado del modo libre.
+    const declaradas =
+      modo === "free"
+        ? (generated.sourceIndexes ?? [])
+            .map((n) => recentNews[n - 1])
+            .filter((item): item is NewsItem => Boolean(item))
+        : [];
 
-    if (!isAssignedMode && hasContext && declaradas.length === 0) {
+    if (modo === "free" && hasContext && declaradas.length === 0) {
       strapi.log.info(
         `[agent-runner] Redactor "${agent.name}": no declaró fuentes para ` +
           `"${generated.title}"; se guarda el pool completo como evidencia.`,
@@ -521,21 +565,24 @@ export async function runRedactor(
     })) as unknown as { documentId: string; title: string };
 
     strapi.log.info(
-      `[agent-runner] Redactor "${agent.name}" created draft (${i + 1}/${notesCount}): ${generated.title}`,
+      `[agent-runner] ${quien} "${agent.name}" created draft (${i + 1}/${iterations}): ${generated.title}`,
     );
 
+    // El rol del agente y no "redactor" fijo: las notas del Explorador se
+    // registraban como de un Redactor en modo "free", y la Auditoría no las
+    // distinguía.
     await logAgentAction(strapi, {
-      agentRole: "redactor",
+      agentRole: agent.role,
       action: "draft_created",
       agentName: agent.name,
       agentDocumentId: agent.documentId,
       postDocumentId: createdDraft.documentId,
       postTitle: createdDraft.title,
-      summary: `Redactor "${agent.name}" creó draft: "${createdDraft.title}"`,
+      summary: `${quien} "${agent.name}" creó draft: "${createdDraft.title}"`,
       metadata: {
         iteration: i + 1,
         of: iterations,
-        mode: isAssignedMode ? "assigned" : "free",
+        mode: modo,
         topic: agent.topic ?? null,
       },
     });
@@ -551,6 +598,8 @@ async function runDirector(
   const textKey = getOpenAITextKey();
   const imageKey = getOpenAIImageKey();
   const textModel = await getOpenAITextModel(strapi);
+  // La revisión puede ir con un modelo propio; la portada sigue con el de texto.
+  const reviewModel = await getOpenAIDirectorModel(strapi);
   const imageModel = await getOpenAIImageModel(strapi);
   const promptSettings = await getPromptSettings(strapi);
   const client = getOpenAIClient(textKey);
@@ -648,13 +697,20 @@ async function runDirector(
       for (const n of [...keywordNews, ...broadNews]) {
         if (!yaEnEvidencia.has(n.url) && !byUrl.has(n.url)) byUrl.set(n.url, n);
       }
-      const finalNews = Array.from(byUrl.values()).slice(0, 50);
-      const newsContextForReview = finalNews
-        .map(
-          (n, i) =>
-            `[${writerSources.length + i + 1}] ${n.source} | ${n.title}\n${(n.summary ?? "").slice(0, 300)}`,
-        )
+      // Recortado UNA vez: el mismo texto arma el bloque del prompt y la
+      // evidencia donde la guarda busca, para que nunca le señale al Director
+      // algo que él no tuvo delante.
+      const extraNews = Array.from(byUrl.values())
+        .slice(0, 50)
+        .map((n) => ({ source: n.source, title: n.title, summary: (n.summary ?? "").slice(0, 300) }));
+      const newsContextForReview = extraNews
+        .map((n, i) => `[${writerSources.length + i + 1}] ${n.source} | ${n.title}\n${n.summary}`)
         .join("\n");
+      const evidence = buildReviewEvidence({
+        researchNotes: draft.researchNotes,
+        writerSources,
+        extraNews,
+      });
 
       if (writerSources.length === 0) {
         strapi.log.info(
@@ -663,19 +719,55 @@ async function runDirector(
         );
       }
 
-      const result = await reviewPost(client, textModel, promptSettings, {
-        directorInstructions: agent.instructions,
-        draft: {
-          title: draft.title,
-          excerpt: draft.excerpt ?? "",
-          content: draft.content ?? "",
+      const { result: veredicto, recheck } = await reviewWithRecheck(
+        client,
+        reviewModel,
+        promptSettings,
+        {
+          directorInstructions: agent.instructions,
+          draft: {
+            title: draft.title,
+            excerpt: draft.excerpt ?? "",
+            content: draft.content ?? "",
+          },
+          newsContext: newsContextForReview,
+          writerSources: formatSourceContext(writerSources),
+          researchNotes: draft.researchNotes ?? undefined,
         },
-        newsContext: newsContextForReview,
-        writerSources: formatSourceContext(writerSources),
-        researchNotes: draft.researchNotes ?? undefined,
-      });
+        evidence,
+      );
 
-      if (result.rejected) {
+      if (recheck) {
+        const desenlace = recheck.error
+          ? "falló la relectura; vale el primer rechazo"
+          : veredicto.rejected
+            ? "sostuvo el rechazo"
+            : "la aprobó";
+        strapi.log.info(
+          `[agent-runner] Director: "${draft.title}" — ${recheck.found.length} afirmación(es) ` +
+            `dada(s) por ausente(s) estaba(n) en la evidencia; segunda lectura: ${desenlace}.`,
+        );
+        await logAgentAction(strapi, {
+          agentRole: "director",
+          action: "director_recheck",
+          agentName: agent.name,
+          agentDocumentId: agent.documentId,
+          postDocumentId: draft.documentId,
+          postTitle: draft.title,
+          summary: `Director "${agent.name}" releyó "${draft.title}": ${desenlace}`,
+          metadata: {
+            found: recheck.found,
+            firstReason: recheck.firstReason,
+            outcome: recheck.error ? "failed" : veredicto.rejected ? "rejected" : "approved",
+            ...(recheck.error ? { error: recheck.error } : {}),
+            model: reviewModel,
+          },
+        });
+      }
+
+      const result = enforceRemovalCap(veredicto);
+
+      if (result.rejected === true) {
         strapi.log.warn(
           `[agent-runner] Director REJECTED draft "${draft.title}": ${result.reason}`,
         );
@@ -687,7 +779,11 @@ async function runDirector(
           postDocumentId: draft.documentId,
           postTitle: draft.title,
           summary: `Director "${agent.name}" rechazó: "${draft.title}"`,
-          metadata: { reason: result.reason },
+          metadata: {
+            reason: result.reason,
+            unsupportedClaims: result.unsupportedClaims,
+            model: reviewModel,
+          },
         });
         // Archive instead of delete: the Director's news-fabrication check has
         // false positives (a TRUE result simply absent from the RSS feed reads
@@ -703,7 +799,7 @@ async function runDirector(
         continue;
       }
 
-      const refined = result as GeneratedPost;
+      const refined = result;
 
       let coverImageId: number | null = null;
       let chosenPrompt: string | null = null;
@@ -801,6 +897,29 @@ async function runDirector(
         );
       }
 
+      // Lo que el Director quitó para poder publicarla. `alsoInEvidence` son
+      // las quitadas que la guarda SÍ encuentra en las fuentes: el mismo error
+      // de lectura que la segunda lectura corrige en los rechazos, acá sin
+      // costo extra. Es para medir, no para actuar.
+      if (refined.removedClaims.length > 0) {
+        await logAgentAction(strapi, {
+          agentRole: "director",
+          action: "director_trimmed",
+          agentName: agent.name,
+          agentDocumentId: agent.documentId,
+          postDocumentId: draft.documentId,
+          postTitle: refined.title,
+          summary:
+            `Director "${agent.name}" quitó ${refined.removedClaims.length} frase(s) ` +
+            `sin respaldo de: "${refined.title}"`,
+          metadata: {
+            removedClaims: refined.removedClaims,
+            alsoInEvidence: findClaimsInEvidence(refined.removedClaims, evidence),
+            model: reviewModel,
+          },
+        });
+      }
+
       strapi.log.info(`[agent-runner] Director "${agent.name}" published: ${refined.title}`);
       await logAgentAction(strapi, {
         agentRole: "director",
@@ -814,6 +933,8 @@ async function runDirector(
           hasCover: Boolean(coverImageId),
           staggered: publishedCount > 1,
           position: publishedCount,
+          removedClaims: refined.removedClaims.length,
+          model: reviewModel,
         },
       });
     } catch (err) {

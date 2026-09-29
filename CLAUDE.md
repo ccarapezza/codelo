@@ -100,6 +100,12 @@ pnpm dev:web    # Next en http://localhost:3200
   web y escribe por el camino del redactor. (Existía un rol `analyst` heredado
   de la plantilla de fulbo —analizaba partidos de fútbol— eliminado junto con
   `match-context.ts` y `post.sourceMatchId`.)
+- El Director (motor, Nib `e44d0b4`) puede quitar hasta tres frases periféricas
+  sin fuente y publicar, y cuando rechaza por algo "que no está en ninguna
+  fuente" el motor lo busca en la evidencia y, si aparece, le pide una segunda
+  lectura. En Auditoría: "Frases quitadas" y "Segunda lectura". Su modelo se
+  elige aparte en Sitio e integraciones (vacío = el de texto); se dejó vacío a
+  propósito para medir primero el efecto del prompt y la guarda.
 
 ## Editor de notas del admin — NO usar el Content Manager
 

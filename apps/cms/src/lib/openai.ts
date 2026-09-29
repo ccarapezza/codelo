@@ -765,8 +765,31 @@ export async function uploadImageToStrapi(
 }
 
 export type ReviewResult =
-  | ({ rejected: false } & GeneratedPost)
-  | { rejected: true; reason: string };
+  | ({
+      rejected: false;
+      /**
+       * Las frases que el Director quitó del cuerpo por no tener fuente. Puede
+       * recortar lo periférico y publicar en vez de tirar la nota entera; lo
+       * quitado queda en la auditoría.
+       */
+      removedClaims: string[];
+    } & GeneratedPost)
+  | {
+      rejected: true;
+      reason: string;
+      /**
+       * Las palabras del borrador que el Director da por ausentes de toda
+       * fuente. El motor las busca en la evidencia (director-review.ts): si
+       * aparecen, le pide una segunda lectura.
+       */
+      unsupportedClaims: string[];
+    };
+
+/** La segunda lectura: lo que el Director respondió y lo que el motor le muestra. */
+export interface ReviewRecheck {
+  previous: { reason: string; unsupportedClaims: string[] };
+  prompt: string;
+}
 
 export interface ReviewPostInput {
   directorInstructions: string;
@@ -862,20 +885,39 @@ export function buildReviewSystemPrompt(s: PromptSettings, input: ReviewPostInpu
     "",
     "  1. Is the problem confined to the TITLE, with a sound body? → REWRITE the title and APPROVE.",
     "  2. Is the claim supported in substance but worded too strongly? → SOFTEN it and APPROVE.",
-    "  3. Only if the BODY itself asserts something no source supports, or something a source",
-    "     contradicts, do you REJECT.",
+    // El caso 3 no existía: una sola frase del cuerpo sin fuente obligaba a
+    // tirar la nota entera, aunque el hecho central estuviera respaldado y el
+    // propio revisor lo dijera en su motivo de rechazo.
+    "  3. Does the BODY carry a PERIPHERAL sentence that no source supports — a side detail, not",
+    "     the fact the title and excerpt announce, nor the one the article is built on? → DELETE",
+    `     that sentence, list it in "removedClaims", and APPROVE. At most three sentences.`,
+    "  4. Only if what no source supports (or what a source contradicts) is the CORE of the story,",
+    "     if the article stitches unrelated stories together, or if it would need more than three",
+    "     deletions, do you REJECT.",
+    "",
+    "Deleting means deleting: take the sentence out and mend the paragraph around it. Never replace",
+    "it with another fact, never move it to the title, never add anything the sources do not carry.",
     "",
     "An evaluative word in a headline is NOT a factual claim and is NEVER grounds for rejection:",
     "'emblematic', 'key', 'historic', 'leading', 'beloved'. These are editorial voice. If one",
     "overstates what the sources support, tone it down in your rewrite — do not reject over it.",
     "",
-    "Before you reject, answer this to yourself: 'could I make this publishable by changing only",
-    "the title?' If the answer is yes, you are not allowed to reject.",
+    "Before you reject, answer this to yourself: 'could I make this publishable by rewriting the",
+    "title or deleting up to three peripheral sentences?' If the answer is yes, you are not allowed",
+    "to reject.",
     "",
     "## STEP 2 — BODY FACT-CHECK",
     "",
-    `REJECT if the body contains a SPECIFIC claim about an already-occurred event (${fabricationProneFacts})`,
-    "that is NOT supported by any source in EITHER block above.",
+    `A SPECIFIC claim about an already-occurred event (${fabricationProneFacts}) that is NOT supported`,
+    "by any source in EITHER block below cannot be published: DELETE it if it is peripheral (STEP 1.6,",
+    "case 3); REJECT if it is the core of the story.",
+    // Visto en producción: el revisor dio por ausente una frase que estaba
+    // textual en el resumen de una fuente, después de otros hechos. El motor
+    // además lo verifica en código (director-review.ts), pero leer bien de
+    // entrada ahorra la segunda lectura.
+    "Before you call a claim unsupported, look for its exact words in EVERY source, summary included:",
+    "a fact often sits in the middle of a summary, after other facts. A claim that a source states",
+    "word for word IS supported.",
     "Opinion, analysis, historical references, and previews of upcoming events are ALLOWED.",
     "",
     "## STEP 2.5 — BRAND GUARDRAIL (mandatory)",
@@ -894,12 +936,12 @@ export function buildReviewSystemPrompt(s: PromptSettings, input: ReviewPostInpu
     "## STEP 3 — REFINE (only if everything passes)",
     "",
     "Apply the editorial guidelines. Improve clarity, voice, and structure. Keep all facts accurate.",
-    "You SHOULD rewrite the title whenever it is borderline — that is the expected outcome, not a last resort — but never by drifting closer to a source headline's wording. Reject only when the body, not the title, is the problem.",
+    "You SHOULD rewrite the title whenever it is borderline — that is the expected outcome, not a last resort — but never by drifting closer to a source headline's wording. Reject only when the core of the body, not the title or a peripheral sentence, is the problem.",
     "",
     "## Output",
     `Return STRICT JSON with one of these two schemas:`,
-    `- Approved: { "rejected": false, "title": string, "excerpt": string, "content": string (HTML allowed) }`,
-    `- Rejected: { "rejected": true, "reason": string (in ${writingLanguage}: name the specific claim IN THE BODY that fails, say which source contradicts it or that no source carries it, AND state why rewriting the title would not have been enough) }`,
+    `- Approved: { "rejected": false, "title": string, "excerpt": string, "content": string (HTML allowed), "removedClaims": string[] (each sentence you DELETED because no source supports it, copied exactly as it was in the draft; [] if none) }`,
+    `- Rejected: { "rejected": true, "reason": string (in ${writingLanguage}: name the specific claim IN THE BODY that fails, say which source contradicts it or that no source carries it, AND state why rewriting the title or deleting peripheral sentences would not have been enough), "unsupportedClaims": string[] (for each fact you found in NO source, the exact words of the draft that state it — the shortest span that carries the fact, copied verbatim; [] when the rejection is for another reason) }`,
     "",
     "## Editorial guidelines:",
     directorInstructions,
@@ -927,11 +969,35 @@ export function buildReviewSystemPrompt(s: PromptSettings, input: ReviewPostInpu
   ].join("\n");
 }
 
+/**
+ * Una lista de frases del veredicto. Tolerante con lo que un modelo devuelve de
+ * más o de menos: sin la lista, o con objetos `{ claim }` en vez de strings.
+ */
+function frasesDelVeredicto(valor: unknown): string[] {
+  if (!Array.isArray(valor)) return [];
+  return valor
+    .map((x) =>
+      typeof x === "string"
+        ? x
+        : x && typeof x === "object" && typeof (x as { claim?: unknown }).claim === "string"
+          ? (x as { claim: string }).claim
+          : "",
+    )
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
+/**
+ * `recheck` es la segunda lectura (ver director-review.ts): se le devuelve al
+ * modelo su propio veredicto y lo que el motor encontró en la evidencia, en la
+ * misma conversación, para que corrija su lectura y no empiece de cero.
+ */
 export async function reviewPost(
   client: OpenAI,
   model: string,
   settings: PromptSettings,
   input: ReviewPostInput,
+  recheck?: ReviewRecheck,
 ): Promise<ReviewResult> {
   const { draft } = input;
   const systemPrompt = buildReviewSystemPrompt(settings, input);
@@ -943,6 +1009,15 @@ export async function reviewPost(
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
+      ...(recheck
+        ? [
+            {
+              role: "assistant" as const,
+              content: JSON.stringify({ rejected: true, ...recheck.previous }),
+            },
+            { role: "user" as const, content: recheck.prompt },
+          ]
+        : []),
     ],
     response_format: { type: "json_object" },
   });
@@ -951,7 +1026,11 @@ export async function reviewPost(
   const parsed = JSON.parse(text);
 
   if (parsed.rejected === true) {
-    return { rejected: true, reason: String(parsed.reason ?? "No reason provided") };
+    return {
+      rejected: true,
+      reason: String(parsed.reason ?? "No reason provided"),
+      unsupportedClaims: frasesDelVeredicto(parsed.unsupportedClaims),
+    };
   }
 
   if (!parsed.title || !parsed.content) {
@@ -963,6 +1042,7 @@ export async function reviewPost(
     title: String(parsed.title).trim(),
     excerpt: String(parsed.excerpt ?? "").trim(),
     content: String(parsed.content).trim(),
+    removedClaims: frasesDelVeredicto(parsed.removedClaims),
   };
 }
 

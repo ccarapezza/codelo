@@ -29,6 +29,10 @@
       "default": "gpt-image-1-mini",
       "private": true
     },
+    "openaiDirectorModel": {
+      "type": "string",
+      "private": true
+    },
     "openaiNormaModel": {
       "type": "string"
     },

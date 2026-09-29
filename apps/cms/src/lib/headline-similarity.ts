@@ -12,7 +12,8 @@
 // prefijo (6 chars) para que "reglamenta"/"reglamentación" cuenten como el
 // mismo token.
 
-const STOPWORDS = new Set([
+/** Exportadas para la guarda del Director (director-review.ts), que normaliza igual. */
+export const STOPWORDS: ReadonlySet<string> = new Set([
   // es — solo palabras funcionales; nada temático (p. ej. "paso" NO va acá).
   "como", "cual", "cuales", "cuanto", "cuanta", "cuantos", "cuantas", "donde",
   "cuando", "para", "por", "con", "sin", "del", "los", "las", "una", "uno",
