@@ -52,9 +52,8 @@ const MARCA = "Cogollos del Oeste";
 export const adminConfig = {
   auth: { logo: Logo },
   menu: { logo: Logo },
-  // Sin esto la pestaña del panel mostraba la pluma de Nib: el favicon es
-  // parte de la identidad por defecto del motor (default-brand.ts).
-  head: { favicon: Logo },
+  // El favicon de la pestaña NO va acá: Strapi 5 ignora `head.favicon` y sirve
+  // el `favicon.png` de la raíz de apps/cms (middleware strapi::favicon).
   theme: {
     light: { colors: COLORS_LIGHT },
     dark: { colors: COLORS_DARK },

@@ -25,12 +25,12 @@ Dónde vive lo nuestro:
 | Costura | Qué hay |
 | --- | --- |
 | `apps/cms/src/verticals/` | INASE, Boletín (y su modelo, `norma-model.ts`), la semilla editorial (`seed.ts`), crons, alcance RSS, campos propios (`prompt-fields.ts`, `setting-fields.ts`), tipografías de las placas (`brand.ts`) |
-| `apps/cms/src/admin/verticals.ts` | Widgets del panel, identidad visual (logo, favicon, paleta, login) y las tarjetas propias de configuración: "Boletín Oficial" (`promptCards`) y "Lectura de normas" (`settingCards`) |
+| `apps/cms/src/admin/verticals.ts` | Widgets del panel, identidad visual (logo, paleta, login) y las tarjetas propias de configuración: "Boletín Oficial" (`promptCards`) y "Lectura de normas" (`settingCards`) |
 | `apps/cms/src/api/{cultivar,operador-semilla,norma,event,dashboard}/` | Content-types propios |
 | `apps/web/app/[lang]/(vertical)/` | semillas, clima, normativa, actividades, quiénes somos, reprocann |
 | `apps/web/components/vertical/`, `lib/vertical/` | Componentes y librerías propias |
 | `apps/web/lib/site.ts`, `app/[lang]/{theme.css,vertical.css,fonts.ts}` | Identidad del sitio |
-| `apps/web/app/{favicon.ico,icon.png,apple-icon.png}`, `public/brand/` | Íconos y logos del sitio. ⚠️ Viven en rutas que Nib también tiene, con los suyos: en un merge, un conflicto en ellos se resuelve siempre con los nuestros. El primer merge los pisó SIN conflicto —Nib nació de codelo con estos mismos íconos y codelo no los había vuelto a tocar— y el sitio salió con la pluma de Nib |
+| `apps/web/app/{favicon.ico,icon.png,apple-icon.png}`, `public/brand/`, `apps/cms/favicon.png` | Íconos y logos del sitio, y el de la pestaña del panel (Strapi 5 ignora `head.favicon`: sirve ese archivo). ⚠️ Viven en rutas que Nib también tiene, con los suyos: en un merge, un conflicto en ellos se resuelve siempre con los nuestros. El primer merge pisó los del sitio SIN conflicto —Nib nació de codelo con estos mismos íconos y codelo no los había vuelto a tocar— y el sitio salió con la pluma de Nib |
 | `apps/web/messages/es.vertical.json` | Cadenas propias (se mezclan con las del motor) |
 | `scripts/check-neutral.ignore` | Lo propio que vive fuera de las costuras con nombre (content-types, scripts, la home): el checker del motor lo saltea |
 
