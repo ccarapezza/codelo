@@ -395,7 +395,7 @@
   "nota.volver": "Volver a Notas",
   "notas.agregarCarrusel": "Agregar al carrusel",
   "notas.borrar": "Borrar",
-  "notas.borrar.pregunta": "¿Seguro que querés borrar «{titulo}»? Esta acción no se puede deshacer.",
+  "notas.borrar.pregunta": "¿Seguro que querés borrar «{titulo}»? Se borra en todos sus idiomas, traducciones incluidas. Esta acción no se puede deshacer.",
   "notas.borrar.titulo": "Borrar borrador",
   "notas.cargando": "Cargando notas…",
   "notas.crear": "Crear nota",

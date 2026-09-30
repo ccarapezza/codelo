@@ -395,7 +395,7 @@
   "nota.volver": "Back to Notes",
   "notas.agregarCarrusel": "Add to the carousel",
   "notas.borrar": "Delete",
-  "notas.borrar.pregunta": "Delete «{titulo}»? This cannot be undone.",
+  "notas.borrar.pregunta": "Delete «{titulo}» in every language, translations included? This cannot be undone.",
   "notas.borrar.titulo": "Delete draft",
   "notas.cargando": "Loading notes…",
   "notas.crear": "Create note",

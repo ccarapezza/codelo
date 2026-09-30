@@ -3,9 +3,12 @@
 //
 // Auth: requireAdmin (admin/editor/author) — misma política que el dashboard.
 import { requireAdmin } from "../../../lib/admin-auth";
+import * as project from "../../../lib/project";
 
 const UID = "api::post.post";
-const LOCALE = "es"; // el sitio es ES-only; en es una traducción secundaria
+// El idioma en que se escriben y se listan las notas. Las traducciones son del
+// mismo documento: despublicar y borrar actúan sobre TODOS los idiomas.
+const LOCALE = project.defaultLocale;
 const PAGE_SIZE = 5;
 
 // Estructura mínima que consume la página. Aplana relaciones para no mandar el
@@ -137,36 +140,45 @@ export default ({ strapi }: { strapi: any }) => ({
     ctx.body = { ok: true };
   },
 
+  // Despublica la nota en TODOS sus idiomas. Antes bajaba sólo el idioma por
+  // defecto y la traducción seguía publicada: un sitio monolingüe no la
+  // muestra, pero la API pública sí la devuelve, y uno bilingüe la seguía
+  // mostrando. Volver a publicar publica el idioma por defecto, y la traducción
+  // la repone el pipeline de traducción si está activo (translate-post.ts).
   async unpublish(ctx: any) {
     if (!(await requireAdmin(ctx, strapi))) return;
     const { documentId } = ctx.request.body as { documentId?: string };
     if (!documentId) return ctx.badRequest("documentId es obligatorio");
-    await strapi.documents(UID).unpublish({ documentId, locale: LOCALE });
+    await strapi.documents(UID).unpublish({ documentId, locale: "*" });
     ctx.body = { ok: true };
   },
 
-  // Borra una nota — SÓLO si es un borrador (nunca publicada). Para borrar una
-  // publicada hay que despublicarla primero. La guarda es del lado del server,
-  // no sólo de la UI: sin esto, un request directo podría bajar una nota viva
-  // del sitio de un saque.
+  // Borra una nota en TODOS sus idiomas — SÓLO si ninguno está publicado. Para
+  // borrar una publicada hay que despublicarla primero. La guarda es del lado
+  // del server, no sólo de la UI: sin esto, un request directo podría bajar una
+  // nota viva del sitio de un saque.
   async remove(ctx: any) {
     if (!(await requireAdmin(ctx, strapi))) return;
     const { documentId } = ctx.request.body as { documentId?: string };
     if (!documentId) return ctx.badRequest("documentId es obligatorio");
 
-    const publishedSibling = await strapi.documents(UID).findOne({
-      documentId,
+    // `findMany` y no `findOne`: sólo el primero acepta locale "*". La guarda
+    // miraba únicamente el idioma por defecto.
+    const publicadas = await strapi.documents(UID).findMany({
+      filters: { documentId },
       status: "published",
-      locale: LOCALE,
-      fields: ["documentId"],
+      locale: "*",
+      fields: ["locale"],
     });
-    if (publishedSibling) {
+    if (publicadas.length > 0) {
       return ctx.badRequest("La nota está publicada. Despublicala antes de borrarla.");
     }
 
-    // delete sin `status` baja TODAS las versiones/locales del documento; como
-    // no hay versión publicada, es sólo el borrador.
-    await strapi.documents(UID).delete({ documentId });
+    // ⚠️ `delete` sin `locale` NO baja todos los idiomas: borra sólo el por
+    // defecto, y la traducción quedaba huérfana en la base —y publicada, si lo
+    // estaba—. Pasó en producción el 30-sep-2026: una nota borrada desde esta
+    // pantalla siguió saliendo en inglés por la API.
+    await strapi.documents(UID).delete({ documentId, locale: "*" });
     ctx.body = { ok: true };
   },
 

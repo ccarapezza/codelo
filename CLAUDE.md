@@ -88,6 +88,14 @@ mismas etiquetas `[n]`): si no, le señala un texto que nunca vio. Revisa con
 spreadea `verticals/cron.ts`. Agregar una tarea propia no toca el archivo del
 motor.
 
+**Idiomas.** Una nota es un documento con una fila por idioma. En Strapi 5,
+`delete`, `unpublish` y `publish` SIN `locale` actúan sólo sobre el idioma por
+defecto: para bajar una nota entera va `locale: "*"`, y para preguntar si
+alguna versión está publicada, `findMany` (`findOne` no acepta `"*"`). La
+pantalla de Notas borraba así y dejaba la traducción huérfana y publicada; en
+producción aparecieron seis, tres de ellas visibles en el sitio en inglés de un
+proyecto.
+
 **Portadas.** Los pools del sorteo (encuadre, tratamiento, luz, acabado)
 están en `lib/cover-pools.ts` y un proyecto los reemplaza desde
 `verticals/cover-pools.ts`; lo que sabe de sus anclas lo suma con
