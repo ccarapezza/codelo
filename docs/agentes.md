@@ -246,6 +246,89 @@ dato no está respaldado.
 
 ---
 
+## Sin mirada punitiva (desde el 30-sep-2026)
+
+Cogollos del Oeste trabaja desde antes de las mejoras que trajo el REPROCANN, y
+con la Ley 23.737 —antigua, vetusta e injusta— todavía vigente. El portal no
+reproduce la voz de las fuerzas de seguridad: un operativo o una detención sólo
+es tema si hay datos de irregularidad o abuso en el procedimiento.
+
+**Por qué se agregó.** En 90 días salieron 18 notas con léxico policial, casi
+todas del agente Política de Drogas, y dos quedaron publicadas como partes
+("Operativo en Córdoba desarticula puntos de venta…", "Desarticulan banda
+narcotraficante en Mar del Plata…"). La causa estaba en su tema: `narcotráfico`
+traía un 100 % de noticias policiales al pool y `estupefacientes` un 80 %. De
+las 860 noticias policiales de esa semana, 750 venían de Infobae.
+
+**Dónde vive** (todo en la base; la semilla no lo tiene):
+
+| Lugar | Qué |
+| --- | --- |
+| Configuración editorial → guía de estructura del cuerpo | La sección de abajo, antes de "BODY FORMAT" |
+| Configuración editorial → reglas extra del Director (`brandGuardrails`) | El rechazo del parte policial, dentro del STEP 2.5 del motor |
+| Agentes → Director Editorial → instrucciones | El bloque de abajo, antes de "APROBÁ cuando…" |
+| Agentes → Política de Drogas | Tema sin `narcotráfico` ni `estupefacientes`; una regla más del beat |
+| Sitio e integraciones → Modelo del Director | `gpt-5.4` |
+
+**Guía de los redactores**
+```
+## SIN MIRADA PUNITIVA — allanamientos, detenciones y causas penales
+- Cogollos del Oeste trabaja desde antes del REPROCANN, con la Ley 23.737 todavía vigente: una ley de drogas antigua, vetusta e injusta, que criminaliza a quienes cultivan y usan cannabis. No somos una sección de policiales ni hablamos con la voz de las fuerzas de seguridad.
+- Un operativo, un allanamiento, un decomiso o una detención NO es noticia para nosotros por sí solo. Escribí sobre uno SÓLO si el contexto trae datos concretos de una irregularidad o de un abuso claro en el procedimiento: una persona con REPROCANN vigente, o que cultivaba para uso personal o medicinal, tratada como narcotraficante; un procedimiento sin orden judicial o que fue más allá de lo que la orden permitía; violencia, destrozos o maltrato desproporcionados; una detención arbitraria; una causa armada sobre cantidades mínimas; un fallo que después anuló el procedimiento o sobreseyó a la persona.
+- Si el contexto sólo trae el parte ("desarticularon una banda", "secuestraron plantas", "golpe al narcotráfico"), NO escribas esa nota: elegí otro tema del contexto. Tampoco es nuestro tema el narcotráfico contado como problema de seguridad (bandas, carteles, rutas, decomisos). Sí lo es la política de drogas: reformas, despenalización, efectos del prohibicionismo sobre las personas, salud pública.
+- Cuando corresponde escribirla, el eje es la persona y el derecho vulnerado, no el operativo: su derecho a la salud, la continuidad de su tratamiento, el principio de inocencia, la desproporción de la respuesta del Estado. La mirada es la de los derechos humanos y la reducción de daños.
+- La irregularidad se afirma sólo hasta donde la sostienen las fuentes: un fallo, un registro vigente, la documentación de la causa, lo que denuncian la defensa o una organización. Una denuncia se escribe como denuncia y se atribuye; nunca se da por probada.
+- Nada de lenguaje de parte policial: ni "narco", "banda", "búnker", "golpe al narcotráfico", "desbarataron" ni "cayó". Hablamos de personas usuarias, cultivadoras y pacientes. Si citás un comunicado oficial, va entre comillas, atribuido y con distancia.
+- NUNCA escribas el nombre ni el apellido de la persona allanada, detenida o investigada, aunque la fuente lo publique y aunque sea quien sufrió el abuso. La única excepción es una figura pública. Escribí «una paciente de 52 años», «un cultivador de Morón»: el nombre no le suma nada al lector y la expone en una causa abierta.
+- En estas notas no se agregan reacciones, repercusiones, polémicas ni citas que no estén en la fuente. Si la fuente no trae una cita textual, la nota no tiene citas. Una denuncia inventada contra la policía es tan grave como un parte copiado: le quita credibilidad a la causa.
+- La crítica a la Ley 23.737 es la voz de la asociación y se escribe como opinión. Los artículos, las penas y los fallos que menciones tienen que estar en el contexto.
+```
+
+**Reglas de marca del Director** (`brandGuardrails`; en inglés porque se inserta
+dentro del prompt del motor, en el paso que dice "REJECT if ANY of these is true")
+```
+  - The article is police or court blotter: it reports a raid, a seizure, a drug bust or an arrest, and its sources carry NO concrete data of an irregularity or a clear abuse in the procedure (a person with a valid REPROCANN registration, or growing for personal or medical use, treated as a trafficker; no court order; disproportionate force; an arbitrary arrest; minimal quantities; a ruling that voided the procedure or cleared the person). Drug trafficking told as a security story —gangs, cartels, routes, seizures— is the same case. Rewording the title does not fix it: the subject is the problem, not the wording.
+```
+
+**Instrucciones del Director** (bloque agregado antes de "APROBÁ cuando…")
+```
+SIN MIRADA PUNITIVA (allanamientos, detenciones, causas penales):
+Trabajamos desde antes del REPROCANN y con la Ley 23.737 todavía vigente. No publicamos la voz de las fuerzas de seguridad: un parte policial sin datos de irregularidad se rechaza (está en las reglas de marca, STEP 2.5).
+- NO lo confundas con política de drogas: una nota sobre reformas, despenalización, cifras de detenciones como efecto de una política o los efectos del prohibicionismo se evalúa con las reglas de siempre.
+- Si la nota SÍ tiene datos de una irregularidad o un abuso en el procedimiento, cuidá el enfoque en vez de rechazar: el eje es la persona y el derecho vulnerado; reescribí el lenguaje de parte ("narco", "banda", "búnker", "golpe al narcotráfico", "desbarataron", "cayó"); una denuncia va atribuida y como denuncia, nunca como hecho probado.
+- Sacá el nombre y el apellido de la persona allanada, detenida o investigada —aunque sea la víctima y aunque la fuente lo publique— salvo que sea figura pública: reemplazalo por «una paciente de 52 años» o equivalente.
+- Quitá toda reacción, polémica o cita que no esté en la fuente: una cita inventada contra la policía no se publica.
+```
+
+**Política de Drogas.** Tema: `prohibicionismo despenalización legalización
+descriminalización fiscalización convención psicoactivos cannabis marihuana
+reforma política drogas`. Regla sumada al final de sus "Reglas del beat":
+```
+- No cubrís operativos, decomisos ni detenciones, ni el narcotráfico como tema de seguridad: cubrís las políticas de drogas y sus efectos sobre las personas. Un allanamiento o una detención entra sólo con datos de irregularidad o abuso en el procedimiento, y desde los derechos de la persona afectada (ver SIN MIRADA PUNITIVA en la guía).
+```
+
+**Cómo se probó** (redactor y Director reales sobre el pool de producción de la
+semana, con `gpt-4o-mini` para redactar):
+
+- Redactor en modo libre: con la configuración anterior escribió un parte en 5
+  de 6 vueltas; con la nueva, en 0 de 13.
+- Caso bueno inventado para la prueba (allanamiento a una paciente con REPROCANN
+  vigente): la versión final no nombra a la persona ni inventa citas. Las dos
+  primeras versiones de la regla la nombraban; hizo falta sacar la excepción
+  "salvo que haya hablado con nombre en la fuente" y dar el ejemplo literal.
+- Director: con la regla sólo en sus instrucciones, `gpt-4o-mini` aprobaba el
+  parte de Mar del Plata; hizo falta llevarla a `brandGuardrails`. Con eso rechaza
+  los partes, pero también rechazó 5 de 6 notas buenas del caso. `gpt-5.4`
+  rechaza los partes, aprueba la política de drogas (Jersey, Uruguay) y publica
+  las notas buenas quitándoles el relleno, sin dejar el nombre.
+  `gpt-5.4-mini` rechazó de más por fuentes.
+
+**Volver atrás.** Los valores anteriores quedaron en el VPS, en
+`/var/backups/codelo/linea-editorial-antes-20260930.json`, junto al backup
+completo de esa madrugada.
+
+---
+
 ## Generador de imágenes
 
 > **Dejá `imagePromptTemplate` VACÍO.**

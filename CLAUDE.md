@@ -265,6 +265,19 @@ agroindustrial/alimentario del cáñamo son objeto estatutario (Art. 2°, incs. 
 legítimo. La línea roja no es hablar de la industria sino **ser canal de venta**:
 no se publicitan ni recomiendan productos, marcas o comercios al lector.
 
+**Sin mirada punitiva (30-sep-2026).** La asociación trabaja desde antes del
+REPROCANN y con la Ley 23.737 vigente: no publica partes policiales. Un
+allanamiento, un decomiso o una detención entra SÓLO con datos de una
+irregularidad o un abuso claro en el procedimiento, con el eje en la persona y
+el derecho vulnerado, sin nombrarla y sin reacciones ni citas que no estén en la
+fuente. Vive en la base, en cuatro lugares: la guía de los redactores, las
+reglas de marca (`brandGuardrails`, que el Director rechaza sin atajos), las
+instrucciones del Director y el agente Política de Drogas (su tema ya no tiene
+`narcotráfico` ni `estupefacientes`, que traían 100 % y 80 % de partes). El
+Director revisa con `gpt-5.4`: `gpt-4o-mini` aprobaba los partes sin la regla de
+marca y, con ella, rechazaba también las notas buenas. Textos, pruebas y
+respaldo para volver atrás: `docs/agentes.md`. Si se toca, re-probar corriéndola.
+
 ## ⚠️ `run-batch` NO filtra por tema — usar `run-now`
 
 `planBatch()` arma el pool con `getRecentNewsForTopic(strapi, "", 200)`: el topic
