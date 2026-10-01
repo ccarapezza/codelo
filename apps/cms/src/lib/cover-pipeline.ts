@@ -19,7 +19,6 @@ import type OpenAI from "openai";
 import {
   chooseImagePrompt,
   generateCoverImage,
-  isOpenRouterModel,
   uploadImageToStrapi,
 } from "./openai";
 import type { PromptSettings } from "./prompt-defaults";
@@ -180,12 +179,13 @@ export async function generateCoverForPost(
   }
   if (!imagen || !prompt) throw new CoverPipelineError("Cover image generation failed after retries.", prompt);
 
-  const ext = isOpenRouterModel(ctx.imageModel) ? "png" : "jpg";
+  // Sin extensión: la pone la subida, mirando los bytes. Decidirla por el
+  // proveedor estaba mal en los dos sentidos.
   const nombre = job.documentId ? `cover-${job.documentId}` : "news-cover";
   const coverImageId = await uploadImageToStrapi(
     strapi as Parameters<typeof uploadImageToStrapi>[0],
     imagen,
-    `${nombre}-${Date.now()}.${ext}`,
+    `${nombre}-${Date.now()}`,
     job.title,
   );
   return { coverImageId, coverPrompt: prompt };

@@ -26,7 +26,7 @@ export interface StudioConfig {
   imageModels: Record<string, ImageModelInfo>;
   videoModels: Record<string, VideoModelInfo>;
   llmCallEstimateUsd: number;
-  defaults: { imageModel: string; videoModel: string; videoPrompt: string };
+  defaults: { imageModel: string; videoModel: string };
   keys: { openai: boolean; openrouter: boolean };
   ffmpegAvailable: boolean;
 }
@@ -167,7 +167,10 @@ export function estimateCost(cfg: StudioConfig, s: StudioState): { lines: CostLi
       }
       break;
     case "reel": {
-      if (fromPost) lines.push({ label: "ss.costo.llmOverlay", usd: cfg.llmCallEstimateUsd });
+      // Igual que el servidor: la llamada también describe el clip cuando no
+      // hay prompt escrito ni clip elegido.
+      const describeClip = !s.clipFile && !s.videoPrompt.trim();
+      if (fromPost || describeClip) lines.push({ label: "ss.costo.llmOverlay", usd: cfg.llmCallEstimateUsd });
       if (s.clipFile) {
         lines.push({ label: "ss.costo.clipExistente", usd: 0 });
       } else {

@@ -68,8 +68,8 @@ describe("generateCoverForPost", () => {
       recentDescriptions: ["una portada anterior"],
       systemInstructions: "instrucciones del motor",
     });
-    // Modelo de OpenRouter → png, y el nombre lleva la nota.
-    expect(upload.mock.calls[0][2]).toMatch(/^cover-d1-\d+\.png$/);
+    // El nombre lleva la nota y va SIN extensión: la pone la subida, por bytes.
+    expect(upload.mock.calls[0][2]).toMatch(/^cover-d1-\d+$/);
   });
 
   it("ante el 200 vacío de Gemini reintenta con otra semilla: base, |retry2, |retry3", async () => {
@@ -124,7 +124,8 @@ describe("generateCoverForPost", () => {
   it("sin nota todavía, el archivo se llama news-cover", async () => {
     const f = fakeStrapi();
     await generateCoverForPost(f.strapi, { documentId: null, title: "T", excerpt: "" }, ctx({ imageModel: "gpt-image-1" }));
-    expect(upload.mock.calls[0][2]).toMatch(/^news-cover-\d+\.jpg$/);
+    // Tampoco acá decide la extensión el proveedor.
+    expect(upload.mock.calls[0][2]).toMatch(/^news-cover-\d+$/);
   });
 
   it("con las descripciones recientes provistas no consulta la base", async () => {

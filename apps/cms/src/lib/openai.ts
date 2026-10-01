@@ -4,6 +4,7 @@ import { DEFAULT_PROMPT_SETTINGS, type PromptSettings } from "./prompt-defaults"
 import { ENGINE_POOLS, type CoverPools, type Mood, type Treatment } from "./cover-pools";
 import { verticalCoverPools } from "../verticals/cover-pools";
 import { applyAnchorEnrichers } from "./anchor-enrichment";
+import { imageFormatFromBytes } from "./image-format";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -728,8 +729,17 @@ export async function generateCoverImage(
 }
 
 // `options.folderId` files the asset into a Media Library folder (Strapi 5
-// supports fileInfo.folder); `options.mime` overrides the extension-based
-// guess (e.g. "video/mp4" for reel clips). Backward compatible.
+// supports fileInfo.folder).
+//
+// La extensión y el mime de una imagen salen de sus BYTES, no del nombre que
+// le puso quien llama: este camino no pasa por el controller HTTP de Strapi,
+// que es el único que detecta el formato, así que lo que se declare acá es lo
+// que queda en la base y en el disco. `filename` puede venir sin extensión.
+// `options.mime` vale sólo para lo que el detector no conoce (los clips mp4).
+//
+// El nombre corregido va en los TRES lugares: Strapi saca la extensión de
+// `originalFilename` y el nombre visible de `fileInfo.name` quitándole esa
+// misma extensión. Corregir uno solo deja archivos `…_png_<hash>.jpg`.
 export async function uploadImageToStrapi(
   strapi: { plugin: (name: string) => { service: (name: string) => { upload: (opts: unknown) => Promise<Array<{ id: number }>> } } },
   imageBuffer: Buffer,
@@ -737,7 +747,12 @@ export async function uploadImageToStrapi(
   alternativeText: string,
   options?: { folderId?: number; mime?: string },
 ): Promise<number> {
-  const tmpPath = path.join(os.tmpdir(), filename);
+  const formato = imageFormatFromBytes(imageBuffer);
+  const nombre = formato ? `${filename.replace(/\.(png|jpe?g|gif|webp)$/i, "")}.${formato.ext}` : filename;
+  const mimetype =
+    formato?.mime ?? options?.mime ?? (nombre.endsWith(".png") ? "image/png" : "image/jpeg");
+
+  const tmpPath = path.join(os.tmpdir(), nombre);
   fs.writeFileSync(tmpPath, imageBuffer);
   try {
     const [uploaded] = await strapi
@@ -746,15 +761,15 @@ export async function uploadImageToStrapi(
       .upload({
         data: {
           fileInfo: {
-            name: filename,
+            name: nombre,
             alternativeText,
             ...(options?.folderId ? { folder: options.folderId } : {}),
           },
         },
         files: {
           filepath: tmpPath,
-          originalFilename: filename,
-          mimetype: options?.mime ?? (filename.endsWith(".png") ? "image/png" : "image/jpeg"),
+          originalFilename: nombre,
+          mimetype,
           size: fs.statSync(tmpPath).size,
         },
       });

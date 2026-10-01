@@ -37,7 +37,22 @@ const EMPTY: NoteDraft = {
 
 type Mode = "ia" | "manual";
 
+/**
+ * El editor se monta de nuevo cada vez que cambia la nota.
+ *
+ * Todo su estado —el borrador, el modo, el slug— se arma al montar. Mientras al
+ * editor sólo se entraba desde Notas eso alcanzaba, porque siempre se montaba
+ * de cero. Con la entrada «Nueva nota» en el menú se puede pasar de editar una
+ * nota a crear otra sin salir de la ruta: sin remontar, el formulario quedaba
+ * con la nota anterior y «Guardar» la creaba otra vez, duplicada.
+ */
 export default function NoteEditorPage() {
+  const location = useLocation();
+  const editId = new URLSearchParams(location.search).get("id");
+  return <NoteEditor key={editId ?? "nueva"} />;
+}
+
+function NoteEditor() {
   const t = useT();
   const { get, post } = useFetchClient();
   const { toggleNotification } = useNotification();

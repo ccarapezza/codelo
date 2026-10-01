@@ -5,6 +5,7 @@ import { useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { AccentCard, GroupLabel, Hairline } from "../../components/ui";
 import { TEMPLATE_FIELDS, type DeckResult, type Slide } from "./types";
 import { useT } from "../../i18n";
+import { dataUriToBlob } from "../../utils/data-uri";
 
 // Preview editable de carrusel/historia: los textos se modifican y se
 // re-renderiza con satori SIN volver a llamar IA (el fondo ya generado se
@@ -70,6 +71,9 @@ export default function DeckEditor({
   // sin pasar por Media. Renderiza full-res (scale 1) y copia el caption.
   // Usa blob URLs (no data: URIs) — Chrome bloquea descargas múltiples de
   // data: URIs; con blobs pregunta una vez "¿descargar varios?" y baja todas.
+  // El blob se arma con `dataUriToBlob` y NO con `fetch(uri)`: la CSP del
+  // admin bloquea el fetch de una data URI, y la descarga moría en la primera
+  // placa con el cartel de error genérico.
   const download = async () => {
     setDownloading(true);
     const urls: string[] = [];
@@ -86,7 +90,7 @@ export default function DeckEditor({
         });
         const uri = (data as { previews: string[] }).previews?.[0];
         if (!uri) continue;
-        const blob = await (await fetch(uri)).blob();
+        const blob = dataUriToBlob(uri);
         const url = URL.createObjectURL(blob);
         urls.push(url);
         const a = document.createElement("a");

@@ -87,6 +87,7 @@ export interface GenerateRequest {
     videoModel?: string;
     videoSeconds?: number;
     resolution?: string;
+    // Vacío no es "el clip por defecto": es "describilo desde la fuente".
     videoPrompt?: string;
     clipFileId?: number;
     overlay?: { type: "title" | "countdown"; fields: Record<string, string> };
@@ -110,7 +111,7 @@ export function isPostSource(source: GenerateRequest["source"]): source is { pos
 // Mirrors the real pipeline so the plan is honest:
 //   portada+prompt = 0 LLM / 1 img · portada+nota = 3 LLM (anchors+candidatos+juez) / 1 img
 //   carrusel/historia = 1 LLM + (fondo existente ? 0 : 1 img)
-//   reel = (nota ? 1 LLM : 0) + (clip existente ? 0 : seconds × $/s)
+//   reel = (nota, o clip a describir desde la fuente ? 1 LLM : 0) + (clip existente ? 0 : seconds × $/s)
 export function estimateCost(req: GenerateRequest): { lines: CostLine[]; totalUsd: number } {
   const lines: CostLine[] = [];
   const fromPost = isPostSource(req.source);
@@ -158,8 +159,11 @@ export function estimateCost(req: GenerateRequest): { lines: CostLine[]; totalUs
       }
       break;
     case "reel": {
-      if (fromPost) {
-        lines.push({ label: "1 llamada LLM (textos del overlay)", usd: LLM_CALL_ESTIMATE_USD });
+      // Una sola llamada cubre los textos y la descripción del clip. Es una
+      // cota superior: con el título escrito y un clip elegido no se hace.
+      const describeClip = !req.options.clipFileId && !req.options.videoPrompt?.trim();
+      if (fromPost || describeClip) {
+        lines.push({ label: "1 llamada LLM (textos del overlay y descripción del clip)", usd: LLM_CALL_ESTIMATE_USD });
       }
       if (req.options.clipFileId) {
         lines.push({ label: "Clip existente (sin IA)", usd: 0 });

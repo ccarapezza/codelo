@@ -9,6 +9,7 @@ import {
   Command,
   Magic,
   PaintBrush,
+  Pencil,
   SlidersHorizontal,
 } from "@strapi/icons";
 import type { StrapiApp } from "@strapi/strapi/admin";
@@ -58,6 +59,8 @@ const IDS_PROPIOS = new Set([WIDGET_SETUP, ...verticals.widgets.map(w => w.id)])
 // cómo desempate el sort del motor de JS.
 const POS = {
   notas: 0.1,
+  /** Pegada a Notas: es el atajo a escribir una, no una pantalla aparte. */
+  nuevaNota: 0.15,
   agentes: 0.2,
   socialStudio: 0.3,
   fuentes: 0.4,
@@ -194,18 +197,6 @@ export default {
       },
     });
 
-    // Editor unificado de notas (crear a mano / con IA / editar). No lleva
-    // entrada de menú: se entra desde /admin/notas. `?id=` = edición; sin él,
-    // creación. Se registra con addRoute (como Audit) para que sea navegable y
-    // sobreviva al back del navegador.
-    app.router.addRoute({
-      path: "editor-nota/*",
-      lazy: async () => {
-        const { default: Component } = await import("./pages/NoteEditorPage");
-        return { Component };
-      },
-    });
-
     // El generador viejo. Quedó sin entrada de menú: /notas + /editor-nota
     // hacen lo mismo y además dejan editar, así que tenerlo en el nav ofrecía
     // dos puertas a la misma tarea y la peor primero. La ruta sigue viva para
@@ -281,6 +272,25 @@ export default {
       },
       permissions: [],
       Component: () => import("./pages/PostReviewPage"),
+    });
+
+    // Editor unificado de notas (crear a mano / con IA / editar). `?id=` =
+    // edición; sin él, creación. La entrada de menú es el atajo a escribir una
+    // nota sin pasar por el tablero; desde Notas se sigue entrando igual, con
+    // «Crear nota» y con el lápiz de cada fila.
+    //
+    // No lleva `addRoute` aparte: `addMenuLink` registra la ruta
+    // `editor-nota/*` por dentro, y dos rutas con el mismo path son una de más.
+    app.addMenuLink({
+      to: "/editor-nota",
+      icon: Pencil,
+      position: POS.nuevaNota,
+      intlLabel: {
+        id: "nib.menu.nuevaNota",
+        defaultMessage: "Nueva nota",
+      },
+      permissions: [],
+      Component: () => import("./pages/NoteEditorPage"),
     });
 
     app.addMenuLink({

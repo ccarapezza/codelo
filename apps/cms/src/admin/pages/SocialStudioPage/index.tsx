@@ -109,11 +109,13 @@ export default function SocialStudioPage() {
     get("/api/social-studio/config")
       .then(({ data }: { data: StudioConfig }) => {
         setConfig(data);
+        // El prompt del clip NO se prellena: vacío significa "describilo desde
+        // la fuente", y con un texto puesto de antemano el servidor no puede
+        // distinguir lo que escribió el editor de lo que venía por defecto.
         setState((prev) => ({
           ...prev,
           imageModel: data.defaults.imageModel,
           videoModel: data.defaults.videoModel,
-          videoPrompt: data.defaults.videoPrompt,
         }));
       })
       .catch(() => toggleNotification({ type: "danger", message: t("ss.err.config") }));
@@ -516,7 +518,11 @@ export default function SocialStudioPage() {
               <>
                 <Field.Root hint={t("ss.clipFondo.hint")}>
                   <Field.Label>{t("ss.promptClip")}</Field.Label>
-                  <Textarea value={state.videoPrompt} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => set("videoPrompt", e.target.value)} />
+                  <Textarea
+                    value={state.videoPrompt}
+                    placeholder={t("ss.promptClip.placeholder")}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => set("videoPrompt", e.target.value)}
+                  />
                   <Field.Hint />
                 </Field.Root>
                 <Flex gap={2}>
