@@ -160,15 +160,23 @@ borra los desconocidos. Registradas tarde, el super admin nunca recibe la fila.
 **Los content-types ocultos del Content Manager devuelven 403 hasta al super
 admin.** Por eso `agent` y `rss-feed` tienen su propio CRUD; no es capricho.
 
-**El editor de notas va por `app.router.addRoute` en `register()`.** `app.router`
-sólo existe ahí: llamarlo desde `bootstrap` deja el panel en blanco.
+**Una ruta sin entrada de menú va por `app.router.addRoute` en `register()`.**
+`app.router` sólo existe ahí: llamarlo desde `bootstrap` deja el panel en
+blanco. Así están Audit y el generador viejo. Una pantalla CON entrada de menú
+no lo necesita, porque `addMenuLink` registra su ruta: el editor de notas pasó
+de un caso al otro cuando ganó la entrada «Nueva nota».
+
+**El editor de notas se remonta cuando cambia la nota** (`key` por `?id=`). Su
+estado se arma al montar; sin eso, pasar de editar una nota a «Nueva nota»
+dejaba el formulario con la anterior y guardar la duplicaba.
 
 **El menú lateral NO respeta el orden de registro.** Strapi junta los links de
 plugins con los generales, los ordena ALFABÉTICAMENTE por etiqueta y recién ahí
 por `position` (con `?? 6` de fallback). Cambiar el orden de los `addMenuLink`
-no hace nada; lo único que manda es `position`. Strapi se reserva 1 Content
-Manager · 2 Releases · 4 Media · 5 CTB · 7 Marketplace · 9 Settings, así que lo
-del motor va en negativo (constante `POS` en `app.tsx`) para quedar antes. Las
+no hace nada; lo único que manda es `position`. Strapi se reserva 0 Home · 1
+Content Manager · 2 Releases · 4 Media · 5 CTB · 7 Marketplace · 9 Settings, así
+que lo del motor va en decimales entre Home y el Content Manager (constante
+`POS` en `app.tsx`). Las
 posiciones son únicas a propósito: el comparador de Strapi nunca devuelve 0, y
 con empates el orden queda a merced de cómo desempate el sort de V8.
 
