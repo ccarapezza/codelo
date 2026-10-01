@@ -1,4 +1,5 @@
 import { LOGO_FILE } from "../../verticals/brand";
+import { imageFormatFromBytes } from "../image-format";
 import { readFileSync } from "node:fs";
 import { join, extname } from "node:path";
 
@@ -9,6 +10,10 @@ const MIME: Record<string, string> = {
   ".webp": "image/webp",
 };
 
+// Lo que satori sabe medir. Con cualquier otro mime en una data URI no cae a
+// "sin imagen": tira un TypeError y se lleva el render entero.
+const RENDERIZABLE = new Set(["image/png", "image/jpeg", "image/gif"]);
+
 // Los assets (fuentes .woff + logo) viven en src/ y NO se copian a dist/ con
 // `strapi build`. Resolvemos relativo a la raíz de la app: process.cwd() ===
 // apps/cms tanto en `strapi develop` (dev) como en el contenedor
@@ -17,13 +22,32 @@ export function assetPath(...segments: string[]): string {
   return join(process.cwd(), "src/lib/social-cards/assets", ...segments);
 }
 
+// El mime de una data URI sale de los BYTES; la extensión y el parámetro son
+// el respaldo para lo que el detector no conoce (un SVG). resvg decodifica
+// según la etiqueta, no según el contenido: un JPEG etiquetado PNG no se dibuja.
+// Leer por bytes es además lo que rescata los fondos que ya quedaron guardados
+// con la extensión equivocada.
 export function dataUriFromFile(absPath: string): string {
-  const mime = MIME[extname(absPath).toLowerCase()] ?? "image/png";
-  return `data:${mime};base64,${readFileSync(absPath).toString("base64")}`;
+  const buf = readFileSync(absPath);
+  const mime = imageFormatFromBytes(buf)?.mime ?? MIME[extname(absPath).toLowerCase()] ?? "image/png";
+  return `data:${mime};base64,${buf.toString("base64")}`;
 }
 
-export function dataUriFromBuffer(buf: Buffer, mime = "image/png"): string {
+export function dataUriFromBuffer(buf: Buffer, fallbackMime = "image/png"): string {
+  const mime = imageFormatFromBytes(buf)?.mime ?? fallbackMime;
   return `data:${mime};base64,${Buffer.from(buf).toString("base64")}`;
+}
+
+/**
+ * Un fondo listo para una placa, o `null` si el render no lo puede dibujar.
+ *
+ * Con `null` la placa sale con el fondo de marca. Quien llama deja el aviso:
+ * sin eso, un formato nuevo de un modelo se nota recién en la placa publicada.
+ */
+export function bgUriForRender(buf: Buffer): string | null {
+  const formato = imageFormatFromBytes(buf);
+  if (!formato || !RENDERIZABLE.has(formato.mime)) return null;
+  return dataUriFromBuffer(buf);
 }
 
 // El logo bundleado: el que se usa mientras no haya ninguno subido.

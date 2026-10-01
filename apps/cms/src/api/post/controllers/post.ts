@@ -32,8 +32,8 @@ import type { PromptSettings } from "../../../lib/prompt-defaults";
 import { ensurePostTranslation } from "../../../lib/translate-post";
 import { generateOpenRouterImage } from "../../../lib/openrouter-image";
 import {
+  bgUriForRender,
   composeCarousel,
-  dataUriFromBuffer,
   getRenderContext,
   renderSlide,
   renderToPng,
@@ -177,7 +177,13 @@ async function buildCarouselFor(
         aspectRatio: "9:16",
         imageSize: "1K",
       });
-      slides[0]._bgUri = dataUriFromBuffer(bg, "image/png");
+      const bgUri = bgUriForRender(bg);
+      if (bgUri) slides[0]._bgUri = bgUri;
+      else {
+        strapi.log.warn(
+          `[post] carousel cover background (${documentId}): ${CAROUSEL_IMAGE_MODEL} devolvió un formato que el render no dibuja; va el fondo de marca`,
+        );
+      }
     } catch (err) {
       strapi.log.warn(
         `[post] carousel cover background failed (${documentId}): ${(err as Error).message}`,

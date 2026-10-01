@@ -26,9 +26,9 @@ import * as project from "../project";
 import { generateOpenRouterImage } from "../openrouter-image";
 import { logAgentAction } from "../audit";
 import {
+  bgUriForRender,
   composeCarousel,
   dataUriFromBuffer,
-  dataUriFromFile,
   getRenderContext,
   renderSlide,
   renderToPng,
@@ -128,11 +128,20 @@ export function absoluteFilePath(strapi: any, file: UploadFileRow): string {
   return path.join(publicDir, file.url.replace(/^\//, ""));
 }
 
-export async function bgUriFromFile(strapi: any, fileId: number): Promise<string> {
+/**
+ * El fondo elegido de Medios, listo para la placa. `null` si el archivo está
+ * pero el render no lo puede dibujar: la placa sale con el fondo de marca.
+ *
+ * Se lee por sus bytes y no por la extensión con la que quedó guardado: hay
+ * fondos viejos que son JPEG con nombre y mime de PNG.
+ */
+export async function bgUriFromFile(strapi: any, fileId: number): Promise<string | null> {
   const file = await getUploadFile(strapi, fileId);
   const abs = absoluteFilePath(strapi, file);
-  if (fs.existsSync(abs)) return dataUriFromFile(abs);
-  throw new Error(`El archivo de fondo no está en disco (${file.url}).`);
+  if (!fs.existsSync(abs)) throw new Error(`El archivo de fondo no está en disco (${file.url}).`);
+  const uri = bgUriForRender(fs.readFileSync(abs));
+  if (!uri) strapi.log.warn(`[studio] el render no puede dibujar el fondo ${file.url}: va el fondo de marca`);
+  return uri;
 }
 
 // ---------------------------------------------------------------------------
@@ -422,11 +431,11 @@ export async function runGenerateJob(strapi: any, job: StudioJob): Promise<void>
         updateStep(job, "imagen", { status: "done" });
 
         updateStep(job, "subir", { status: "running" });
-        const ext = isOpenRouterModel(imageModel) ? "png" : "jpg";
+        // Sin extensión: la pone la subida, mirando los bytes.
         const fileId = await uploadImageToStrapi(
           strapi,
           buffer,
-          `studio-portada-${Date.now()}.${ext}`,
+          `studio-portada-${Date.now()}`,
           material.title,
           { folderId },
         );
@@ -493,16 +502,25 @@ export async function runGenerateJob(strapi: any, job: StudioJob): Promise<void>
         if (req.options.bgFileId) {
           bgFileId = req.options.bgFileId;
           bgUri = await bgUriFromFile(strapi, bgFileId);
-          updateStep(job, "fondo", { status: "done", detail: "fondo existente (sin IA)" });
+          updateStep(job, "fondo", {
+            status: "done",
+            detail: bgUri ? "fondo existente (sin IA)" : "el render no puede dibujar ese archivo — fondo de marca",
+          });
         } else {
           try {
             const bg = await generateBgImage(strapi, imageModel, bgPrompt);
-            bgFileId = await uploadImageToStrapi(strapi, bg, `studio-bg-${Date.now()}.png`, bgPrompt.slice(0, 120), {
+            // La imagen ya está paga: se sube antes de saber si el render la
+            // puede dibujar. Sin extensión ni mime: los pone la subida, por bytes.
+            bgFileId = await uploadImageToStrapi(strapi, bg, `studio-bg-${Date.now()}`, bgPrompt.slice(0, 120), {
               folderId,
-              mime: "image/png",
             });
-            bgUri = dataUriFromBuffer(bg, "image/png");
-            updateStep(job, "fondo", { status: "done", detail: coverPrompt ? undefined : "prompt derivado del título" });
+            bgUri = bgUriForRender(bg);
+            if (!bgUri) {
+              strapi.log.warn(`[studio] ${imageModel} devolvió un formato que el render no dibuja: va el fondo de marca`);
+              updateStep(job, "fondo", { status: "done", detail: "formato de imagen no soportado — fondo de marca" });
+            } else {
+              updateStep(job, "fondo", { status: "done", detail: coverPrompt ? undefined : "prompt derivado del título" });
+            }
           } catch (err) {
             // Si el fondo IA falla, seguimos con fondo de marca (el deck no se
             // pierde por una imagen).

@@ -18,5 +18,5 @@ export {
 export { getRenderContext } from "./render-context";
 export { renderToPng } from "./render";
 export { renderSlide, TEMPLATE_NAMES, type RenderContext, type Slide, type TemplateName } from "./templates";
-export { bundledLogoMark, dataUriFromBuffer, dataUriFromFile, uploadedLogoMark } from "./assets";
+export { bgUriForRender, bundledLogoMark, dataUriFromBuffer, dataUriFromFile, uploadedLogoMark } from "./assets";
 export { composeCarousel, type ComposeCarouselInput, type ComposeCarouselResult } from "./composer";
