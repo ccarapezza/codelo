@@ -14,6 +14,29 @@ referencia de qué archivo es de quién.
 Los puertos están corridos a propósito para convivir con los proyectos que usan
 el motor (codelo 5435/1339/3200, fulbo 5432/1337/3000). No los "normalices".
 
+## Comandos
+
+```sh
+docker compose -f docker-compose.dev.yml up -d   # Postgres y Redis
+pnpm dev:cms            # Strapi; el primer arranque compila el panel
+pnpm dev:web            # Next; `pnpm dev:all` levanta los dos
+./scripts/local-up.sh   # instancia completa en Docker (genera .env.local)
+```
+
+Los `.env` salen de los `.env.example` de la raíz, `apps/cms` y `apps/web`. La
+web lee el CMS sólo por REST (`lib/cms.ts`, `lib/pages.ts`, con `revalidate` de
+60–300 s) y nunca toca la base.
+
+Tests con vitest, en `apps/cms/test/` y junto al código (`src/lib/*.test.ts`).
+Uno solo, desde `apps/cms`:
+
+```sh
+pnpm exec vitest --run src/lib/director-review.test.ts
+pnpm exec vitest --run -t "nombre del caso"
+CAPTURE=1 pnpm exec vitest --run test/preservation/capture.test.ts    # recaptura (ver abajo)
+FEEDS_LIVE=1 pnpm exec vitest --run src/lib/feed-discovery.live.test.ts  # sale a la red
+```
+
 ## La regla que ordena todo
 
 Si un archivo nombra un tema, una marca o un dominio concreto, **está en el
@@ -21,8 +44,12 @@ lugar equivocado**. El motor no sabe de qué habla el sitio que lo usa. Antes de
 cerrar un cambio:
 
 ```sh
-grep -rniE "cannabis|futbol|<la marca del momento>" apps/*/src apps/web/{app,components,lib}
+./scripts/check-neutral.sh
 ```
+
+Es esta regla ejecutable, y corre en CI. El script tiene que ser idéntico en el
+motor y en cada proyecto: lo propio que un proyecto tenga fuera de las costuras
+se excluye en `scripts/check-neutral.ignore`, no editando el script.
 
 Lo específico vive en las costuras (`src/verticals/`, `admin/verticals.ts`,
 `components/vertical/`, `lib/site.ts`, `theme.css`), todas con default vacío.
@@ -101,6 +128,13 @@ están en `lib/cover-pools.ts` y un proyecto los reemplaza desde
 `verticals/cover-pools.ts`; lo que sabe de sus anclas lo suma con
 `verticals/anchor-enrichers.ts`. Todo camino que genera una portada pasa por
 `generateCoverForPost` (`lib/cover-pipeline.ts`): no escribir otra copia.
+
+Además de los agentes, `src/index.ts` registra en `register()` un middleware de
+`strapi.documents` que funciona como red de seguridad: cada create, update o
+publish de un post dispara en segundo plano `ensurePostCover` y
+`ensurePostTranslation`, que no hacen nada si la nota ya tiene portada y
+traducción. Un publish por REST o desde Notas también las genera, y la propia
+traducción vuelve a entrar al middleware: se saltea por su locale.
 
 **Web.** `globals.css` es el puente de tokens; `theme.css` los valores;
 `vertical.css` lo que no existe en un portal cualquiera. Los componentes usan
@@ -195,6 +229,20 @@ barra de anuncio nueva a todo el ancho. Los dos viven en
 hay que mirar después de cada actualización. Cuando falla, lo oculto REAPARECE:
 se ve en una captura y no rompe nada.
 
+**El formato de una imagen generada sale de sus bytes, nunca del proveedor.**
+Gemini por OpenRouter devuelve JPEG y gpt-image PNG, y eso cambia de un modelo
+al siguiente. resvg decodifica según el mime de la data URI, no según el
+contenido: un JPEG etiquetado PNG se sube y se ve bien en un navegador, pero la
+placa sale con el fondo de marca, sin la imagen y sin una línea en el log. Las
+imágenes se suben sin extensión —`uploadImageToStrapi` la pone con
+`lib/image-format.ts`— y a una placa entran por `bgUriForRender`, que devuelve
+`null` para lo que satori no mide (con un WEBP no cae a "sin imagen": tira).
+
+**En el panel, `fetch` sobre una URI `data:` lo bloquea la CSP.** `connect-src`
+sólo permite `'self'` y `https:`; las imágenes `data:` se ven porque para eso
+manda `img-src`. El error llega como un TypeError genérico y no nombra la CSP.
+Para pasar una data URI a archivo: `dataUriToBlob` (`admin/utils/data-uri.ts`).
+
 **Los tipos de Strapi están gitignoreados.** Tras tocar un content-type:
 `cd apps/cms && pnpm exec strapi ts:generate-types`. Sin eso el typecheck falla
 en cada `.update()`. El comando no necesita base de datos.
@@ -202,11 +250,15 @@ en cada `.update()`. El comando no necesita base de datos.
 ## Verificación
 
 ```sh
+./scripts/check-neutral.sh
+(cd apps/cms && pnpm exec strapi ts:generate-types)   # antes del typecheck
 pnpm lint && pnpm typecheck && pnpm test
 pnpm --filter @nib/web build
 docker build -f apps/cms/Dockerfile . && docker build -f apps/web/Dockerfile .
 ```
 
-El CI corre eso mismo. Este repo **no se deploya**: lo que se deploya son los
+El CI corre eso mismo. En el CMS, `lint` y `typecheck` son el mismo `tsc`, que
+no mira `src/admin/`: un cambio al panel no está verificado hasta que pasa el
+`docker build` del CMS. Este repo **no se deploya**: lo que se deploya son los
 proyectos que lo adoptan, cada uno con su `Jenkinsfile` y su compose (hay
 plantillas en `deploy/templates/`).
