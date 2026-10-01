@@ -108,9 +108,6 @@ export const HOY = "2026-09-22T12:00:00.000Z";
 
 export const SITE_HOST = "example.com";
 
-export const OVERLAY_ASK =
-  'Return JSON { "kicker": "<short label, <=22 chars>", "title": "<hook from the article, <=55 chars>" }';
-
 export const RECENT_DESCRIPTIONS = [
   "A wide desk with stacked folders under warm window light.",
   "An empty meeting room seen from the doorway.",

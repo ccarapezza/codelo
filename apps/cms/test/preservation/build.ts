@@ -25,6 +25,7 @@ import { composeSingleSlide } from "../../src/lib/social-studio/compose-single";
 import {
   buildClipPrompt,
   buildCoverFallbackPrompt,
+  buildOverlayAsk,
   buildOverlaySystemPrompt,
 } from "../../src/lib/social-studio/pipeline";
 import type { PromptSettings } from "../../src/lib/prompt-defaults";
@@ -146,7 +147,10 @@ export async function construirPrompts(
     // Piezas de Social Studio que no pasan por un cliente: se arman directo.
     "video.clip": soloSystem(buildClipPrompt(s)),
     "cover.fallback": soloSystem(buildCoverFallbackPrompt(s, I.TITLE)),
-    "overlay": soloSystem(buildOverlaySystemPrompt(s, I.OVERLAY_ASK)),
+    // El pedido sale del builder real, no de una copia: antes vivía duplicado
+    // en inputs.ts y el pipeline podía cambiarlo sin que ninguna fixture se moviera.
+    "overlay": soloSystem(buildOverlaySystemPrompt(s, buildOverlayAsk("title", { textos: true, clip: false }))),
+    "overlay.clip": soloSystem(buildOverlaySystemPrompt(s, buildOverlayAsk("title", { textos: true, clip: true }))),
   };
   } finally {
     vi.useRealTimers();

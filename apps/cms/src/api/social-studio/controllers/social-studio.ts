@@ -10,7 +10,6 @@ import { getOpenAIImageModel } from "../../../lib/openai-config";
 import { republishPreservingDate } from "../../../lib/post-publish";
 import { sanitizeSlide } from "../../../lib/social-cards/composer";
 import { dataUriFromBuffer, getRenderContext, SIZES, type Slide } from "../../../lib/social-cards";
-import { getPromptSettings } from "../../../lib/prompt-settings";
 import {
   DEFAULT_VIDEO_MODEL,
   IMAGE_MODELS,
@@ -92,7 +91,6 @@ export default ({ strapi }: { strapi: any }) => ({
       defaults: {
         imageModel: IMAGE_MODELS[defaultImageModel] ? defaultImageModel : "google/gemini-2.5-flash-image",
         videoModel: DEFAULT_VIDEO_MODEL,
-        videoPrompt: (await getPromptSettings(strapi)).videoDefaultPrompt,
       },
       keys: {
         openai: Boolean(process.env.OPENAI_API_KEY?.trim()),

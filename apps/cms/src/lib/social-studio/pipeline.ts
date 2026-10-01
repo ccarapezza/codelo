@@ -104,7 +104,7 @@ export function stepsForFormat(format: StudioFormat, output?: "image" | "video")
       ];
     case "reel":
       return [
-        { key: "textos", label: "Textos del overlay" },
+        { key: "textos", label: "Textos del overlay y descripción del clip" },
         { key: "clip", label: "Clip de video IA" },
         { key: "overlay", label: "Overlay de marca" },
         { key: "ffmpeg", label: "Composición final (ffmpeg)" },
@@ -177,7 +177,7 @@ const PREVIEW_SCALE = 0.5;
 // ---------------------------------------------------------------------------
 // Source resolution
 
-interface SourceMaterial {
+export interface SourceMaterial {
   title: string;
   excerpt: string;
   content: string;
@@ -219,7 +219,7 @@ async function generateBgImage(strapi: any, model: string, prompt: string): Prom
 }
 
 // ---------------------------------------------------------------------------
-// Reel overlay texts (LLM only when sourcing from a post)
+// Reel: textos del overlay y descripción del clip
 
 /**
  * Exportado para poder compararlo sin red (test/preservation).
@@ -237,24 +237,61 @@ export function buildOverlaySystemPrompt(ps: PromptSettings, ask: string): strin
   ].join("\n");
 }
 
-async function generateOverlayFields(
+/**
+ * Lo que se le pide al modelo en el paso de textos, según qué falte.
+ *
+ * Es estructura, no línea editorial: qué claves devolver y de qué largo. Con
+ * `{ textos: true, clip: false }` es, byte por byte, el pedido de antes.
+ *
+ * El `clip` es la descripción del b-roll, derivada de la fuente. Va en inglés
+ * porque se le pega `videoStyle`, que está en inglés, y así llega al modelo de
+ * video; el resto del pedido sigue saliendo en el idioma del sitio.
+ */
+export function buildOverlayAsk(type: OverlayType, pide: { textos: boolean; clip: boolean }): string {
+  const claves: string[] = [];
+  if (pide.textos) {
+    if (type === "title") {
+      claves.push('"kicker": "<short label, <=22 chars>"', '"title": "<hook from the article, <=55 chars>"');
+    } else {
+      claves.push('"label": "<short countdown context, <=55 chars>"');
+    }
+  }
+  if (pide.clip) {
+    claves.push(
+      '"clip": "<one sentence IN ENGLISH describing a short b-roll video scene that illustrates the topic ' +
+        'of the material: one concrete scene, no text, no logos, no recognisable faces>"',
+    );
+  }
+  return `Return JSON { ${claves.join(", ")} }`;
+}
+
+/**
+ * Los textos del overlay y, si hace falta, la descripción del clip, en UNA
+ * llamada.
+ *
+ * Los textos se le piden al modelo sólo con una nota de fuente y el campo
+ * principal vacío, como siempre. El clip se pide cuando el editor no escribió
+ * un prompt ni eligió un clip, venga de una nota o de un prompt propio: antes
+ * el video salía siempre del prompt genérico y no tenía nada que ver con la
+ * fuente.
+ *
+ * Lo que el editor escribió no se pisa: el modelo sólo rellena lo vacío.
+ */
+export async function generateOverlayFields(
   strapi: any,
   material: SourceMaterial,
   type: OverlayType,
   base: Record<string, string>,
-): Promise<Record<string, string>> {
-  const needsLlm =
+  wantClip: boolean,
+): Promise<{ fields: Record<string, string>; clip: string | null }> {
+  const needsText =
     material.postDocumentId !== null &&
     ((type === "title" && !base.title?.trim()) || (type === "countdown" && !base.label?.trim()));
-  if (!needsLlm) return base;
+  if (!needsText && !wantClip) return { fields: base, clip: null };
 
   const client = getOpenAIClient(getOpenAITextKey());
   const textModel = await getOpenAITextModel(strapi);
   const ps = await getPromptSettings(strapi);
-  const ask =
-    type === "title"
-      ? 'Return JSON { "kicker": "<short label, <=22 chars>", "title": "<hook from the article, <=55 chars>" }'
-      : 'Return JSON { "label": "<short countdown context, <=55 chars>" }';
   const completion = await client.chat.completions.create({
     model: textModel,
     temperature: 0.7,
@@ -262,16 +299,24 @@ async function generateOverlayFields(
     messages: [
       {
         role: "system",
-        content: buildOverlaySystemPrompt(ps, ask),
+        content: buildOverlaySystemPrompt(ps, buildOverlayAsk(type, { textos: needsText, clip: wantClip })),
       },
       { role: "user", content: `Título: ${material.title}\nResumen: ${material.excerpt}\n\n${material.content.slice(0, 3000)}` },
     ],
   });
   try {
-    const parsed = JSON.parse(completion.choices?.[0]?.message?.content ?? "{}") as Record<string, string>;
-    return { ...base, ...Object.fromEntries(Object.entries(parsed).filter(([, v]) => typeof v === "string" && v.trim())) };
+    const parsed = JSON.parse(completion.choices?.[0]?.message?.content ?? "{}") as Record<string, unknown>;
+    const fields = { ...base };
+    if (needsText) {
+      for (const [k, v] of Object.entries(parsed)) {
+        if (k === "clip" || typeof v !== "string" || !v.trim()) continue;
+        if (!fields[k]?.trim()) fields[k] = v;
+      }
+    }
+    const clip = wantClip && typeof parsed.clip === "string" && parsed.clip.trim() ? parsed.clip.trim() : null;
+    return { fields, clip };
   } catch {
-    return base;
+    return { fields: base, clip: null };
   }
 }
 
@@ -279,12 +324,17 @@ async function generateOverlayFields(
 // Clip de video (reel + historia-video): genera o reusa, lo deja en
 // tmpDir/clip.mp4, y sube el clip CRUDO a "AI Backgrounds" apenas existe
 // (restart-safe + reutilizable). Asume que el step "clip" existe.
+//
+// Qué describe el clip, en orden: lo que escribió el editor; si no escribió
+// nada, `derived` (la descripción sacada de la fuente); y sólo si tampoco hay,
+// el clip por defecto de los ajustes.
 async function resolveClip(
   strapi: any,
   job: StudioJob,
   req: GenerateRequest,
   folderId: number,
   tmpDir: string,
+  derived?: string | null,
 ): Promise<{ clipFileId: number; clipPath: string; seconds: number; vmKey: string }> {
   const vmKey = req.options.videoModel || DEFAULT_VIDEO_MODEL;
   const vm = VIDEO_MODELS[vmKey];
@@ -302,7 +352,9 @@ async function resolveClip(
     fs.copyFileSync(abs, clipPath);
     updateStep(job, "clip", { status: "done", detail: "clip existente (sin IA)" });
   } else {
-    const prompt = buildClipPrompt(await getPromptSettings(strapi), req.options.videoPrompt);
+    const escrito = req.options.videoPrompt?.trim();
+    const descripcion = escrito || derived?.trim() || undefined;
+    const prompt = buildClipPrompt(await getPromptSettings(strapi), descripcion);
     await generateClip({
       apiKey: getOpenRouterImageKey(),
       model: vmKey,
@@ -324,10 +376,19 @@ async function resolveClip(
       strapi,
       fs.readFileSync(clipPath),
       `studio-clip-${Date.now()}.mp4`,
-      req.options.videoPrompt?.slice(0, 120) || "Clip IA",
+      descripcion?.slice(0, 120) || "Clip IA",
       { folderId, mime: "video/mp4" },
     );
-    updateStep(job, "clip", { status: "done" });
+    // Queda a la vista qué se pidió: es lo único que explica un clip que no
+    // se parece a la nota.
+    updateStep(job, "clip", {
+      status: "done",
+      detail: !descripcion
+        ? "clip por defecto"
+        : escrito
+          ? descripcion.slice(0, 120)
+          : `desde la fuente: ${descripcion.slice(0, 100)}`,
+    });
   }
   return { clipFileId, clipPath, seconds, vmKey };
 }
@@ -343,6 +404,9 @@ async function runStoryVideo(
 ): Promise<void> {
   updateStep(job, "composicion", { status: "running" });
   let slide: Slide;
+  // La descripción del fondo que el modelo ya escribe al componer la placa:
+  // sale de la fuente, así que sirve de descripción del clip. Antes se tiraba.
+  let fondoDerivado: string | null = null;
   if (req.options.slide) {
     const s = sanitizeSlide(req.options.slide);
     if (!s) throw new Error("Slide inválido para recomponer.");
@@ -359,11 +423,19 @@ async function runStoryVideo(
       promptSettings: await getPromptSettings(strapi),
     });
     slide = res.slide;
+    fondoDerivado = res.coverPrompt;
     updateStep(job, "composicion", { status: "done" });
   }
 
   job.tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "studio-story-"));
-  const { clipFileId, clipPath, seconds, vmKey } = await resolveClip(strapi, job, req, folderId, job.tmpDir);
+  const { clipFileId, clipPath, seconds, vmKey } = await resolveClip(
+    strapi,
+    job,
+    req,
+    folderId,
+    job.tmpDir,
+    fondoDerivado,
+  );
 
   updateStep(job, "overlay", { status: "running" });
   const overlayPng = path.join(job.tmpDir, "overlay.png");
@@ -551,11 +623,15 @@ export async function runGenerateJob(strapi: any, job: StudioJob): Promise<void>
         const overlayType: OverlayType = req.options.overlay?.type ?? "title";
 
         updateStep(job, "textos", { status: "running" });
-        const fields = await generateOverlayFields(
+        // Sin prompt escrito y sin clip elegido, la descripción del clip sale
+        // de la fuente, en la misma llamada que los textos.
+        const wantClip = !req.options.clipFileId && !req.options.videoPrompt?.trim();
+        const { fields, clip } = await generateOverlayFields(
           strapi,
           material,
           overlayType,
           req.options.overlay?.fields ?? {},
+          wantClip,
         );
         if (overlayType === "title" && !fields.title?.trim()) fields.title = material.title.slice(0, 55);
         if (overlayType === "countdown" && !fields.big?.trim()) {
@@ -564,7 +640,14 @@ export async function runGenerateJob(strapi: any, job: StudioJob): Promise<void>
         updateStep(job, "textos", { status: "done" });
 
         job.tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "studio-reel-"));
-        const { clipFileId, clipPath, seconds, vmKey } = await resolveClip(strapi, job, req, folderId, job.tmpDir);
+        const { clipFileId, clipPath, seconds, vmKey } = await resolveClip(
+          strapi,
+          job,
+          req,
+          folderId,
+          job.tmpDir,
+          clip,
+        );
 
         updateStep(job, "overlay", { status: "running" });
         const overlayPng = path.join(job.tmpDir, "overlay.png");
