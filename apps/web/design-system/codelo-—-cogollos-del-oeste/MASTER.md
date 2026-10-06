@@ -17,7 +17,7 @@ que se descartó por genérica — ver *Historia* al final.
 ## De dónde sale todo: el logo
 
 La paleta **no se eligió de un catálogo**: se muestreó del logo real
-(`public/icons/logo.png`), un círculo con silueta vectorial plana de cannabis
+(`public/brand/logo.png`), un círculo con silueta vectorial plana de cannabis
 contra un sol de atardecer. Muestreo sobre 20.983 píxeles del círculo:
 
 | Muestra | Hex | Presencia |
@@ -47,7 +47,7 @@ Los dos hallazgos que definen el sistema:
 
 Las usan el **duotono** de portadas y la **banda del pie**. Son tratamientos de
 impresión, no superficies de interfaz: seguir el tema los rompe. Un bug real:
-cuando `.duotone` usaba `var(--ink)` —que sí se invierte— en modo oscuro la
+cuando el duotono (hoy `.cover-treatment`) usaba `var(--ink)` —que sí se invierte— en modo oscuro la
 imagen quedaba con `screen` sobre fondo claro, se saturaba a blanco y el velo
 ámbar la tapaba.
 
@@ -101,6 +101,34 @@ obligó y que a ojo no se ven:
 
 Si se agrega una tercera serie, revalidar — no estirar la paleta a ojo.
 
+**Cada sección tiene sus tokens.** `--data-rnc`/`--data-rnpc` significan
+registro de INASE y solo los usa `/semillas`. `/clima` tiene los suyos
+(`--data-calor`, `--data-agua`, …) y `/copa-cata` también: tres familias de
+premio, validadas con TODOS los pares porque la matriz y la leyenda los ponen
+juntos.
+
+```css
+--data-copa-flor:     #b96831;  /* claro */   #ce773e;  /* oscuro */
+--data-copa-extracto: #525ca1;  /* claro */   #6977d3;  /* oscuro */
+--data-copa-otro:     #902558;  /* claro */   #ac4278;  /* oscuro */
+```
+
+Sobre papel: CVD peor par ΔE 12.0, visión normal 17.7, contraste 3.36 / 5.03 /
+6.60. Sobre `#090c20`: ΔE 14.2, 18.2, contraste 5.84 / 4.77 / 3.51. El tercero
+iba a ser el oliva de `/clima`, pero junto al ocre colapsa con daltonismo
+(ΔE 1.5 en oscuro): por eso es un vino.
+
+Desde el 06/10/2026 `/copa-cata` es de noche en los dos temas y usa siempre los
+pasos oscuros, revalidados sobre su propia noche: ver `design-system/pages/copa-cata.md`, que
+para esa sección manda sobre este archivo.
+
+### Ocre para texto
+
+`--ember` da 2.13:1 sobre el papel: sirve para un filete o un ícono, no para
+texto chico. `--ember-texto` (`oklch(0.5 0.11 52)` en claro, el `--ember` del
+tema en oscuro) es el mismo tono con 5.11:1 sobre el papel. Hoy lo usa solo
+`/copa-cata`; el resto del sitio todavía escribe `label text-ember` a 2.13:1.
+
 ---
 
 ## Tipografía — cuatro roles
@@ -130,10 +158,17 @@ tracking `0.14em`.
 
 ## Firma: portadas en duotono PARCIAL
 
+Vive en `.cover-treatment` (`app/[lang]/vertical.css`), que envuelve la imagen:
+
 ```css
-filter: grayscale(0.55) contrast(1.5) brightness(1.06) saturate(1.15);
-/* + velo var(--brand-sun) en multiply al 45 % */
+/* claro */  filter: grayscale(0.35) brightness(1.26) saturate(1.9);
+/*           + velo var(--brand-sun) en multiply al 34 % y papel en screen al 6 % */
+/* oscuro */ filter: grayscale(0.55) contrast(1.5) brightness(1.06) saturate(1.15);
+/*           + velo var(--brand-sun) en multiply al 45 % */
 ```
+
+El claro se aflojó porque `contrast(1.5)` aplastaba las portadas nocturnas hasta
+dejarlas como un agujero sobre el papel; las cifras están comentadas en el CSS.
 
 Es el elemento por el que se reconoce el sitio. No es decoración:
 
@@ -186,7 +221,12 @@ Además, nunca:
 - Gradientes decorativos que no vengan del atardecer del logo.
 - Verde como color de marca (el logo no tiene verde).
 - Emojis como iconos — SVG de Lucide.
-- Imágenes de consumo, caras reconocibles o marcas (regla editorial, Art. 2°).
+- Imágenes de consumo, caras reconocibles o marcas (regla editorial, Art. 2°)
+  en lo que produce el sitio: portadas generadas, ilustraciones, láminas.
+  **Excepción, el material histórico de la asociación** (`/copa-cata`): las
+  fotos y piezas de la época van tal como circularon, con consumo y marcas,
+  porque son parte de la cultura cannábica y se cuentan sin tabú (decisión de
+  la asociación, 06/10/2026). Ahí también rige no mostrar caras reconocibles.
 
 ---
 

@@ -51,6 +51,22 @@ toca):
 - El sitemap: `apps/web/lib/vertical/sitemap.ts`.
 - El estilo: `apps/web/design-system/codelo-—-cogollos-del-oeste/MASTER.md`.
 
+Una sección con sub-páginas (modelo: `/copa-cata`, y antes `/semillas`):
+
+- Rutas anidadas: `<seccion>/[param]/page.tsx` que valida el parámetro y llama a
+  `notFound()`; sin `generateStaticParams`, porque el layout lee la cookie del
+  tema y todo el árbol es dinámico. Navegación interna propia: el header es
+  plano y ya no tiene lugar.
+- Datos tipados con su fuente en `lib/vertical/<seccion>/`, funciones puras en
+  un `stats.ts` y tests de invariantes sobre los datos reales (`datos.test.ts`).
+  El texto corrido, en un `textos.ts` para editarlo en un solo lugar.
+- Tarjeta para compartir propia: `opengraph-image.tsx` co-locado, 600×315 y
+  menos de 300 KB (el límite de WhatsApp; ver el del blog).
+- Gráficos: marcas en el `charts.tsx` de la ruta y tokens `--data-*` propios en
+  `theme.css`, validados con el skill de dataviz (ver MASTER.md).
+- JSON-LD armado en la página: `eventSchema()` nunca pone a la asociación como
+  organizadora, porque es para la agenda de terceros.
+
 ## Arquitectura
 
 | Pieza | Qué es | Puerto dev |
@@ -361,7 +377,7 @@ es neutro), sol ámbar `#E4B569`, papel `#F6E6CC`. Tipografía en cuatro roles:
 Big Shoulders **solo** para el nombre de la asociación, Zilla Slab en titulares,
 Literata en cuerpo, IBM Plex Mono en etiquetas.
 
-La firma son las **portadas en duotono parcial** (`.duotone` en `globals.css`).
+La firma son las **portadas en duotono parcial** (`.cover-treatment` en `app/[lang]/vertical.css`).
 Detalle no obvio: usa `--brand-ink`/`--brand-sun`, constantes que **NO se
 invierten con el tema**. Con los tokens normales, en modo oscuro la imagen
 quedaba en `screen` sobre fondo claro y el velo ámbar la tapaba.
@@ -428,7 +444,13 @@ con containers `codelo-*` y red `codelo-internal`; **sin servicio migrate**
 **Push a `main` = deploy.** Jenkins arranca solo, entre 1 y 5 minutos después,
 y recrea `codelo-cms` y `codelo-web` unos 6 minutos más tarde. Una rama que no
 sea `main` no despliega (`gitBranch: 'main'`): el trabajo en curso va en ramas y
-sale todo junto al mergear. El procedimiento:
+sale todo junto al mergear.
+
+Las fotos y los videos de `/copa-cata` no están en el repo: viven en la Media
+Library de Strapi (uploads, con prefijo `copa-cata-AAAA-`) y el sitio los lee de
+`lib/vertical/copa-cata/medios.ts`, que genera el pipeline del repo de
+secretaría. Son unos 130 MB: cada tarball diario de uploads del backup crece
+eso. El procedimiento:
 
 1. **Backup antes del push**, porque el pipeline no lo hace:
    `ssh cc-lab-contabo 'cd /opt/codelo && UPLOADS_RETENTION_DAYS=7 ./scripts/backup-postgres.sh'`

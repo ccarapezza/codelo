@@ -71,6 +71,30 @@
   --data-viento: #0f8fa8;
   --data-uv: #a8305c;
 
+  /* Tintas de dato de la Copa Cata (/copa-cata). Tokens PROPIOS, como los de
+     /clima: tres familias de premio, y el color sigue a la familia en todas
+     las figuras de la sección.
+       flor     → campeón, interior, exterior, podio general
+       extracto → rosin, hash, extracciones, mención de hash
+       otro     → menciones del jurado y de mesa, grow, otras menciones
+     Flor y extracto repiten los pasos ya validados del ocre y la tinta
+     abierta. El tercero NO es el verde de /clima: el plan lo proponía, pero
+     ocre y oliva colapsan con daltonismo cuando cualquier par puede quedar
+     al lado (la matriz y la leyenda): ΔE 3,6 protan en claro y 1,5 deutan
+     en oscuro. Se cambió por un vino buscado con el validador.
+     Validador del skill de dataviz, TODOS los pares, sobre papel #f6e6cc:
+     banda de luminosidad y croma OK, CVD peor par ΔE 12.0 (deutan), visión
+     normal 17.7, contraste 3.36 / 5.03 / 6.60 a 1.                        */
+  --data-copa-flor: #b96831;
+  --data-copa-extracto: #525ca1;
+  --data-copa-otro: #902558;
+
+  /* Ocre para TEXTO chico (rótulos, enlaces, cejas). --ember da 2,13:1 sobre
+     el papel: no llega al piso de 4,5:1 del texto. Este paso es el mismo tono
+     (h 52) más oscuro: 5,11:1 sobre el papel y 4,54:1 sobre --muted. Por ahora
+     lo usa la Copa Cata; el resto del sitio sigue con --ember.             */
+  --ember-texto: oklch(0.5 0.11 52);
+
   --background: oklch(0.931 0.039 80); /* #F6E6CC papel tintado con el ámbar */
   --foreground: oklch(0.145 0.045 275);
   --card: oklch(0.972 0.022 80);
@@ -135,6 +159,17 @@
   --data-vegetal: #7f9c22;
   --data-viento: #28a0b8;
   --data-uv: #d4577f;
+
+  /* Copa Cata, revalidados sobre #090c20 con TODOS los pares: CVD peor par
+     ΔE 14.2 (deutan), visión normal 18.2, contraste 5.84 / 4.77 / 3.51 a 1.
+     El vino oscuro está ELEGIDO, no aclarado: el paso de --data-uv quedaba a
+     ΔE 12.6 del ocre en visión normal, debajo del piso de 15.            */
+  --data-copa-flor: #ce773e;
+  --data-copa-extracto: #6977d3;
+  --data-copa-otro: #ac4278;
+
+  /* En oscuro el ocre de interfaz ya pasa: 8,77:1 sobre #090c20. */
+  --ember-texto: oklch(0.762 0.124 52);
 
   --background: oklch(0.165 0.042 275);
   --foreground: oklch(0.93 0.015 78);
