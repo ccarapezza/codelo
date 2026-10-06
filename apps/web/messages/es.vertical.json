@@ -351,7 +351,8 @@
     "normativa": "Normativa",
     "seeds": "Semillas",
     "events": "Actividades",
-    "weather": "Clima"
+    "weather": "Clima",
+    "copaCata": "Copa Cata (2014–2022)"
   },
   "pages": {
     "eyebrowAbout": "La asociación",
@@ -369,5 +370,82 @@
   },
   "tags": {
     "seoDescription": "Notas y novedades sobre {name} en el portal de Cogollos del Oeste."
+  },
+  "copa": {
+    "title": "Copa Cata del Oeste",
+    "nav": {
+      "aria": "Secciones de la Copa Cata del Oeste",
+      "inicio": "La Copa",
+      "palmares": "Palmarés",
+      "anterior": "Anterior",
+      "siguiente": "Siguiente",
+      "vecinas": "Edición anterior y siguiente"
+    },
+    "secciones": {
+      "manifiesto": "La ronda",
+      "enNumeros": "En números",
+      "ediciones": "Las cosechas",
+      "records": "Récords de la Copa",
+      "datos": "La edición en datos",
+      "podio": "El podio",
+      "galeria": "La galería",
+      "videos": "Videos",
+      "graficas": "Afiches y piezas",
+      "premios": "Los premios",
+      "cifras": "El palmarés en cifras"
+    },
+    "riel": {
+      "anterior": "Ver anteriores",
+      "siguiente": "Ver siguientes"
+    },
+    "edicion": {
+      "cronica": "Leer la crónica completa"
+    },
+    "palmares": {
+      "title": "Todos los premios",
+      "cta": "Todos los premios, copa por copa",
+      "anio": "Edición",
+      "categoria": "Categoría",
+      "todas": "Todas",
+      "familias": "Por familia",
+      "categorias": "Por categoría",
+      "q": "Buscar",
+      "qPlaceholder": "Genética, banco o nombre",
+      "filtrar": "Filtrar",
+      "limpiar": "Limpiar",
+      "filtrarGenetica": "Ver todos los premios de {genetica}",
+      "col": {
+        "categoria": "Categoría",
+        "premio": "Premio",
+        "ganador": "Ganador",
+        "genetica": "Genética",
+        "banco": "Banco",
+        "muestra": "Muestra",
+        "premios": "Premios",
+        "ediciones": "Ediciones"
+      }
+    },
+    "galeria": {
+      "foto": "Foto {n} de {total}",
+      "grafica": "Gráfica {n} de {total}",
+      "anterior": "Anterior",
+      "siguiente": "Siguiente",
+      "cerrar": "Cerrar"
+    },
+    "videos": {
+      "reel": "Reel",
+      "historia": "Historia",
+      "facebook": "Video de Facebook"
+    },
+    "graficas": {
+      "afiche": "Afiche",
+      "flyer": "Flyer",
+      "logo": "Logo",
+      "placa-ganadores": "Placa de ganadores",
+      "placa-sponsors": "Placa de sponsors",
+      "entrada": "Entrada",
+      "credencial": "Credencial",
+      "rotulo": "Rótulo"
+    }
   }
 }

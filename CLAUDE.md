@@ -37,6 +37,36 @@ Dónde vive lo nuestro:
 `docs/adoptar-nib.md` en el repo de Nib tiene la tabla completa de qué archivo
 es de quién. Antes de tocar algo fuera de esa lista, pensar dos veces.
 
+**Agregar una sección a la web** (todo cae en costuras; ningún merge de Nib lo
+toca):
+
+- La página: `apps/web/app/[lang]/(vertical)/<seccion>/page.tsx`.
+- El contenido y la vista: datos en `apps/web/lib/vertical/`, componentes en
+  `apps/web/components/vertical/` (`QuienesSomosView.tsx` sirve de modelo).
+- Las imágenes: en una carpeta NUEVA de `apps/web/public/` (como
+  `public/illustrations/`). No en `public/brand/`: Nib tiene una carpeta con ese
+  nombre, y un merge puede pisar lo que coincida.
+- El menú y el pie: `NAV_ITEMS` y `FOOTER_SECTIONS` en `apps/web/lib/site.ts`, con
+  el texto en `messages/es.vertical.json` → `nav`.
+- El sitemap: `apps/web/lib/vertical/sitemap.ts`.
+- El estilo: `apps/web/design-system/codelo-—-cogollos-del-oeste/MASTER.md`.
+
+Una sección con sub-páginas (modelo: `/copa-cata`, y antes `/semillas`):
+
+- Rutas anidadas: `<seccion>/[param]/page.tsx` que valida el parámetro y llama a
+  `notFound()`; sin `generateStaticParams`, porque el layout lee la cookie del
+  tema y todo el árbol es dinámico. Navegación interna propia: el header es
+  plano y ya no tiene lugar.
+- Datos tipados con su fuente en `lib/vertical/<seccion>/`, funciones puras en
+  un `stats.ts` y tests de invariantes sobre los datos reales (`datos.test.ts`).
+  El texto corrido, en un `textos.ts` para editarlo en un solo lugar.
+- Tarjeta para compartir propia: `opengraph-image.tsx` co-locado, 600×315 y
+  menos de 300 KB (el límite de WhatsApp; ver el del blog).
+- Gráficos: marcas en el `charts.tsx` de la ruta y tokens `--data-*` propios en
+  `theme.css`, validados con el skill de dataviz (ver MASTER.md).
+- JSON-LD armado en la página: `eventSchema()` nunca pone a la asociación como
+  organizadora, porque es para la agenda de terceros.
+
 ## Arquitectura
 
 | Pieza | Qué es | Puerto dev |
@@ -64,6 +94,11 @@ cp apps/web/.env.example apps/web/.env   # NEXT_PUBLIC_CMS_URL=http://localhost:
 pnpm dev:cms    # Strapi en http://localhost:1339 (primer boot compila el admin, ~1 min)
 pnpm dev:web    # Next en http://localhost:3200
 ```
+
+**Para trabajar sólo en la web** no hace falta nada de lo anterior salvo
+`pnpm install`: con `NEXT_PUBLIC_CMS_URL=https://cms.cogollosdeloeste.com.ar` en
+`apps/web/.env`, la web local lee el blog y las páginas de la API pública de
+producción (sólo lectura). Sin Docker, sin CMS local, sin base.
 
 ### Primer arranque del CMS
 
@@ -105,8 +140,8 @@ pnpm dev:web    # Next en http://localhost:3200
   sin fuente y publicar, y cuando rechaza por algo "que no está en ninguna
   fuente" el motor lo busca en la evidencia y, si aparece, le pide una segunda
   lectura. En Auditoría: "Frases quitadas" y "Segunda lectura". Su modelo se
-  elige aparte en Sitio e integraciones (vacío = el de texto); se dejó vacío a
-  propósito para medir primero el efecto del prompt y la guarda.
+  elige aparte en Sitio e integraciones (vacío = el de texto); desde el
+  30-sep-2026 es `gpt-5.4` (ver "Sin mirada punitiva").
 
 ## Editor de notas del admin — NO usar el Content Manager
 
@@ -336,13 +371,13 @@ imprimen las placas mientras no haya uno subido.
 
 ## Diseño de la web — dirección "Dos Tintas"
 
-La paleta se **muestreó del logo real** (`apps/web/public/icons/logo.png`),
+La paleta se **muestreó del logo real** (`apps/web/public/brand/logo.png`),
 no se eligió de un catálogo: tinta azul-negra `#00001C` (el "negro" del logo NO
 es neutro), sol ámbar `#E4B569`, papel `#F6E6CC`. Tipografía en cuatro roles:
 Big Shoulders **solo** para el nombre de la asociación, Zilla Slab en titulares,
 Literata en cuerpo, IBM Plex Mono en etiquetas.
 
-La firma son las **portadas en duotono parcial** (`.duotone` en `globals.css`).
+La firma son las **portadas en duotono parcial** (`.cover-treatment` en `app/[lang]/vertical.css`).
 Detalle no obvio: usa `--brand-ink`/`--brand-sun`, constantes que **NO se
 invierten con el tema**. Con los tokens normales, en modo oscuro la imagen
 quedaba en `screen` sobre fondo claro y el velo ámbar la tapaba.
@@ -379,8 +414,9 @@ Gotchas:
   contra el `ContentType` genérico. El comando no necesita base de datos.
 - **`ENOSPC` / dev servers que se caen solos**: VS Code agota los watchers de
   inotify vigilando `node_modules` y `dist` (llegó a 63.000 de 65.536). Hay un
-  `files.watcherExclude` en `.vscode/settings.json`; si aparece igual, revisar
-  con `cat /proc/sys/fs/inotify/max_user_watches` y recargar las ventanas.
+  `files.watcherExclude` en `.vscode/settings.json` (versionado aunque
+  `.vscode/` esté en el `.gitignore`); si aparece igual, revisar con
+  `cat /proc/sys/fs/inotify/max_user_watches` y recargar las ventanas.
 - ES-only: `i18n/routing.ts` tiene `locales: ["es"]`. Para sumar un idioma se
   extiende ese array + se agrega `messages/<locale>.json`.
 
@@ -404,3 +440,28 @@ externa `proxy-edge`; nada publica puertos al host). `docker-compose.prod.yml`
 con containers `codelo-*` y red `codelo-internal`; **sin servicio migrate**
 (Strapi gestiona su schema en el boot). Pipeline: `Jenkinsfile` (shared lib
 `westcode-shared`, `remoteDir /opt/codelo`, secrets Jenkins `codelo-*`).
+
+**Push a `main` = deploy.** Jenkins arranca solo, entre 1 y 5 minutos después,
+y recrea `codelo-cms` y `codelo-web` unos 6 minutos más tarde. Una rama que no
+sea `main` no despliega (`gitBranch: 'main'`): el trabajo en curso va en ramas y
+sale todo junto al mergear.
+
+Las fotos y los videos de `/copa-cata` no están en el repo: viven en la Media
+Library de Strapi (uploads, con prefijo `copa-cata-AAAA-`) y el sitio los lee de
+`lib/vertical/copa-cata/medios.ts`, que genera el pipeline del repo de
+secretaría. Son unos 130 MB: cada tarball diario de uploads del backup crece
+eso. El procedimiento:
+
+1. **Backup antes del push**, porque el pipeline no lo hace:
+   `ssh cc-lab-contabo 'cd /opt/codelo && UPLOADS_RETENTION_DAYS=7 ./scripts/backup-postgres.sh'`
+   (queda en `/var/backups/codelo`).
+2. **Push por SSH**: `git push git@github.com:ccarapezza/codelo.git main`. El
+   `origin` es HTTPS y puede no tener credenciales en la máquina.
+3. **Verificar**: `https://cms.cogollosdeloeste.com.ar/_health` (204),
+   `https://cogollosdeloeste.com.ar/api/health` y
+   `ssh cc-lab-contabo 'docker logs codelo-cms 2>&1 | grep -E "\[seed\]|IGNORADOS|error"'`.
+
+Si un deploy "no hace nada" (Jenkins termina bien pero el commit del VPS no se
+mueve), lo primero es `ssh cc-lab-contabo 'cd /opt/codelo && git status --short'`:
+un archivo editado a mano en el VPS hace fallar el `git pull --ff-only` y frena
+todos los deploys en silencio. A fulbo le pasó durante un mes.

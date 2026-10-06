@@ -1,0 +1,22 @@
+{
+  // Excluye del file watcher las carpetas generadas. Sin esto, VS Code vigila
+  // node_modules (~17.700 directorios solo en este repo), .next y dist, y agota
+  // el límite de inotify del sistema (fs.inotify.max_user_watches): el dev
+  // server de Next y `strapi develop` empiezan a caerse con ENOSPC sin causa
+  // aparente. Duplicado en los settings de usuario para que aplique también a
+  // los repos hermanos (fulbo, x100, pingpong).
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.next/**": true,
+    "**/dist/**": true,
+    "**/build/**": true,
+    "**/.turbo/**": true,
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.next": true,
+    "**/dist": true
+  }
+}

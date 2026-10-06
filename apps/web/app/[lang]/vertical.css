@@ -69,6 +69,18 @@
   content: none;
 }
 
+/* Variante para fotos de archivo de eventos, casi todas nocturnas o de interior.
+   En oscuro conserva el tratamiento del modo claro: con contrast(1.5) las
+   sombras se aplastan y buena parte de las miniaturas quedaban casi negras,
+   el mismo problema que llevó a aflojar el filtro claro de las portadas. */
+.dark .cover-treatment--suave > img,
+.dark .cover-treatment--suave > * > img {
+  filter: grayscale(0.35) brightness(1.26) saturate(1.9);
+}
+.dark .cover-treatment--suave::after {
+  opacity: 0.34;
+}
+
 /* Etiquetas de sección/metadata: el registro de ficha que separa dato de
    relato. Mono, versalitas, tracking abierto. */
 
@@ -314,8 +326,8 @@
      mirando el sello A SU TAMAÑO REAL (44 px) — ampliado engaña, y una primera
      versión que se veía bien al doble quedaba imperceptible en la página. */
   background-color: oklch(0.245 0.055 275);
-  -webkit-mask-image: url("/icons/logo.png");
-  mask-image: url("/icons/logo.png");
+  -webkit-mask-image: url("/brand/logo.png");
+  mask-image: url("/brand/logo.png");
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
@@ -733,3 +745,231 @@
 .dark .placa {
   box-shadow: inset 0 1px 0 oklch(0.949 0.017 78 / 10%);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NOCHE — la sección histórica de la Copa (/copa-cata)
+
+   La única parte del sitio con atmósfera propia: es noche en los DOS temas.
+   `.copa-noche` envuelve el contenido de cada página de la sección y redefine
+   los tokens del tema solo para lo que tiene adentro, así los componentes —y
+   las primitivas de los gráficos— siguen usando los mismos nombres
+   (background, foreground, rule…) y quedan sobre la noche sin enterarse. La
+   cabecera y el pie del sitio quedan afuera y no cambian. Spec y razones:
+   design-system/pages/copa-cata.md.
+
+   La noche es la tinta de las ilustraciones de la sección, un punto más clara:
+   rgb(4 10 42) contra rgb(2 6 36) de mediana en sus fondos. Ese punto es el que
+   deja imprimirlas con `lighten`: todo lo que en la imagen es más oscuro que la
+   página queda en el color de la página, y el rectángulo desaparece. Con
+   `screen` no pasa: la tinta de las imágenes no es negra (azul 0,14) y `screen`
+   la sube a 0,27, una franja azul a la vista.
+
+   Contraste del texto (WCAG), sobre la noche / sobre --card:
+     papel   oklch(0.94 0.03 82)    16,3 / 14,9
+     gris    oklch(0.78 0.035 80)    9,6 /  8,8
+     ocre    oklch(0.762 0.124 52)   8,8 /  8,1
+     ámbar   oklch(0.842 0.112 76)  11,8 / 10,8
+   Sobre el halo ámbar de arriba de la página, el peor caso del gris es 8,3.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.copa-noche {
+  --noche: oklch(0.165 0.066 268);
+  --background: var(--noche);
+  --foreground: oklch(0.94 0.03 82);
+  --card: oklch(0.21 0.06 268);
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.842 0.112 76);
+  --primary-foreground: var(--noche);
+  --secondary: oklch(0.245 0.055 268);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.245 0.055 268);
+  --muted-foreground: oklch(0.78 0.035 80);
+  --accent: oklch(0.28 0.06 268);
+  --accent-foreground: var(--foreground);
+  --border: oklch(0.949 0.017 78 / 16%);
+  --input: oklch(0.949 0.017 78 / 22%);
+  --ring: oklch(0.842 0.112 76);
+  --ink: var(--foreground);
+  --sun: oklch(0.842 0.112 76);
+  --ember: oklch(0.762 0.124 52);
+  --ember-texto: oklch(0.762 0.124 52);
+  --rule: oklch(0.949 0.017 78 / 16%);
+  /* Tintas de dato: los pasos oscuros de theme.css, revalidados sobre esta
+     noche con el validador del skill de dataviz, TODOS los pares: banda y
+     croma OK, CVD peor par ΔE 14.2 (deutan), visión normal 18.2, contraste
+     5.85 / 4.79 / 3.52 a 1. */
+  --data-copa-flor: #ce773e;
+  --data-copa-extracto: #6977d3;
+  --data-copa-otro: #ac4278;
+  /* El halo de foco y de hover: ámbar, nunca una sombra gris. */
+  --brillo: oklch(0.842 0.112 76 / 42%);
+  /* Esquinas más blandas que en el resto del sitio: acá manda la órbita, no
+     la imprenta. Los `rounded-*` del puente de tokens las siguen solos. */
+  --radius: 0.5rem;
+
+  position: relative;
+  isolation: isolate;
+  color-scheme: dark;
+  color: var(--foreground);
+  background-color: var(--background);
+  /* La luz baja desde arriba, como el sol de la portada: el ámbar del logo,
+     el único gradiente que el sitio se permite. Abajo, la noche se cierra en
+     la tinta del pie, que es más oscura, para que no quede un escalón. */
+  background-image:
+    radial-gradient(120% 55% at 50% 0%, oklch(0.842 0.112 76 / 9%), transparent 72%),
+    linear-gradient(to bottom, transparent calc(100% - 14rem), var(--brand-ink));
+}
+
+/* El velo de papel del duotono existe para el papel: en la noche sobra, y sin
+   él las fotos se ven igual en los dos temas. */
+.copa-noche .cover-treatment::before {
+  content: none;
+}
+
+/* El cielo: el campo de estrellas de la sección, que se repite sin cortes, en
+   dos capas que titilan a destiempo. `lighten` se queda con lo más claro de
+   cada punto: pasan las estrellas y el fondo de la imagen desaparece. La
+   imagen llega por la variable `--estrellas`, que la página pone desde lib/.
+   La opacidad tiene techo: 0,16. Es lo que deja al texto más chico (ocre o
+   gris) en 4,5:1 o más aun con una estrella blanca justo detrás, también bajo
+   el halo ámbar de arriba. */
+.copa-noche::before,
+.copa-noche::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: var(--estrellas);
+  mix-blend-mode: lighten;
+}
+.copa-noche::before {
+  background-size: 640px;
+  opacity: 0.14;
+}
+.copa-noche::after {
+  background-size: 460px;
+  background-position: 230px 140px;
+  opacity: 0.1;
+}
+
+/* Las ilustraciones se imprimen sobre la noche, no se pegan encima. La clase
+   va en el contenedor que lleva la máscara o la animación, no en la imagen:
+   la máscara y el `transform` arman un grupo aislado, y una imagen que se
+   mezcla adentro de ese grupo no ve la página. */
+.copa-arte {
+  mix-blend-mode: lighten;
+}
+
+/* Fundidos: el arte se apaga en los bordes en vez de cortarse. */
+.copa-fundido-abajo {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 56%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 56%, transparent 100%);
+}
+.copa-fundido {
+  -webkit-mask-image:
+    linear-gradient(to bottom, transparent 0, #000 9%, #000 86%, transparent 100%),
+    linear-gradient(to right, transparent 0, #000 9%, #000 91%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to bottom, transparent 0, #000 9%, #000 86%, transparent 100%),
+    linear-gradient(to right, transparent 0, #000 9%, #000 91%, transparent 100%);
+  mask-composite: intersect;
+}
+
+/* Bandas entre bloques: decoración pura. */
+.copa-ornamento {
+  pointer-events: none;
+  mix-blend-mode: lighten;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 14%, #000 86%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 14%, #000 86%, transparent 100%);
+}
+/* La banda de cierre crece desde el borde de abajo: se funde arriba y a los
+   costados, y apoya entera sobre el pie. */
+.copa-ornamento--cierre {
+  -webkit-mask-image:
+    linear-gradient(to bottom, transparent 0, #000 42%),
+    linear-gradient(to right, transparent 0, #000 12%, #000 88%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to bottom, transparent 0, #000 42%),
+    linear-gradient(to right, transparent 0, #000 12%, #000 88%, transparent 100%);
+  mask-composite: intersect;
+}
+
+/* Brillo ámbar en hover y en foco: lo que en el resto del sitio es un filete,
+   acá es luz. Nunca levanta ni agranda: solo se enciende. */
+.copa-brillo {
+  outline: none;
+  transition:
+    box-shadow 0.25s ease,
+    border-color 0.25s ease,
+    color 0.2s ease;
+}
+.copa-brillo:hover:not(:disabled) {
+  box-shadow:
+    0 0 0 1px oklch(0.842 0.112 76 / 55%),
+    0 0 28px -4px var(--brillo);
+}
+.copa-brillo:focus-visible {
+  outline: 2px solid var(--sun);
+  outline-offset: 3px;
+  box-shadow: 0 0 30px -4px var(--brillo);
+}
+
+/* Cifras y piezas encendidas: el ámbar con su halo. */
+.copa-luz {
+  text-shadow: 0 0 22px oklch(0.842 0.112 76 / 30%);
+}
+.copa-halo {
+  background-image: radial-gradient(90% 70% at 0% 0%, oklch(0.842 0.112 76 / 14%), transparent 70%);
+}
+
+/* Riel: una fila que se desliza y frena en cada pieza. `--riel-margen` es el
+   margen de la página: con él la primera pieza arranca alineada con el texto
+   y la fila igual corre hasta el borde de la pantalla. */
+.copa-riel {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--riel-margen, 0px);
+  padding: 0.5rem var(--riel-margen, 0px) 1.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.949 0.017 78 / 28%) transparent;
+}
+.copa-riel > li {
+  flex: none;
+  scroll-snap-align: start;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes copa-titila {
+    from {
+      opacity: 0.04;
+    }
+    to {
+      opacity: 0.16;
+    }
+  }
+  @keyframes copa-flota {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(-10px);
+    }
+  }
+  .copa-noche::before {
+    animation: copa-titila 7s ease-in-out infinite alternate;
+  }
+  .copa-noche::after {
+    animation: copa-titila 4.5s ease-in-out -2s infinite alternate-reverse;
+  }
+  .copa-flota {
+    animation: copa-flota 9s ease-in-out infinite alternate;
+  }
+}
+/* ═══════════ FIN NOCHE ═══════════ */

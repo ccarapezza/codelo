@@ -5,6 +5,7 @@
 // proyecto sin páginas propias exporta una lista vacía y una función que
 // devuelve nada.
 
+import { ANIOS } from "./copa-cata";
 import { getCultivares } from "./semillas";
 
 /** Rutas estáticas propias, sin el prefijo de idioma. */
@@ -19,17 +20,22 @@ export const VERTICAL_STATIC_PATHS = [
   "/semillas/operadores",
   "/semillas/rotulo",
   "/semillas/leer",
+  "/copa-cata",
+  "/copa-cata/palmares",
 ];
 
 /**
  * Rutas dinámicas propias.
  *
- * Acá: la ficha de cada cultivar del espejo de INASE. Cada una es una página
- * de registro público que vale indexar —la gente busca por nombre de
- * variedad— y el espejo se refresca semanal, de ahí la baja frecuencia de
- * cambio que les pone el motor.
+ * Acá: la ficha de cada edición de la Copa Cata —salen de datos versionados,
+ * no del CMS, así que van primero y no dependen de que el CMS responda— y la
+ * de cada cultivar del espejo de INASE. Las fichas de cultivar son páginas de
+ * registro público que vale indexar —la gente busca por nombre de variedad—
+ * y el espejo se refresca semanal, de ahí la baja frecuencia de cambio que
+ * les pone el motor.
  */
 export async function extraSitemapPaths(): Promise<string[]> {
+  const copa = ANIOS.map((anio) => `/copa-cata/${anio}`);
   const cultivares = await getCultivares();
-  return cultivares.map((c) => `/semillas/${c.numeroRegistro}`);
+  return [...copa, ...cultivares.map((c) => `/semillas/${c.numeroRegistro}`)];
 }
