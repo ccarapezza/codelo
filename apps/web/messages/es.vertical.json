@@ -392,6 +392,7 @@
       "galeria": "La galería",
       "videos": "Videos",
       "graficas": "Afiches y piezas",
+      "objetos": "De mano en mano",
       "premios": "Los premios",
       "cifras": "El palmarés en cifras"
     },
@@ -432,6 +433,7 @@
     "galeria": {
       "foto": "Foto {n} de {total}",
       "grafica": "Gráfica {n} de {total}",
+      "objeto": "Pieza {n} de {total}",
       "anterior": "Anterior",
       "siguiente": "Siguiente",
       "cerrar": "Cerrar"
@@ -449,7 +451,10 @@
       "placa-sponsors": "Placa de sponsors",
       "entrada": "Entrada",
       "credencial": "Credencial",
-      "rotulo": "Rótulo"
+      "rotulo": "Rótulo de muestra",
+      "sticker": "Sticker",
+      "ficha-cata": "Ficha de cata",
+      "etiqueta-premio": "Etiqueta de premio"
     }
   },
   "archivo": {

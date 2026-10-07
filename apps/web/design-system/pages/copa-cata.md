@@ -122,6 +122,83 @@ y sin logos. Rutas, medidas y `alt` en `lib/vertical/copa-cata/ilustraciones.ts`
 
 ---
 
+## De mano en mano: los objetos de la época
+
+Las piezas que circularon en la mano —credenciales, entradas, stickers,
+rótulos de muestra, fichas de cata y etiquetas de premio— no van en el riel
+de gráficas: tienen su bloque, «De mano en mano», y se dibujan como cosas. Los
+afiches, flyers, logos y placas siguen planos en «Afiches y piezas». Qué tipo
+es objeto y de qué material lo dice `MATERIAL_OBJETO` (`lib/vertical/copa-cata/tipos.ts`),
+salvo que la pieza declare el suyo (`material` en `graficas.ts`): la credencial
+de 2022 no era un plastificado sino una tarjeta de papel para escanear. El
+bloque va después del podio o, sin podio, pegado a la banda de órbitas.
+Hoy hay objetos en 2014 (las dos credenciales y un rótulo), 2017 (entrada,
+sticker y ficha), 2019 (ficha), 2021 (entrada, rótulo y dos etiquetas de
+premio) y 2022 (la credencial de participante). Las credenciales de 2015 a 2019
+se ven en fotos de la galería, pero los originales no están en el archivo. La
+de 2022 es una reconstrucción a partir de fotos del evento (paso
+`09_credencial_2022.py` del repo de secretaría): la etiqueta va sin el nombre ni
+el QR, con el número y un mote que ya publica el palmarés, y `datos.test.ts`
+vigila que siga siendo así.
+
+**Materiales** (`data-material`, bloque de objetos en `vertical.css`):
+
+| Material | Qué | Cómo se ve |
+| --- | --- | --- |
+| `plastico` | Credenciales | Laminado casi transparente (la noche se ve a través) con filo claro, la ranura del cordón, un gancho de metal y un cordón oscuro que se apaga hacia arriba. **Cuelga**. Reflejo doble —una franja nítida y otra difusa— en `screen`: no aclara lo blanco, se ve sobre lo oscuro y el color |
+| `vinilo` | Stickers | El borde blanco del corte y un brillo leve |
+| `adhesivo` | Rótulos de muestra | Apenas satinado |
+| `papel` | Entradas, fichas, etiquetas de premio y la credencial de 2022 | Mate: no refleja, lo recorre una luz ancha y tenue. No cuelga: flota |
+
+El recorte y el color salen del pipeline (`07_graficas.py`, con su perfil ICC:
+las planchas de 2014 son CMYK); el material es solo CSS, así el visor muestra
+la pieza tal cual. Las credenciales traen alfa en las esquinas redondeadas.
+
+**El motor de inclinación.** Capas, de afuera hacia adentro:
+`.objeto` (el botón; recibe las variables) › `.objeto-escena` (la
+perspectiva, 62rem; es lo que se mide, porque no se mueve) › `.objeto-vaiven`
+(el vaivén en reposo) › `.objeto-inclina` (lo que sigue al puntero) ›
+`.objeto-pieza` (el material) › `.objeto-brillo` (el reflejo).
+
+- **En reposo se mueven solos**, también en el teléfono: animación CSS, sin
+  JS. Lo que cuelga oscila como un péndulo desde 6rem arriba (±1,3° y un giro
+  de ±8°); lo demás flota (±2,5° y ±5°, medio rem de subida). Cada uno tiene
+  su pose, su duración (6,2 a 8 s) y su desfasaje: no se mueven al unísono. El
+  reflejo corre al mismo compás.
+- **Con el mouse**, `Objetos.tsx` escribe `--rx` y `--ry` (grados, máximo 9 y
+  13) y `--gx` y `--gy` (de 0 a 1) en el botón, a lo sumo una vez por cuadro.
+  El lado del puntero se hunde y el reflejo va hacia el puntero. Mientras
+  sigue, la transición es de 0,15 s; al salir se borran las variables y vuelve
+  en 0,8 s. El vaivén se pausa donde está, sin salto. La cuenta es pura
+  (`inclinacion.ts`) y tiene test.
+- **El dedo no inclina**: arrastrar es desplazar la página, y el objeto ya se
+  mueve solo. Tocarlo abre el visor.
+- **Teclado**: foco visible —contorno ámbar de 2 px a 6 px de la pieza, que
+  sigue sus esquinas y su inclinación— más el halo; con el foco la pieza se
+  queda quieta y se inclina hacia quien la mira. Enter abre el visor de la
+  sección («Pieza 2 de 3»), ← y → recorren y al cerrar el foco vuelve al objeto
+  que se estaba viendo.
+- **Movimiento reducido**: sin vaivén y sin inclinación, ni con el mouse ni
+  con el foco. Quedan en su pose de reposo, apenas giradas, con el reflejo
+  quieto.
+- **Rendimiento**: todo lo que se mueve es `transform`; el halo es la
+  opacidad de un pseudo-elemento. `will-change` solo en el vaivén y, mientras
+  sigue al puntero, en la inclinación. Medido el 07/10/2026 en Chrome: 3 s de
+  reposo, 0 layouts; 2 s de mouse encima, 0 layouts y 62 ms de recálculo de
+  estilos.
+
+**Tamaños**: más o menos a escala entre sí (la credencial de 2014 mide 81 mm;
+la entrada, 135), salvo la ficha, que a escala taparía al resto. La credencial
+apaisada de 2022 (unos 130 mm) toma el ancho de una entrada. En el teléfono las
+dos credenciales de 2014 entran de a par.
+
+**El remate de la portada**: la credencial de socio participante de 2014
+cuelga en la columna del manifiesto, al lado de «La Copa nació en 2014 como
+una cata entre socios», y entra a la edición. Solo desde 1024 px: en el
+teléfono empujaría el texto.
+
+---
+
 ## La ventana de la home
 
 `CopaCataHome.tsx` abre la noche dentro de la portada del sitio, en la columna
@@ -152,6 +229,7 @@ bajada de la portada.
 | **Esquinas blandas** (`--radius: 0.5rem` local; píldoras en navegación y botones) | Manda la órbita, no la imprenta | Tarjetas con sombra |
 | **Gradientes de luz**: el halo ámbar de arriba, el cierre hacia la tinta | Son el sol y la noche del logo | Gradientes de color ajenos a la paleta |
 | **Movimiento sutil**: estrellas que titilan, la ilustración que flota 10 px | Da vida sin pedir atención | Cualquier animación con `prefers-reduced-motion: reduce` (todo va bajo `no-preference`) |
+| **Objetos en 3D**: credenciales, entradas y rótulos que se mecen, se inclinan con el puntero y brillan según su material | Son cosas que pasaron de mano en mano, no imágenes: el movimiento cuenta de qué estaban hechas | Que levanten, crezcan o se acerquen: se inclinan en su lugar. Sombras grises: la suya es de la tinta de la noche |
 | **Ilustraciones con la planta** en la portada, el encabezado y los separadores | Es la sección del material histórico: la Copa se cuenta sin tabú (decisión del 06/10/2026) | Personas reconocibles, apellidos, cuentas personales; marcas en el texto |
 
 La pieza de la época que acompaña a la ilustración en el encabezado de cada

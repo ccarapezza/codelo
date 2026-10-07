@@ -11,17 +11,20 @@ import {
   enNumeros,
   esCategoria,
   esFamilia,
+  esObjeto,
   filtrarPremios,
   filtroDeParams,
   fold,
   ganadoresRecurrentes,
   geneticasRepetidas,
+  materialDe,
   matrizCategorias,
   premiosPorCategoria,
   records,
+  repartirPiezas,
   slug,
 } from "./stats";
-import type { Anio, Edicion, Premio } from "./tipos";
+import type { Anio, Edicion, Grafica, Premio, TipoGrafica } from "./tipos";
 
 const vacio = { valor: null, fuente: null };
 
@@ -387,5 +390,60 @@ describe("filtroDeParams", () => {
   it("colapsa espacios y corta la búsqueda en el largo máximo", () => {
     expect(filtroDeParams({ q: "tío    guille" }, ANIOS).q).toBe("tío guille");
     expect(filtroDeParams({ q: "x".repeat(Q_MAXIMO + 50) }, ANIOS).q).toHaveLength(Q_MAXIMO);
+  });
+});
+
+describe("objetos y gráficas planas", () => {
+  const pieza = (id: string, tipo: TipoGrafica): Grafica => ({
+    id,
+    edicion: 2014,
+    tipo,
+    src: `/copa-cata/2014/${id}.webp`,
+    width: 10,
+    height: 10,
+    alt: "Pieza de prueba",
+    fuente: "f",
+  });
+
+  it("lo que pasó de mano en mano es objeto; afiches, flyers, logos y placas, no", () => {
+    for (const t of ["credencial", "entrada", "sticker", "rotulo", "ficha-cata", "etiqueta-premio"] as const) {
+      expect(esObjeto(pieza("a", t)), t).toBe(true);
+    }
+    for (const t of ["afiche", "flyer", "logo", "placa-ganadores", "placa-sponsors"] as const) {
+      expect(esObjeto(pieza("a", t)), t).toBe(false);
+    }
+  });
+
+  it("cada objeto tiene su material: la credencial es plástico, el sticker vinilo, la entrada papel", () => {
+    const material = (t: TipoGrafica) => {
+      const g = pieza("a", t);
+      if (!esObjeto(g)) throw new Error(t);
+      return materialDe(g);
+    };
+    expect(material("credencial")).toBe("plastico");
+    expect(material("sticker")).toBe("vinilo");
+    expect(material("rotulo")).toBe("adhesivo");
+    expect(material("entrada")).toBe("papel");
+    expect(material("ficha-cata")).toBe("papel");
+    expect(material("etiqueta-premio")).toBe("papel");
+  });
+
+  it("un material propio manda sobre el del tipo: una credencial de papel no es plástico", () => {
+    const g: Grafica = { ...pieza("tarjeta", "credencial"), material: "papel" };
+    if (!esObjeto(g)) throw new Error("credencial");
+    expect(materialDe(g)).toBe("papel");
+  });
+
+  it("reparte en dos grupos sin perder piezas y respetando el orden de los datos", () => {
+    const { objetos, planas } = repartirPiezas([
+      pieza("afiche", "afiche"),
+      pieza("credencial-1", "credencial"),
+      pieza("logo", "logo"),
+      pieza("rotulo", "rotulo"),
+      pieza("credencial-2", "credencial"),
+    ]);
+    expect(objetos.map((g) => g.id)).toEqual(["credencial-1", "rotulo", "credencial-2"]);
+    expect(planas.map((g) => g.id)).toEqual(["afiche", "logo"]);
+    expect(repartirPiezas([])).toEqual({ objetos: [], planas: [] });
   });
 });

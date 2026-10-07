@@ -19,6 +19,7 @@ import {
   GRAFICAS,
   ILUSTRACION_EDICION,
   ILUSTRACION_PORTADA,
+  MATERIAL_OBJETO,
   MEDIOS,
   ORIGENES_VIDEO,
   ORNAMENTOS,
@@ -35,7 +36,11 @@ import {
   fuente,
   ganadoresRecurrentes,
   geneticasRepetidas,
+  esObjeto,
   getEdicion,
+  graficasDe,
+  materialDe,
+  objetosDe,
   records,
   siguiente,
   slug,
@@ -223,7 +228,8 @@ describe("ediciones", () => {
       const { min, max } = getEdicion(anio).marcas;
       return [min, max];
     };
-    expect(rango(2014)).toEqual([6, 6]);
+    // La crónica nombra 6; la credencial suma una marca que la crónica no nombra.
+    expect(rango(2014)).toEqual([6, 7]);
     expect(rango(2015)).toEqual([10, 12]);
     expect(rango(2019)).toEqual([45, 45]);
     expect(rango(2021)).toEqual([33, 36]);
@@ -243,12 +249,15 @@ describe("ediciones", () => {
     expect(EDICIONES.filter((e) => e.jurado).map((e) => e.anio)).toEqual([2021, 2022]);
   });
 
-  it("la gráfica principal, si hay, existe y es de la misma edición", () => {
+  it("la gráfica principal, si hay, existe, es de la misma edición y es plana, no un objeto", () => {
     for (const e of EDICIONES) {
       if (e.heroGrafica === null) continue;
       const g = GRAFICAS.find((x) => x.id === e.heroGrafica);
       expect(g?.edicion, `${e.anio}: ${e.heroGrafica}`).toBe(e.anio);
+      expect(g && esObjeto(g), `${e.anio}: ${e.heroGrafica}`).toBe(false);
     }
+    // Desde el 07/10/2026 la VI tiene su afiche, y el encabezado lo muestra en vez del logo.
+    expect(getEdicion(2019).heroGrafica).toBe("2019-afiche");
   });
 
   it("2014 no tiene palmarés, y la ficha anota por qué", () => {
@@ -555,7 +564,7 @@ describe("recurrencias", () => {
 });
 
 describe("textos publicados", () => {
-  const TODO = cadenas([EDICIONES, PREMIOS, FUENTES, CLAVES_GANADOR]);
+  const TODO = cadenas([EDICIONES, PREMIOS, FUENTES, CLAVES_GANADOR, GRAFICAS]);
 
   it("no hay cadenas vacías ni con espacios de más: un hueco es null", () => {
     expect(TODO.filter((s) => s.trim() === "" || s !== s.trim())).toEqual([]);
@@ -598,6 +607,79 @@ describe("gráficas", () => {
       expect(IDS_FUENTE.has(g.fuente), g.id).toBe(true);
       expect(g.width > 0 && g.height > 0, g.id).toBe(true);
     }
+  });
+
+  it("cada archivo mide lo que dice el módulo y va en la carpeta de su edición", () => {
+    for (const g of GRAFICAS) {
+      expect(medidasWebp(fs.readFileSync(path.join(PUBLIC, g.src))), g.src).toEqual({ width: g.width, height: g.height });
+      expect(g.src.startsWith(`/copa-cata/${g.edicion}/${g.edicion}-`), g.src).toBe(true);
+    }
+  });
+
+  it("el detalle, si lo hay, es corto y sin espacios de más", () => {
+    for (const g of GRAFICAS) {
+      if (g.detalle === undefined) continue;
+      expect(g.detalle, g.id).toBe(g.detalle.trim());
+      expect(g.detalle.length, g.id).toBeGreaterThan(0);
+      expect(g.detalle.length, g.id).toBeLessThanOrEqual(32);
+    }
+  });
+});
+
+describe("objetos de la época", () => {
+  it("credenciales: las dos plastificadas de la 1ª Copa y la de papel de la 8ª, y de ninguna otra edición", () => {
+    const credenciales = GRAFICAS.filter((g) => g.tipo === "credencial");
+    expect(credenciales.map((g) => [g.edicion, g.detalle, esObjeto(g) ? materialDe(g) : null])).toEqual([
+      [2014, "Socio participante", "plastico"],
+      [2014, "Socio/Invitado", "plastico"],
+      [2022, "Participante", "papel"],
+    ]);
+  });
+
+  it("un objeto declara su material solo cuando no es el de su tipo", () => {
+    for (const g of GRAFICAS) {
+      if (g.material === undefined) continue;
+      expect(esObjeto(g), g.id).toBe(true);
+      if (esObjeto(g)) expect(g.material, g.id).not.toBe(MATERIAL_OBJETO[g.tipo]);
+    }
+  });
+
+  it("la credencial de 2022 imprime número y mote, y el mote es el de alguien del palmarés de 2022", () => {
+    // La etiqueta original llevaba el nombre de quien la usaba y su QR: se reconstruyó vacía, con
+    // el número y un mote que ya publica el palmarés (decisión de la Secretaría, 07/10/2026).
+    const c = GRAFICAS.find((g) => g.id === "2022-credencial");
+    const mote = /«#\d+ - ([^»]+)»/.exec(c?.alt ?? "")?.[1];
+    expect(mote, "el alt cita la etiqueta como «#N - MOTE»").toBeDefined();
+    const ganadores = PREMIOS.filter((p) => p.edicion === 2022).map((p) => fold(p.ganador));
+    expect(ganadores).toContain(fold(mote ?? ""));
+  });
+
+  it("cada credencial plastificada trae alfa: el plástico tiene su forma, sin el blanco de la hoja en las esquinas", () => {
+    for (const g of GRAFICAS.filter((x) => x.tipo === "credencial" && esObjeto(x) && materialDe(x) === "plastico")) {
+      const buf = fs.readFileSync(path.join(PUBLIC, g.src));
+      expect(buf.toString("ascii", 12, 16), g.src).toBe("VP8X");
+      // Byte de banderas del VP8X: 0x10 es el canal alfa.
+      expect(buf[20] & 0x10, g.src).toBe(0x10);
+    }
+  });
+
+  it("ninguna pieza publicada arrastra EXIF ni perfil de color del original", () => {
+    for (const g of GRAFICAS) {
+      const buf = fs.readFileSync(path.join(PUBLIC, g.src));
+      if (buf.toString("ascii", 12, 16) !== "VP8X") continue;
+      // Banderas del VP8X: 0x20 perfil ICC, 0x08 EXIF, 0x04 XMP.
+      expect(buf[20] & 0x2c, g.src).toBe(0);
+    }
+  });
+
+  it("cada edición reparte sus piezas entre objetos y gráficas planas, sin perder ni repetir ninguna", () => {
+    for (const anio of ANIOS) {
+      const todas = GRAFICAS.filter((g) => g.edicion === anio).map((g) => g.id);
+      const repartidas = [...objetosDe(anio), ...graficasDe(anio)].map((g) => g.id);
+      expect([...repartidas].sort(), `${anio}`).toEqual([...todas].sort());
+      for (const o of objetosDe(anio)) expect(MATERIAL_OBJETO[o.tipo], o.id).toBeTruthy();
+    }
+    expect(ANIOS.filter((a) => objetosDe(a).length > 0)).toEqual([2014, 2017, 2019, 2021, 2022]);
   });
 });
 

@@ -1011,6 +1011,293 @@
     animation: copa-flota 9s ease-in-out infinite alternate;
   }
 }
+
+/* ── Objetos de la época ────────────────────────────────────────────────────
+   Lo que pasó de mano en mano —credenciales, entradas, stickers, rótulos,
+   fichas, etiquetas de premio— dibujado como lo que era: cuelga o flota en la
+   noche, se inclina siguiendo al puntero y le corre el brillo de su material.
+
+   Capas, de afuera hacia adentro:
+     .objeto          el botón: recibe --rx y --ry (grados) y --gx y --gy (de
+                      0 a 1, dónde está el puntero), y la pose de reposo
+     .objeto-escena   la perspectiva; es lo que se mide, porque no se mueve
+     .objeto-vaiven   el vaivén en reposo: animación CSS, sin JS
+     .objeto-inclina  la inclinación que sigue al puntero
+     .objeto-pieza    el material: laminado, vinilo, adhesivo o papel
+     .objeto-brillo   el reflejo, que corre con el vaivén y con el puntero
+   Todo lo que se mueve es transform: va por el compositor y no repinta la
+   página. El JS (Objetos.tsx) escribe a lo sumo una vez por cuadro, y solo
+   mientras el mouse está encima. Con movimiento reducido no hay vaivén ni
+   inclinación: quedan en su pose de reposo, apenas giradas, con el brillo
+   quieto. Spec: design-system/pages/copa-cata.md. */
+.objeto {
+  --rx: 0deg;
+  --ry: 0deg;
+  --gx: 0.5;
+  --gy: 0.5;
+  --sombra-noche: oklch(0.1 0.05 268 / 92%);
+  /* Sin display: lo decide quien lo usa con sus clases (esta hoja va fuera de
+     las capas de Tailwind y le ganaría a un `hidden`). */
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.objeto-escena {
+  display: block;
+  perspective: 62rem;
+  container-type: inline-size;
+}
+.objeto-vaiven {
+  position: relative;
+  display: block;
+  transform-style: preserve-3d;
+  transform: rotateX(var(--pose-rx, 0deg)) rotateY(var(--pose-ry, 0deg)) rotate(var(--pose-rz, 0deg));
+}
+/* Lo plastificado cuelga: gira desde donde se ata el cordón, bien arriba. */
+.objeto[data-material="plastico"] .objeto-vaiven {
+  transform-origin: 50% -6rem;
+  transform: rotate(var(--pose-rz, 0deg)) rotateY(var(--pose-ry, 0deg));
+}
+.objeto-inclina {
+  display: block;
+  transform: rotateX(var(--rx)) rotateY(var(--ry));
+  transition: transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.objeto-pieza {
+  --reflejo: 0.3;
+  position: relative;
+  display: block;
+  isolation: isolate;
+  border-radius: 0.5cqw;
+  box-shadow: 0 1.5rem 2.25rem -1.25rem var(--sombra-noche);
+}
+.objeto-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: inherit;
+}
+/* El halo ámbar de hover y foco, como .copa-brillo: se enciende, no levanta. */
+.objeto-pieza::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  box-shadow: 0 0 2.5rem -0.25rem var(--brillo);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+.objeto:focus-visible .objeto-pieza::after {
+  opacity: 1;
+}
+/* Solo con mouse: en el teléfono el :hover queda prendido después del toque. */
+@media (hover: hover) {
+  .objeto:hover .objeto-pieza::after {
+    opacity: 1;
+  }
+}
+.objeto:focus-visible .objeto-pieza {
+  outline: 2px solid var(--sun);
+  outline-offset: 6px;
+}
+/* El reflejo: una franja de luz más ancha que la pieza, recortada por ella. */
+.objeto-luz {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.objeto-brillo {
+  position: absolute;
+  inset: -40% -90%;
+  opacity: var(--reflejo);
+  background: linear-gradient(
+    112deg,
+    transparent 41%,
+    oklch(1 0 0 / 80%) 48.5%,
+    oklch(1 0 0 / 22%) 51.5%,
+    transparent 58%
+  );
+  mix-blend-mode: screen;
+  translate: calc((var(--gx) - 0.5) * 35.7%) calc((var(--gy) - 0.5) * 55%);
+  transition: translate 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+/* Mientras sigue al puntero, la transición se acorta: acompaña sin retraso
+   y sin saltos, y al soltar vuelve despacio. */
+.objeto[data-siguiendo] .objeto-inclina {
+  transition-duration: 0.15s;
+  will-change: transform;
+}
+.objeto[data-siguiendo] .objeto-brillo {
+  transition-duration: 0.15s;
+}
+
+/* Plástico: la pieza dentro del laminado, con su borde, la ranura y el gancho
+   del cordón. El laminado es casi transparente: la noche se ve a través. El
+   reflejo es doble, como bajo una lámpara: una franja nítida y otra difusa al
+   lado. Con `screen` no aclara lo que ya es blanco: se ve sobre lo oscuro y
+   sobre el color, como en un plastificado de verdad. */
+.objeto[data-material="plastico"] .objeto-pieza {
+  --reflejo: 0.7;
+  padding: 12cqw 3.6cqw 3.6cqw;
+  border-radius: 8.5cqw;
+  background: linear-gradient(155deg, oklch(1 0 0 / 11%), oklch(1 0 0 / 4%) 42%, oklch(1 0 0 / 8%));
+  box-shadow:
+    inset 0 0 0 1px oklch(1 0 0 / 30%),
+    inset 0 1.5px 0 oklch(1 0 0 / 40%),
+    inset 0 -1px 0 oklch(0 0 0 / 30%),
+    0 1.75rem 2.5rem -1.25rem var(--sombra-noche);
+}
+.objeto[data-material="plastico"] .objeto-img {
+  border-radius: 0;
+}
+.objeto[data-material="plastico"] .objeto-brillo {
+  background:
+    linear-gradient(112deg, transparent 39%, oklch(1 0 0 / 85%) 47.5%, oklch(1 0 0 / 30%) 50.5%, transparent 56%),
+    linear-gradient(112deg, transparent 53%, oklch(1 0 0 / 24%) 60%, transparent 69%);
+}
+.objeto-ranura {
+  position: absolute;
+  top: 4.4cqw;
+  left: 50%;
+  width: 24cqw;
+  height: 3.8cqw;
+  translate: -50% 0;
+  border-radius: 99rem;
+  background: var(--noche);
+  box-shadow:
+    inset 0 1px 1.5px oklch(0 0 0 / 70%),
+    0 0 0 1px oklch(1 0 0 / 22%);
+}
+.objeto-gancho {
+  position: absolute;
+  top: -4.5cqw;
+  left: 50%;
+  width: 7cqw;
+  height: 11cqw;
+  translate: -50% 0;
+  border-radius: 1.6cqw 1.6cqw 1cqw 1cqw;
+  background: linear-gradient(90deg, #6f7482, #e6e9ef 38%, #b9bec9 55%, #686d7a);
+  box-shadow: 0 1px 2px oklch(0 0 0 / 55%);
+}
+.objeto-gancho::before {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  box-sizing: border-box;
+  width: 5.5cqw;
+  height: 5.5cqw;
+  translate: -50% 35%;
+  border: 1.1cqw solid #c3c7d0;
+  border-radius: 50%;
+}
+.objeto-cordon {
+  position: absolute;
+  bottom: calc(100% + 7.5cqw);
+  left: 50%;
+  width: 3.4cqw;
+  height: 6.5rem;
+  translate: -50% 0;
+  border-radius: 1px;
+  background: linear-gradient(90deg, #07080f, #2a2f4a 50%, #07080f);
+  -webkit-mask-image: linear-gradient(to top, #000 45%, transparent);
+  mask-image: linear-gradient(to top, #000 45%, transparent);
+}
+
+/* Vinilo: el borde blanco del corte y un brillo leve. */
+.objeto[data-material="vinilo"] .objeto-pieza {
+  --reflejo: 0.38;
+  padding: 3.4cqw;
+  border-radius: 4cqw;
+  background: #f6f2e9;
+  box-shadow:
+    inset 0 0 0 1px oklch(0 0 0 / 7%),
+    0 1.25rem 2rem -1rem var(--sombra-noche);
+}
+.objeto[data-material="vinilo"] .objeto-img {
+  border-radius: 1cqw;
+}
+
+/* Adhesivo de papel: apenas satinado. */
+.objeto[data-material="adhesivo"] .objeto-pieza {
+  --reflejo: 0.25;
+  border-radius: 1.6cqw;
+}
+
+/* Papel: mate. No refleja: lo recorre una luz ancha y tenue. */
+.objeto[data-material="papel"] .objeto-pieza {
+  --reflejo: 0.14;
+}
+.objeto[data-material="papel"] .objeto-brillo {
+  background: linear-gradient(112deg, transparent 22%, oklch(1 0 0 / 60%) 50%, transparent 78%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes objeto-flota {
+    from {
+      transform: translateY(0) rotateX(calc(var(--pose-rx, 0deg) + 2.5deg))
+        rotateY(calc(var(--pose-ry, 0deg) - 5deg)) rotate(calc(var(--pose-rz, 0deg) - 0.5deg));
+    }
+    to {
+      transform: translateY(-0.5rem) rotateX(calc(var(--pose-rx, 0deg) - 2.5deg))
+        rotateY(calc(var(--pose-ry, 0deg) + 5deg)) rotate(calc(var(--pose-rz, 0deg) + 0.5deg));
+    }
+  }
+  @keyframes objeto-cuelga {
+    from {
+      transform: rotate(calc(var(--pose-rz, 0deg) - 1.3deg)) rotateY(calc(var(--pose-ry, 0deg) - 8deg));
+    }
+    to {
+      transform: rotate(calc(var(--pose-rz, 0deg) + 1.3deg)) rotateY(calc(var(--pose-ry, 0deg) + 8deg));
+    }
+  }
+  @keyframes objeto-reflejo {
+    from {
+      transform: translateX(-9%);
+    }
+    to {
+      transform: translateX(7%);
+    }
+  }
+  .objeto-vaiven {
+    will-change: transform;
+    animation: objeto-flota var(--vaiven-dur, 7s) ease-in-out var(--vaiven-desfasaje, 0s) infinite alternate;
+  }
+  .objeto[data-material="plastico"] .objeto-vaiven {
+    animation-name: objeto-cuelga;
+  }
+  /* El reflejo va al mismo compás que el vaivén: gira la pieza, corre la luz. */
+  .objeto-brillo {
+    animation: objeto-reflejo var(--vaiven-dur, 7s) ease-in-out var(--vaiven-desfasaje, 0s) infinite alternate;
+  }
+  /* Con el foco, la pieza se queda quieta y se inclina hacia quien la mira. */
+  .objeto:focus-visible {
+    --rx: 7deg;
+    --ry: -12deg;
+    --gx: 0.8;
+    --gy: 0.25;
+  }
+  .objeto:focus-visible .objeto-vaiven,
+  .objeto:focus-visible .objeto-brillo {
+    animation-play-state: paused;
+  }
+  @media (hover: hover) {
+    .objeto:hover .objeto-vaiven,
+    .objeto:hover .objeto-brillo {
+      animation-play-state: paused;
+    }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .objeto-inclina,
+  .objeto-brillo,
+  .objeto-pieza::after {
+    transition: none;
+  }
+}
 /* ═══════════ FIN NOCHE ═══════════ */
 
 /* ═══════════════════════════════════════════════════════════════════════════

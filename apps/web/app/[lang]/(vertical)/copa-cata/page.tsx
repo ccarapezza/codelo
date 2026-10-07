@@ -4,6 +4,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ArrowRight, Leaf, Sprout, Trophy } from "lucide-react";
 import { JsonLd } from "@/components/JsonLd";
 import { CopaNav } from "@/components/vertical/copa-cata/CopaNav";
+import { ObjetoEnlace } from "@/components/vertical/copa-cata/Objetos";
 import { Ornamento } from "@/components/vertical/copa-cata/Ornamento";
 import { RielEdiciones } from "@/components/vertical/copa-cata/RielEdiciones";
 import { TituloSeccion } from "@/components/vertical/copa-cata/TituloSeccion";
@@ -14,6 +15,8 @@ import {
   ORNAMENTOS,
   PREMIOS,
   enNumeros,
+  materialDe,
+  objetosDe,
   records,
   type Recurrencia,
 } from "@/lib/vertical/copa-cata";
@@ -26,6 +29,7 @@ import {
   palmaresCta,
   premiosEnAnios,
   premiosEnCopas,
+  rotuloCredencialPortada,
   seoPortada,
 } from "@/lib/vertical/copa-cata/textos";
 import { breadcrumbSchema, localizedAlternates, OG_LOCALE, SITE_LOGO, SITE_NAME, SITE_URL } from "@/lib/seo";
@@ -66,6 +70,9 @@ export default async function CopaCataPage({ params }: { params: Promise<{ lang:
   const t = await getTranslations("copa");
   const url = `${SITE_URL}/${lang}${PATH}`;
   const [parrafo1, parrafo2] = manifiesto(EDICIONES[0]);
+  // La primera credencial de la primera Copa, si la hay: cuelga junto al
+  // manifiesto ("nació en 2014 como una cata entre socios") y entra a su edición.
+  const credencial = objetosDe(EDICIONES[0].anio).find((g) => g.tipo === "credencial") ?? null;
   const r = records(PREMIOS);
 
   return (
@@ -137,9 +144,27 @@ export default async function CopaCataPage({ params }: { params: Promise<{ lang:
           aria-labelledby="manifiesto"
           className="mt-20 grid gap-6 sm:mt-28 lg:grid-cols-[minmax(0,3fr)_minmax(0,9fr)] lg:gap-12"
         >
-          <h2 id="manifiesto" className="label pt-2 text-(--ember-texto)">
-            {t("secciones.manifiesto")}
-          </h2>
+          <div>
+            <h2 id="manifiesto" className="label pt-2 text-(--ember-texto)">
+              {t("secciones.manifiesto")}
+            </h2>
+            {credencial ? (
+              <ObjetoEnlace
+                item={{
+                  src: credencial.src,
+                  width: credencial.width,
+                  height: credencial.height,
+                  alt: credencial.alt,
+                  tipo: credencial.tipo,
+                  material: materialDe(credencial),
+                  rotulo: rotuloCredencialPortada(EDICIONES[0]),
+                }}
+                href={`/copa-cata/${EDICIONES[0].anio}`}
+                tamanio="176px"
+                className="mt-28 ml-4 hidden w-[11rem] lg:block"
+              />
+            ) : null}
+          </div>
           <div className="max-w-4xl">
             <p className="font-serif text-[clamp(1.375rem,2.6vw,2.125rem)] leading-snug text-pretty">{parrafo1}</p>
             <p className="mt-6 font-serif text-[clamp(1.125rem,1.8vw,1.5rem)] leading-relaxed text-pretty text-muted-foreground">

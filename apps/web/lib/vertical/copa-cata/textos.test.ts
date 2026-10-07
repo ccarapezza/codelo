@@ -30,6 +30,7 @@ import {
   palmaresCta,
   premiosEnAnios,
   premiosEnCopas,
+  rotuloCredencialPortada,
   seoEdicion,
   seoPortada,
   verPremiosDe,
@@ -232,5 +233,11 @@ describe("textos de la Copa", () => {
     expect(premiosEnAnios(4, [2021, 2022])).toBe("4 premios, en 2021 y 2022");
     expect(conteoPremios(1, 1)).toBe("1 premio · 1 edición");
     expect(conteoPremios(13, 2)).toBe("13 premios · 2 ediciones");
+  });
+});
+
+describe("la credencial de la portada", () => {
+  it("se rotula con el número y el año de la primera Copa", () => {
+    expect(rotuloCredencialPortada(EDICIONES[0])).toBe("1ª Copa · 2014");
   });
 });

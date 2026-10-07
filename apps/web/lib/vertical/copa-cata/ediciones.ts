@@ -67,9 +67,9 @@ export const EDICIONES: Edicion[] = [
     },
     marcas: {
       min: 6,
-      max: 6,
-      fuentes: ["web-0010"],
-      nota: "Los comercios que aportaron premios, según la crónica.",
+      max: 7,
+      fuentes: ["web-0010", "credencial-2014"],
+      nota: "La crónica nombra 6 comercios que aportaron premios; la credencial lleva 5 logos: 4 de esos y otra marca que la crónica no nombra.",
     },
     jurado: null,
     palmares: { fuentes: [], nota: "No hay registro de ganadores: la crónica no los nombra." },
@@ -322,6 +322,7 @@ export const EDICIONES: Edicion[] = [
       "fb-2017-07-15",
       "fb-2017-07-18",
       "fb-album-2017",
+      "stickers-2017",
     ],
     contradicciones: [
       {
@@ -440,7 +441,7 @@ export const EDICIONES: Edicion[] = [
     etapa: "asociacion",
     fecha: "2019-07-14",
     diaSemana: "domingo",
-    fechaFuentes: ["bases-2019"],
+    fechaFuentes: ["bases-2019", "afiche-2019"],
     horaInicio: {
       valor: "12:00",
       fuente: "bases-2019",
@@ -499,10 +500,12 @@ export const EDICIONES: Edicion[] = [
     jurado: null,
     palmares: { fuentes: ["placa-menciones-2019"], nota: "La placa se leyó a ojo." },
     cronica: null,
-    heroGrafica: "2019-logo",
+    heroGrafica: "2019-afiche",
     fuentes: [
       "fb-2019-06-18",
       "logo-2019",
+      "afiche-2019",
+      "ficha-cata-2019",
       "bases-2019",
       "planilla-2019",
       "placa-menciones-2019",
@@ -643,6 +646,8 @@ export const EDICIONES: Edicion[] = [
       "placas-sponsors-2021",
       "planilla-sponsors-2021",
       "ig-reel-2021",
+      "etiqueta-muestra-2021",
+      "etiquetas-premios-2021",
     ],
     contradicciones: [
       {
@@ -723,6 +728,7 @@ export const EDICIONES: Edicion[] = [
       "ig-2022-05-30",
       "fb-2022-06-08",
       "flyer-2022",
+      "credencial-2022",
       "protocolo-2022",
       "cartas-sponsors-2022",
       "planilla-sponsors-2022",

@@ -152,6 +152,12 @@ export function palmaresCta(premios: number): string {
 /** La línea de la primera edición en el riel, que no tiene campeón para mostrar. */
 export const PRIMERA_RONDA = "La primera ronda, entre socios";
 
+/**
+ * El rótulo de la credencial de la 1ª Copa que cuelga junto al manifiesto de
+ * la portada y lleva a su edición: "1ª Copa · 2014".
+ */
+export const rotuloCredencialPortada = (e: Pick<Edicion, "rotulo" | "anio">) => `${e.rotulo} Copa · ${e.anio}`;
+
 // ── Home ────────────────────────────────────────────────────────────────
 // La ventana de la Copa en la portada del sitio (CopaCataHome). La ceja, las
 // cifras y la tira de ediciones repiten las de la sección (cejaPortada,
