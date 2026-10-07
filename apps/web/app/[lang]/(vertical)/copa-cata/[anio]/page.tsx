@@ -19,6 +19,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { CopaNav } from "@/components/vertical/copa-cata/CopaNav";
 import { Galeria, type ItemGaleria } from "@/components/vertical/copa-cata/Galeria";
 import { GraficasEdicion } from "@/components/vertical/copa-cata/GraficasEdicion";
+import { ObjetosEdicion } from "@/components/vertical/copa-cata/ObjetosEdicion";
 import { Ornamento } from "@/components/vertical/copa-cata/Ornamento";
 import { PodioEdicion } from "@/components/vertical/copa-cata/PodioEdicion";
 import { TituloSeccion } from "@/components/vertical/copa-cata/TituloSeccion";
@@ -37,6 +38,7 @@ import {
   getEdicion,
   graficasDe,
   mediosDe,
+  objetosDe,
   premiosDe,
   siguiente,
   type Anio,
@@ -130,6 +132,7 @@ export default async function EdicionPage({ params }: { params: Params }) {
   const fotos = medios.filter((m): m is Foto => m.tipo === "foto");
   const videos = medios.filter((m): m is Video => m.tipo === "video");
   const graficas = graficasDe(anio);
+  const objetos = objetosDe(anio);
   const pieza = GRAFICAS.find((g) => g.id === e.heroGrafica) ?? null;
   const previa = anterior(anio);
   const proxima = siguiente(anio);
@@ -247,6 +250,20 @@ export default async function EdicionPage({ params }: { params: Params }) {
             <TituloSeccion id="podio">{t("secciones.podio")}</TituloSeccion>
             <div className="mt-10">
               <PodioEdicion anio={anio} premios={datos.premios} />
+            </div>
+          </section>
+        ) : null}
+
+        {/* ---- Los objetos: credenciales, entradas, rótulos… ---------------------
+            Van después del podio o, sin podio, pegados a la banda de órbitas. */}
+        {objetos.length > 0 ? (
+          <section
+            aria-labelledby="objetos"
+            className={datos.premios.length > 0 ? "mt-24 sm:mt-32" : "mt-4 sm:mt-8"}
+          >
+            <TituloSeccion id="objetos">{t("secciones.objetos")}</TituloSeccion>
+            <div className="mt-10">
+              <ObjetosEdicion objetos={objetos} />
             </div>
           </section>
         ) : null}

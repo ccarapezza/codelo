@@ -250,9 +250,37 @@ export const TIPOS_GRAFICA = [
   "entrada",
   "credencial",
   "rotulo",
+  "sticker",
+  "ficha-cata",
+  "etiqueta-premio",
 ] as const;
 
 export type TipoGrafica = (typeof TIPOS_GRAFICA)[number];
+
+/**
+ * Cómo se dibuja un objeto de la época, según de qué estaba hecho:
+ * - `plastico`: plastificado, con el brillo que corre con la inclinación, el
+ *   borde del laminado y la ranura del cordón; cuelga.
+ * - `vinilo`: sticker con brillo leve y el borde blanco del corte.
+ * - `adhesivo`: rótulo de papel autoadhesivo, apenas satinado.
+ * - `papel`: mate, sin reflejo; solo la luz que lo recorre.
+ */
+export type Material = "plastico" | "vinilo" | "adhesivo" | "papel";
+
+/**
+ * Las piezas que pasaron de mano en mano, con su material. Las demás —afiches,
+ * flyers, logos y placas— son gráficas planas y van en su riel.
+ */
+export const MATERIAL_OBJETO = {
+  credencial: "plastico",
+  entrada: "papel",
+  sticker: "vinilo",
+  rotulo: "adhesivo",
+  "ficha-cata": "papel",
+  "etiqueta-premio": "papel",
+} as const satisfies Partial<Record<TipoGrafica, Material>>;
+
+export type TipoObjeto = keyof typeof MATERIAL_OBJETO;
 
 /** De dónde sale un video. El rótulo de cada uno, en copa.videos (mismo test). */
 export const ORIGENES_VIDEO = ["reel", "historia", "facebook"] as const;
@@ -267,6 +295,18 @@ export type Grafica = {
   width: number;
   height: number;
   alt: string;
+  /**
+   * Lo que distingue a la pieza de otras del mismo tipo, con las palabras que
+   * imprime ("Socio participante", "Mejor Planta"). Va después del tipo en el
+   * rótulo que la acompaña.
+   */
+  detalle?: string;
+  /**
+   * El material de un objeto cuando no es el de su tipo (`MATERIAL_OBJETO`):
+   * la credencial de 2022 era una tarjeta de papel para escanear, no un
+   * plastificado que cuelga.
+   */
+  material?: Material;
   /** Id de `FUENTES`. */
   fuente: string;
 };

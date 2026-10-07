@@ -1,7 +1,9 @@
-// Gráficas de la Copa versionadas en public/copa-cata/: afiches, flyers, logos,
-// entradas y placas. Las convierte a webp salidas/copas/_scripts/07_graficas.py
+// Gráficas de la Copa versionadas en public/copa-cata/: afiches, flyers, logos y
+// placas, y los objetos que pasaron de mano en mano (credenciales, entradas,
+// stickers, rótulos, fichas de cata y etiquetas de premio; ver MATERIAL_OBJETO
+// en tipos.ts). Las recorta y convierte a webp salidas/copas/_scripts/07_graficas.py
 // (repo de secretaría), que también lista las piezas que quedaron afuera y por
-// qué; el texto de cada una (alt, fuente) se escribe a mano acá.
+// qué; el texto de cada una (alt, detalle, fuente) se escribe a mano acá.
 //
 // Van tal como circularon, con sus logos y su ilustración: la Copa es parte de
 // la cultura cannábica y la contamos sin esconderla detrás del tabú. Quedan
@@ -16,6 +18,38 @@
 import type { Grafica } from "./tipos";
 
 export const GRAFICAS: Grafica[] = [
+  {
+    id: "2014-credencial-participante",
+    edicion: 2014,
+    tipo: "credencial",
+    src: "/copa-cata/2014/2014-credencial-participante.webp",
+    width: 951,
+    height: 1177,
+    alt: "Credencial de la 1ra Copa Cata, de fondo negro con una franja naranja arriba: el logo de la asociación, la leyenda «Socio Participante» y abajo los logos de cinco marcas que acompañaron.",
+    detalle: "Socio participante",
+    fuente: "credencial-2014",
+  },
+  {
+    id: "2014-credencial-invitado",
+    edicion: 2014,
+    tipo: "credencial",
+    src: "/copa-cata/2014/2014-credencial-invitado.webp",
+    width: 953,
+    height: 1177,
+    alt: "Credencial de la 1ra Copa Cata, de fondo blanco con la misma franja naranja: el logo de la asociación, la leyenda «Socio/Invitado» en una banda negra y los logos de las mismas cinco marcas.",
+    detalle: "Socio/Invitado",
+    fuente: "credencial-2014",
+  },
+  {
+    id: "2014-rotulo-muestra",
+    edicion: 2014,
+    tipo: "rotulo",
+    src: "/copa-cata/2014/2014-rotulo-muestra.webp",
+    width: 662,
+    height: 333,
+    alt: "Rótulo autoadhesivo de la 1ra Copa: «Muestra N° 1» y el sol del logo de la asociación, con su filete negro de corte.",
+    fuente: "rotulos-2014",
+  },
   {
     id: "2015-flyer",
     edicion: 2015,
@@ -67,6 +101,46 @@ export const GRAFICAS: Grafica[] = [
     fuente: "afiche-2017",
   },
   {
+    id: "2017-entrada",
+    edicion: 2017,
+    tipo: "entrada",
+    src: "/copa-cata/2017/2017-entrada.webp",
+    width: 1590,
+    height: 682,
+    alt: "Entrada de la IV Copa Cata del Oeste con el dibujo del afiche, una pluma mecánica con engranajes sobre papel envejecido: sábado 15 de julio, $400, «buena música, mucha comida, premios, sorteos y mucho más».",
+    fuente: "entradas-2017",
+  },
+  {
+    id: "2017-sticker",
+    edicion: 2017,
+    tipo: "sticker",
+    src: "/copa-cata/2017/2017-sticker.webp",
+    width: 823,
+    height: 823,
+    alt: "Sticker cuadrado de la IV Copa con el mismo dibujo: la pluma mecánica sobre papel envejecido, el logo de la asociación y «sábado 15 de julio».",
+    fuente: "stickers-2017",
+  },
+  {
+    id: "2017-ficha-cata",
+    edicion: 2017,
+    tipo: "ficha-cata",
+    src: "/copa-cata/2017/2017-ficha-cata.webp",
+    width: 1242,
+    height: 1600,
+    alt: "Ficha de cata en blanco de la Copa 2017: arriba las reglas —nadie tiene su propia muestra en la mesa, se puntúa del 1 al 10, dos tandas de cata— y abajo seis cuadros para anotar visual, textura, aroma, sabor y total de cada muestra.",
+    fuente: "ficha-cata-2017",
+  },
+  {
+    id: "2019-afiche",
+    edicion: 2019,
+    tipo: "afiche",
+    src: "/copa-cata/2019/2019-afiche.webp",
+    width: 1130,
+    height: 1600,
+    alt: "Afiche de la VI Copa Cata del Oeste: el nombre en letras amarillas enormes sobre hojas de cannabis en magenta y naranja. Domingo 14/7; abajo, la franja de logos de las marcas que acompañaron.",
+    fuente: "afiche-2019",
+  },
+  {
     id: "2019-logo",
     edicion: 2019,
     tipo: "logo",
@@ -75,6 +149,16 @@ export const GRAFICAS: Grafica[] = [
     height: 579,
     alt: "Logo de la VI Copa Cata del Oeste: el nombre en letras gruesas naranjas y la silueta de una flor.",
     fuente: "logo-2019",
+  },
+  {
+    id: "2019-ficha-cata",
+    edicion: 2019,
+    tipo: "ficha-cata",
+    src: "/copa-cata/2019/2019-ficha-cata.webp",
+    width: 1131,
+    height: 1600,
+    alt: "Ficha de cata en blanco de la VI Copa: seis cuadros para puntuar la presentación, el aroma en flor y picado y el sabor apagado y prendido de cada muestra, y un casillero aparte para la muestra ganadora de la «Copa Berenjena».",
+    fuente: "ficha-cata-2019",
   },
   {
     id: "2021-flyer",
@@ -95,6 +179,38 @@ export const GRAFICAS: Grafica[] = [
     height: 695,
     alt: "Entrada de la VII Copa Cata del Oeste, con la ilustración del flyer: la pareja junto a la copa. Domingo 7 de noviembre.",
     fuente: "entrada-2021",
+  },
+  {
+    id: "2021-rotulo-muestra",
+    edicion: 2021,
+    tipo: "rotulo",
+    src: "/copa-cata/2021/2021-rotulo-muestra.webp",
+    width: 1182,
+    height: 591,
+    alt: "Etiqueta para las muestras de la VII Copa: fondo rojo con guarda naranja y hojas en las esquinas, el nombre de la Copa, el sol del logo de la asociación y 2021, y la mitad derecha lisa.",
+    fuente: "etiqueta-muestra-2021",
+  },
+  {
+    id: "2021-premio-mejor-planta",
+    edicion: 2021,
+    tipo: "etiqueta-premio",
+    src: "/copa-cata/2021/2021-premio-mejor-planta.webp",
+    width: 1067,
+    height: 1600,
+    alt: "Etiqueta de premio de la VII Copa Cata del Oeste, 2021, en negro sobre blanco: «Mejor Planta, 1er puesto».",
+    detalle: "Mejor Planta",
+    fuente: "etiquetas-premios-2021",
+  },
+  {
+    id: "2021-premio-equipo",
+    edicion: 2021,
+    tipo: "etiqueta-premio",
+    src: "/copa-cata/2021/2021-premio-equipo.webp",
+    width: 1067,
+    height: 1600,
+    alt: "Etiqueta de premio de la VII Copa Cata del Oeste, 2021, en negro sobre blanco: «Mención, Mejor Equipo de Trabajo».",
+    detalle: "Mejor equipo de trabajo",
+    fuente: "etiquetas-premios-2021",
   },
   {
     id: "2021-logo",
@@ -195,6 +311,18 @@ export const GRAFICAS: Grafica[] = [
     height: 1600,
     alt: "Placa de agradecimiento de la VII Copa, publicada en las historias, con el logo de la edición y las marcas que acompañaron.",
     fuente: "ig-historias-2021",
+  },
+  {
+    id: "2022-credencial",
+    edicion: 2022,
+    tipo: "credencial",
+    material: "papel",
+    src: "/copa-cata/2022/2022-credencial.webp",
+    width: 1200,
+    height: 796,
+    alt: "Credencial de participante de la 8va Copa Cata del Oeste: una tarjeta de papel con «Participante», la etiqueta con el número y el mote, «#39 - EL BRUJA», y el logo de la edición con la flor; abajo, «Utiliza este QR para identificarte en la aplicación».",
+    detalle: "Participante",
+    fuente: "credencial-2022",
   },
   {
     id: "2022-flyer",

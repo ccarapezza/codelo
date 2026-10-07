@@ -4,7 +4,8 @@ import { EDICIONES } from "./ediciones";
 import { GRAFICAS } from "./graficas";
 import { MEDIOS } from "./medios";
 import { PREMIOS } from "./premios";
-import type { Anio, Edicion, Grafica, Medio, Premio } from "./tipos";
+import { repartirPiezas } from "./stats";
+import type { Anio, Edicion, Grafica, Medio, Premio, TipoObjeto } from "./tipos";
 
 export * from "./tipos";
 export * from "./stats";
@@ -57,8 +58,14 @@ export function premiosDe(anio: Anio): Premio[] {
   return PREMIOS.filter((p) => p.edicion === anio);
 }
 
+/** Las gráficas planas de una edición: afiches, flyers, logos y placas. */
 export function graficasDe(anio: Anio): Grafica[] {
-  return GRAFICAS.filter((g) => g.edicion === anio);
+  return repartirPiezas(GRAFICAS.filter((g) => g.edicion === anio)).planas;
+}
+
+/** Los objetos de una edición que pasaron de mano en mano: credenciales, entradas, rótulos… */
+export function objetosDe(anio: Anio): Array<Grafica & { tipo: TipoObjeto }> {
+  return repartirPiezas(GRAFICAS.filter((g) => g.edicion === anio)).objetos;
 }
 
 export function mediosDe(anio: Anio): Medio[] {

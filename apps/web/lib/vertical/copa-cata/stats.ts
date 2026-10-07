@@ -9,8 +9,8 @@
 //   son dos personas salvo que una `ganadorClave` diga lo contrario.
 // - Solo existen los años con edición (`Anio`).
 
-import { CATEGORIAS, FAMILIAS, FAMILIA_DE } from "./tipos";
-import type { Anio, Categoria, Edicion, Familia, Premio } from "./tipos";
+import { CATEGORIAS, FAMILIAS, FAMILIA_DE, MATERIAL_OBJETO } from "./tipos";
+import type { Anio, Categoria, Edicion, Familia, Grafica, Material, Premio, TipoObjeto } from "./tipos";
 
 /** Para comparar textos: sin tildes, en minúscula y con un solo espacio. */
 export function fold(texto: string): string {
@@ -244,6 +244,34 @@ export function esCategoria(valor: string): valor is Categoria {
 
 export function esFamilia(valor: string): valor is Familia {
   return (FAMILIAS as readonly string[]).includes(valor);
+}
+
+/** Una pieza que pasó de mano en mano (credencial, entrada, rótulo…), no una gráfica plana. */
+export function esObjeto(g: Grafica): g is Grafica & { tipo: TipoObjeto } {
+  return Object.hasOwn(MATERIAL_OBJETO, g.tipo);
+}
+
+/** El material con que se dibuja un objeto: el suyo, si lo declara, o el de su tipo. */
+export function materialDe(g: Grafica & { tipo: TipoObjeto }): Material {
+  return g.material ?? MATERIAL_OBJETO[g.tipo];
+}
+
+/**
+ * Las piezas de una edición repartidas en sus dos bloques: los objetos de la
+ * época y las gráficas planas (afiches, flyers, logos, placas), cada grupo en
+ * el orden de los datos.
+ */
+export function repartirPiezas(graficas: readonly Grafica[]): {
+  objetos: Array<Grafica & { tipo: TipoObjeto }>;
+  planas: Grafica[];
+} {
+  const objetos: Array<Grafica & { tipo: TipoObjeto }> = [];
+  const planas: Grafica[] = [];
+  for (const g of graficas) {
+    if (esObjeto(g)) objetos.push(g);
+    else planas.push(g);
+  }
+  return { objetos, planas };
 }
 
 export type FiltroPremios = {
