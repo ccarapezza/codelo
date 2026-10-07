@@ -17,6 +17,9 @@ import { SemillasRail } from "@/components/vertical/SemillasRail";
 import { MissionStrip } from "@/components/vertical/MissionStrip";
 import { AcuerdoRegulacion } from "@/components/vertical/AcuerdoRegulacion";
 import { FeaturedCarousel } from "@/components/vertical/FeaturedCarousel";
+import { CopaCataHome } from "@/components/vertical/copa-cata/CopaCataHome";
+import { ArchivoHome } from "@/components/vertical/archivo/ArchivoHome";
+import { SLUGS_VIEJOS, sinNotasViejas } from "@/lib/vertical/archivo";
 
 export async function generateMetadata({
   params,
@@ -72,11 +75,18 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
   const t = await getTranslations("home");
   const locale = lang as Locale;
 
-  const [events, posts, boletin] = await Promise.all([
+  const [events, recientes, boletin] = await Promise.all([
     getEvents({ upcomingOnly: true, limit: 3 }),
-    getLatestPosts(30, lang as CmsLocale),
+    // Se piden de más tantas como notas tiene el archivo viejo, para que
+    // sacarlas no achique la portada.
+    getLatestPosts(30 + SLUGS_VIEJOS.size, lang as CmsLocale),
     getBoletinEntries(5),
   ]);
+  // Las notas del sitio anterior (2014–2021) viven en /archivo, no en la
+  // portada: ni en el carrusel ni entre las últimas, tampoco mientras se
+  // importan (al publicar, el CMS les pone la hora del momento y la fecha
+  // original se escribe después). Las nuevas del archivo sí pueden aparecer.
+  const posts = sinNotasViejas(recientes, SLUGS_VIEJOS).slice(0, 30);
 
   // Carrusel de portada: las notas marcadas como destacadas desde el panel
   // (página Notas → "En carrusel"), más nuevas primero. Si no hay ninguna
@@ -274,6 +284,15 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
                 ))}
               </div>
             ) : null}
+
+            {/* La Copa Cata: una ventana de noche fija, después de las notas.
+                Va dentro de esta pieza (order-3) para que en el teléfono
+                también quede debajo de las notas y antes del resto del riel. */}
+            <CopaCataHome className="mt-12" />
+
+            {/* Del archivo: tres entrevistas del sitio de antes y el acceso a
+                /archivo. Sin notas en el manifiesto, no se muestra. */}
+            <ArchivoHome className="mt-14" />
 
             {/* SECCIONES POR ÁREA — cada una alterna su distribución para que la
             página tenga ritmo: la primera nota va grande con portada y bajada,

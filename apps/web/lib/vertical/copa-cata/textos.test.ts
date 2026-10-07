@@ -15,6 +15,7 @@ import {
   RECORDS,
   SIN_RESULTADOS,
   bajadaEdicion,
+  bajadaHome,
   bajadaPortada,
   cejaEdicion,
   cejaPalmares,
@@ -57,6 +58,7 @@ function cadenas(valor: unknown): string[] {
 const TODO = cadenas([
   cejaPortada(numeros.ediciones, numeros.desde, numeros.hasta),
   bajadaPortada(numeros.ediciones),
+  bajadaHome(numeros.ediciones),
   manifiesto(EDICIONES[0]),
   seoPortada(numeros.ediciones, numeros.desde, numeros.hasta),
   NUMEROS,
@@ -111,6 +113,14 @@ describe("textos de la Copa", () => {
     expect(seoPortada(numeros.ediciones, numeros.desde, numeros.hasta).title).toBe(
       "Copa Cata del Oeste: ocho cosechas, 2014–2022",
     );
+  });
+
+  it("la home usa la primera frase de la portada, sin el cierre de la sección", () => {
+    const home = bajadaHome(numeros.ediciones);
+    expect(home).toBe(
+      "Durante ocho ediciones, el oeste se juntó a celebrar la cosecha: cultivadores, mesas largas, frascos que pasaban de mano en mano y una copa que cada año encontraba nuevo dueño.",
+    );
+    expect(bajadaPortada(numeros.ediciones)).toBe(`${home} Esta es la historia de esa ronda.`);
   });
 
   it("hay una bajada por edición, con su número en palabras", () => {

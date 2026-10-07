@@ -81,6 +81,8 @@ export const FOOTER_SECTIONS: Array<{ labelKey: string; items: NavItem[] }> = [
       // Historia de la asociación, no agenda: va en el pie y no en el header,
       // que ya tiene nueve ítems sin sub-menús.
       { href: "/copa-cata", key: "copaCata" },
+      // Las notas del sitio anterior (2014–2021): historia, como la Copa.
+      { href: "/archivo", key: "archivo" },
       { href: "/contacto", key: "contact" },
     ],
   },

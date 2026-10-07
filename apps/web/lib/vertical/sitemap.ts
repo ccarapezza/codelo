@@ -22,6 +22,7 @@ export const VERTICAL_STATIC_PATHS = [
   "/semillas/leer",
   "/copa-cata",
   "/copa-cata/palmares",
+  "/archivo",
 ];
 
 /**
