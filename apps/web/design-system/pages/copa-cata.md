@@ -48,11 +48,14 @@ no quede un escalón contra la banda del sitio. `-mb-24` en el `<main>` anula el
 
 **El cielo:** `estrellas.webp`, un campo que se repite sin cortes, en dos capas
 (`::before` y `::after` del `<main>`) que titilan a destiempo. La opacidad tiene
-**techo en 0,16**: con eso el texto más chico (ocre o gris) sigue en 4,5:1 o
-más aun con una estrella blanca justo detrás, también bajo el halo. Medido con
-las estrellas fijas en el máximo, el peor píxel detrás del texto del
-encabezado (portada y 2019, a 1440 y a 375 px): ceja 4,66 · título 6,38 ·
-bajada 4,68.
+**techo**: el titilar llega a **0,13**, y en reposo (movimiento reducido) las
+capas quedan fijas en 0,14 y 0,10. Con eso el texto más chico (ocre o gris)
+sigue en 4,5:1 o más aun con dos estrellas en su pico justo detrás, también
+bajo el halo. Medido con las estrellas fijas en el pico, el peor píxel detrás
+del texto del encabezado (portada y 2019, a 1440 y a 375 px): ceja 4,79 ·
+título 5,91 · bajada 5,39; en la ventana de la home: ceja 6,63 · título 10,16 ·
+bajada 5,14. El pico era 0,16 y bajó el 06/10/2026: con dos estrellas juntas,
+un píxel de la bajada de la ventana daba 4,31:1. En reposo esa bajada da 5,44.
 
 **Tintas de dato:** los pasos oscuros de `theme.css` (`#ce773e`, `#6977d3`,
 `#ac4278`), revalidados sobre `#040a2a` con el validador del skill de dataviz,
@@ -116,6 +119,28 @@ y sin logos. Rutas, medidas y `alt` en `lib/vertical/copa-cata/ilustraciones.ts`
 - **El podio**: el premio mayor en grande, con su halo; el resto compacto,
   agrupado por categoría.
 - **Navegación propia** (`CopaNav`): píldoras; la página activa se enciende.
+
+---
+
+## La ventana de la home
+
+`CopaCataHome.tsx` abre la noche dentro de la portada del sitio, en la columna
+principal y después de las notas, en los dos temas: es `.copa-noche` —los
+mismos tokens y el mismo cielo— más `.copa-ventana`, que cambia solo el marco
+(filete y esquinas) y la vuelve contenedor de consultas. Todo lo que dice sale
+de los datos y los textos de la sección; `bajadaHome` es la primera frase de la
+bajada de la portada.
+
+- **El texto nunca va sobre el arte.** La ilustración va arriba, apagada hacia
+  abajo, y la ceja, el título y la bajada van después, sobre la noche lisa.
+  Montada sobre el fundido, como en la portada de la sección, la ceja caía
+  sobre estrellas y órbitas del dibujo y bajaba a 2,4:1 (768 px) y 3,4:1
+  (1440).
+- **La tira responde a la ventana, no a la pantalla** (`.copa-tira`,
+  `@container copa-ventana`), porque la ventana mide distinto según la columna
+  que le toque: angosta es un riel con el dedo y deja asomar la tercera
+  edición; desde 40rem las piezas crecen; desde 50rem las ocho entran en una
+  fila fija y el riel no dibuja flechas.
 
 ---
 

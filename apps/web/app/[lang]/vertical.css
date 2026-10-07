@@ -831,9 +831,11 @@
    dos capas que titilan a destiempo. `lighten` se queda con lo más claro de
    cada punto: pasan las estrellas y el fondo de la imagen desaparece. La
    imagen llega por la variable `--estrellas`, que la página pone desde lib/.
-   La opacidad tiene techo: 0,16. Es lo que deja al texto más chico (ocre o
-   gris) en 4,5:1 o más aun con una estrella blanca justo detrás, también bajo
-   el halo ámbar de arriba. */
+   La opacidad tiene techo: el titilar llega a 0,13 y en reposo (movimiento
+   reducido) las capas quedan en 0,14 y 0,10. Es lo que deja al texto más chico
+   (ocre o gris) en 4,5:1 o más aun con dos estrellas en su pico justo detrás.
+   Con 0,16 un píxel de la bajada de la ventana de la home bajaba a 4,31:1;
+   con 0,13, el peor da 5,14 (detalle en design-system/pages/copa-cata.md). */
 .copa-noche::before,
 .copa-noche::after {
   content: "";
@@ -945,13 +947,50 @@
   scroll-snap-align: start;
 }
 
+/* La noche como ventana dentro de otra página: la portada del sitio la abre
+   después de las notas, en los dos temas. Es el mismo lienzo, con sus tokens y
+   su cielo; cambia solo el marco. El filete la recorta del fondo cuando el
+   sitio también está de noche (tema oscuro). Es contenedor de consultas: lo de
+   adentro se acomoda al ancho de la ventana, no al de la pantalla, porque la
+   ventana mide distinto según la columna que le toque. */
+.copa-ventana {
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  border-radius: calc(var(--radius) * 1.8);
+  container: copa-ventana / inline-size;
+}
+
+/* La tira de ediciones de la ventana: un riel mientras no entran todas; con
+   lugar para las ocho, una fila fija que las muestra de una vez. Ahí la fila no
+   desborda y el riel no dibuja flechas. */
+/* En el teléfono, con este ancho asoma la tercera edición: avisa que la fila sigue. */
+.copa-tira .copa-riel > li {
+  width: 7.75rem;
+}
+@container copa-ventana (min-width: 40rem) {
+  .copa-tira .copa-riel > li {
+    width: 9.5rem;
+  }
+}
+@container copa-ventana (min-width: 50rem) {
+  .copa-tira .copa-riel {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 0.5rem;
+    overflow: visible;
+  }
+  .copa-tira .copa-riel > li {
+    width: auto;
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   @keyframes copa-titila {
     from {
       opacity: 0.04;
     }
     to {
-      opacity: 0.16;
+      opacity: 0.13;
     }
   }
   @keyframes copa-flota {
@@ -973,3 +1012,81 @@
   }
 }
 /* ═══════════ FIN NOCHE ═══════════ */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ARCHIVO — las láminas del archivo histórico (/archivo y su bloque en la home)
+
+   Cada nota tiene su grabado a dos tintas (o el de su tipo) sobre su propio
+   papel, viejo y gastado. En claro se imprime sobre el papel de la página:
+   `darken` se queda con lo más oscuro de cada punto, así el papel de la lámina
+   toma el de la página y quedan el trazo y el ámbar. Los bordes se apagan
+   (`--lamina-borde`), porque ahí el papel viejo está manchado y oscurecido, y
+   sin el degradé se veía el rectángulo de cada lámina. La mezcla va en el
+   contenedor, que es el que lleva la máscara (ver la NOCHE de arriba).
+
+   La mezcla necesita ver el papel de la página detrás: un ancestro que arme su
+   propio contexto de apilamiento (sticky, contenedor de consultas, opacidad,
+   transform) la corta y la lámina vuelve a mostrar su papel. Si hace falta uno,
+   que lleve el fondo de la página (`bg-background`), como el bloque de la home.
+
+   En oscuro va como lámina impresa, con su papel, igual que las láminas de la
+   casa (lib/vertical/laminas.ts): se probó el negativo y cambiaba el dibujo
+   (la ventana de noche de una de ellas pasaba a ser de día). Un punto más baja
+   de brillo, para que no encandile sobre la tinta.
+
+   En los dos temas la imagen va recortada un 2,5 % por lado. No es un zoom ni
+   un efecto: es el corte de imprenta. Cuatro láminas traen el escaneo de una
+   tarjeta sobre blanco (hasta 1,1 % de margen blanco y el canto roto detrás), y
+   de noche ese margen se veía como un marco.
+
+   Las fotos propias de tres notas no pasan por acá: van con .cover-treatment.
+   Spec: design-system/pages/archivo.md.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.archivo-lamina {
+  --lamina-borde: 10%;
+  mix-blend-mode: darken;
+  -webkit-mask-image:
+    linear-gradient(
+      to right,
+      transparent 0,
+      #000 var(--lamina-borde),
+      #000 calc(100% - var(--lamina-borde)),
+      transparent 100%
+    ),
+    linear-gradient(
+      to bottom,
+      transparent 0,
+      #000 var(--lamina-borde),
+      #000 calc(100% - var(--lamina-borde)),
+      transparent 100%
+    );
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(
+      to right,
+      transparent 0,
+      #000 var(--lamina-borde),
+      #000 calc(100% - var(--lamina-borde)),
+      transparent 100%
+    ),
+    linear-gradient(
+      to bottom,
+      transparent 0,
+      #000 var(--lamina-borde),
+      #000 calc(100% - var(--lamina-borde)),
+      transparent 100%
+    );
+  mask-composite: intersect;
+}
+.archivo-lamina > img {
+  transform: scale(1.05);
+}
+.dark .archivo-lamina {
+  mix-blend-mode: normal;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+.dark .archivo-lamina > img {
+  filter: brightness(0.88);
+}
+/* ═══════════ FIN ARCHIVO ═══════════ */

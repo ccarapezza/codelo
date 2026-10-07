@@ -87,8 +87,13 @@ export function cejaPortada(ediciones: number, desde: number, hasta: number): st
   return `${capitalizar(enLetras(ediciones))} cosechas · ${rango(desde, hasta)}`;
 }
 
+/** La frase de las cosechas: abre la bajada de la portada y es la bajada del bloque de la home. */
+function cosechas(ediciones: number): string {
+  return `Durante ${enLetras(ediciones)} ediciones, el oeste se juntó a celebrar la cosecha: cultivadores, mesas largas, frascos que pasaban de mano en mano y una copa que cada año encontraba nuevo dueño.`;
+}
+
 export function bajadaPortada(ediciones: number): string {
-  return `Durante ${enLetras(ediciones)} ediciones, el oeste se juntó a celebrar la cosecha: cultivadores, mesas largas, frascos que pasaban de mano en mano y una copa que cada año encontraba nuevo dueño. Esta es la historia de esa ronda.`;
+  return `${cosechas(ediciones)} Esta es la historia de esa ronda.`;
 }
 
 /** El manifiesto: de qué se trató la Copa, en dos párrafos. */
@@ -146,6 +151,16 @@ export function palmaresCta(premios: number): string {
 
 /** La línea de la primera edición en el riel, que no tiene campeón para mostrar. */
 export const PRIMERA_RONDA = "La primera ronda, entre socios";
+
+// ── Home ────────────────────────────────────────────────────────────────
+// La ventana de la Copa en la portada del sitio (CopaCataHome). La ceja, las
+// cifras y la tira de ediciones repiten las de la sección (cejaPortada,
+// NUMEROS, PRIMERA_RONDA); acá va solo lo que la home dice distinto.
+
+/** La bajada del bloque: la primera frase de la portada, sin el "esta es la historia". */
+export function bajadaHome(ediciones: number): string {
+  return cosechas(ediciones);
+}
 
 // ── Edición ─────────────────────────────────────────────────────────────
 

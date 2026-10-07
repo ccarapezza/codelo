@@ -352,7 +352,8 @@
     "seeds": "Semillas",
     "events": "Actividades",
     "weather": "Clima",
-    "copaCata": "Copa Cata (2014–2022)"
+    "copaCata": "Copa Cata (2014–2022)",
+    "archivo": "Archivo histórico"
   },
   "pages": {
     "eyebrowAbout": "La asociación",
@@ -397,6 +398,9 @@
     "riel": {
       "anterior": "Ver anteriores",
       "siguiente": "Ver siguientes"
+    },
+    "home": {
+      "entrar": "Entrar a la Copa"
     },
     "edicion": {
       "cronica": "Leer la crónica completa"
@@ -446,6 +450,45 @@
       "entrada": "Entrada",
       "credencial": "Credencial",
       "rotulo": "Rótulo"
+    }
+  },
+  "archivo": {
+    "title": "Archivo histórico",
+    "ceja": "El sitio de antes · {desde}–{hasta}",
+    "bajada": "Lo que escribimos, grabamos y contamos entre {desde} y {hasta}: crónicas de talleres y de la Copa, entrevistas, informes y pronunciamientos, cada uno con la fecha en que salió.",
+    "seo": "Crónicas, entrevistas, informes y pronunciamientos que la asociación publicó entre {desde} y {hasta}, con su fecha original.",
+    "filtro": {
+      "aria": "Ver por tipo",
+      "todo": "Todo"
+    },
+    "tipo": {
+      "entrevista": "Entrevista",
+      "cronica": "Crónica",
+      "informe": "Informe",
+      "pronunciamiento": "Pronunciamiento",
+      "cronologia": "Cronología",
+      "investigacion": "Investigación"
+    },
+    "tipos": {
+      "entrevista": "Entrevistas",
+      "cronica": "Crónicas",
+      "informe": "Informes",
+      "pronunciamiento": "Pronunciamientos",
+      "cronologia": "Cronología",
+      "investigacion": "Investigación"
+    },
+    "nuevas": "Nuevo en el archivo",
+    "entrevistas": "Entrevistas",
+    "entrevistasBajada": "{cantidad, plural, one {Una charla grabada} other {# charlas grabadas}} entre {desde} y {hasta}, en primera persona.",
+    "porAnio": "Año por año",
+    "notas": "{cantidad, plural, one {# nota} other {# notas}}",
+    "por": "Por {autor}",
+    "entrevistaA": "Entrevista {aQuien}, por {autor}",
+    "vacio": "Todavía no hay notas en el archivo.",
+    "home": {
+      "titulo": "Del archivo",
+      "bajada": "Lo que escribimos, grabamos y contamos entre {desde} y {hasta}, cada nota con su fecha original.",
+      "entrar": "Entrar al archivo"
     }
   }
 }
