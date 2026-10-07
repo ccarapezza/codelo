@@ -48,6 +48,10 @@ export const EDICIONES: Edicion[] = [
       { texto: "Se previeron mesas de cuatro a seis personas.", fuente: "propuesta-2014" },
       { texto: "La cata se hizo en dos tandas por mesa.", fuente: "web-0010" },
       {
+        texto: "Se puntuaba cada rubro del 1 al 10 y se premiaban los cinco primeros puestos.",
+        fuente: "ficha-cata-2014",
+      },
+      {
         texto: "Un cultivador reconocido asistió sin competir, por tratarse de una competencia amateur.",
         fuente: "web-0010",
       },
@@ -90,6 +94,7 @@ export const EDICIONES: Edicion[] = [
       "datos-2014",
       "web-0010",
       "credencial-2014",
+      "ficha-cata-2014",
       "rotulos-2014",
     ],
     contradicciones: [
@@ -103,6 +108,17 @@ export const EDICIONES: Edicion[] = [
           },
         ],
         nota: "La propuesta es una semana anterior a la invitación a los socios.",
+      },
+      {
+        tema: "A qué hora empezó la cata",
+        versiones: [
+          { valor: "La Copa empezaba a las 14:00", fuente: "invitacion-2014" },
+          {
+            valor: "Primera tanda de 13:00 a 14:30 y segunda de 15:30 a 17:30",
+            fuente: "ficha-cata-2014",
+          },
+        ],
+        nota: "La ficha se mandó a imprimir el mismo 14/06/2014; el correo del 13/06/2014 ponía la presentación de muestras de 12:00 a 12:45, que encaja con una cata desde las 13:00.",
       },
     ],
     faltantes: [
@@ -305,8 +321,8 @@ export const EDICIONES: Edicion[] = [
     marcas: {
       min: 15,
       max: 16,
-      fuentes: ["afiche-2017", "fb-2017-07-18"],
-      nota: "El afiche lleva 15 marcas; la publicación de ganadores agradece a 14 de ellas y a otro auspiciante que no está en el afiche.",
+      fuentes: ["afiche-2017", "placa-sponsors-2017", "fb-2017-07-18"],
+      nota: "El afiche y la placa de sponsors llevan las mismas 15 marcas; la publicación de ganadores agradece a 14 de ellas y a otro auspiciante que no está en ninguna de las dos.",
     },
     jurado: null,
     palmares: { fuentes: ["fb-2017-07-18"] },
@@ -323,6 +339,7 @@ export const EDICIONES: Edicion[] = [
       "fb-2017-07-18",
       "fb-album-2017",
       "stickers-2017",
+      "placa-sponsors-2017",
     ],
     contradicciones: [
       {
@@ -609,7 +626,11 @@ export const EDICIONES: Edicion[] = [
     muestras: SIN_DATO,
     participantes: SIN_DATO,
     cupo: { valor: 100, fuente: "protocolo-2021" },
-    mesas: SIN_DATO,
+    mesas: {
+      valor: 15,
+      fuente: "identificadores-mesa-2021",
+      nota: "Las mesas de participantes: el pedido de identificadores, cinco días antes de la Copa, va de la mesa 1 a la 15 y suma las de extracciones, jurado y sponsors.",
+    },
     entrada: {
       valor: "$4.000 anticipada y $4.500 en puerta, con precio especial para socios y otras organizaciones",
       fuente: "bases-2021",
@@ -648,6 +669,7 @@ export const EDICIONES: Edicion[] = [
       "ig-reel-2021",
       "etiqueta-muestra-2021",
       "etiquetas-premios-2021",
+      "identificadores-mesa-2021",
     ],
     contradicciones: [
       {

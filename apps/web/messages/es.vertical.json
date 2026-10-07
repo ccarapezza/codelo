@@ -454,7 +454,8 @@
       "rotulo": "Rótulo de muestra",
       "sticker": "Sticker",
       "ficha-cata": "Ficha de cata",
-      "etiqueta-premio": "Etiqueta de premio"
+      "etiqueta-premio": "Etiqueta de premio",
+      "identificador-mesa": "Identificador de mesa"
     }
   },
   "archivo": {

@@ -24,16 +24,18 @@ export type EtiquetasObjetos = EtiquetasLightbox & {
  * El ancho de cada objeto en la mesa. Van más o menos a escala entre sí (la
  * credencial mide 81 mm; la entrada, 135; la ficha, una hoja) salvo la ficha,
  * que a escala taparía al resto. En el teléfono las credenciales entran de a
- * dos; entre 1024 y 1279 px todo se achica un poco para que la edición más
- * cargada (2021, cuatro objetos) entre en una fila y no deje uno solo abajo.
+ * dos; entre 1024 y 1279 px todo se achica un poco para que las cuatro piezas de
+ * 2014 entren en una fila. Cuando no entran todas, el orden de los datos decide
+ * qué queda abajo: en 2021, la entrada, la pieza ancha, cierra sola la mesa.
  */
 const ANCHO: Record<TipoObjeto, string> = {
   credencial: "w-[9rem] sm:w-[13.5rem] xl:w-[15rem]",
   entrada: "w-full max-w-[24rem] lg:max-w-[20rem] xl:max-w-[24rem]",
   sticker: "w-[10rem] sm:w-[12rem]",
   rotulo: "w-[12rem] sm:w-[14rem] lg:w-[12rem] xl:w-[14rem]",
-  "ficha-cata": "w-[12.5rem] sm:w-[16rem]",
+  "ficha-cata": "w-[12.5rem] sm:w-[16rem] lg:w-[13.5rem] xl:w-[16rem]",
   "etiqueta-premio": "w-[8.75rem] sm:w-[11rem] lg:w-[9.5rem] xl:w-[11rem]",
+  "identificador-mesa": "w-[8.75rem] sm:w-[11rem] lg:w-[9.5rem] xl:w-[11rem]",
 };
 
 /**
@@ -50,8 +52,9 @@ const TAMANIO: Record<TipoObjeto, string> = {
   entrada: "(min-width: 1280px) 384px, (min-width: 1024px) 320px, (min-width: 640px) 384px, 100vw",
   sticker: "(min-width: 640px) 192px, 160px",
   rotulo: "(min-width: 1280px) 224px, (min-width: 1024px) 192px, (min-width: 640px) 224px, 192px",
-  "ficha-cata": "(min-width: 640px) 256px, 200px",
+  "ficha-cata": "(min-width: 1280px) 256px, (min-width: 1024px) 216px, (min-width: 640px) 256px, 200px",
   "etiqueta-premio": "(min-width: 1280px) 176px, (min-width: 1024px) 152px, (min-width: 640px) 176px, 140px",
+  "identificador-mesa": "(min-width: 1280px) 176px, (min-width: 1024px) 152px, (min-width: 640px) 176px, 140px",
 };
 
 /**

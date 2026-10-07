@@ -1231,8 +1231,22 @@
 .objeto[data-material="papel"] .objeto-pieza {
   --reflejo: 0.14;
 }
-.objeto[data-material="papel"] .objeto-brillo {
+.objeto:is([data-material="papel"], [data-material="carton"]) .objeto-brillo {
   background: linear-gradient(112deg, transparent 22%, oklch(1 0 0 / 60%) 50%, transparent 78%);
+}
+
+/* Cartón: mate como el papel y más grueso. El canto asoma abajo, en capas de
+   un píxel que van del blanco del borde al gris del alma, y se inclina con
+   la pieza. */
+.objeto[data-material="carton"] .objeto-pieza {
+  --reflejo: 0.12;
+  border-radius: 0.6cqw;
+  box-shadow:
+    0 1px 0 #e6dccb,
+    0 2px 0 #d6cab4,
+    0 3px 0 #c6b89e,
+    0 4px 0 #a99a80,
+    0 1.5rem 2.25rem -1.25rem var(--sombra-noche);
 }
 
 @media (prefers-reduced-motion: no-preference) {

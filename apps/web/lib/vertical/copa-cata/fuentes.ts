@@ -51,6 +51,14 @@ export const FUENTES: Fuente[] = [
     nota: ARCHIVO,
   },
   {
+    id: "ficha-cata-2014",
+    tipo: "pieza",
+    titulo: "Ficha de cata de la 1ª Copa",
+    fecha: "2014-06-14",
+    url: null,
+    nota: "Archivo de la asociación: la que se mandó a imprimir el día de la Copa.",
+  },
+  {
     id: "rotulos-2014",
     tipo: "pieza",
     titulo: "Rótulos autoadhesivos para las muestras de la 1ª Copa",
@@ -173,7 +181,15 @@ export const FUENTES: Fuente[] = [
     titulo: "Ficha de cata de la IV Copa",
     fecha: null,
     url: null,
-    nota: ARCHIVO,
+    nota: "Archivo de la asociación. Es la plantilla de la ficha de 2014 con otro año y un rubro menos: las reglas y los horarios son los mismos, palabra por palabra, así que pueden venir de aquella.",
+  },
+  {
+    id: "placa-sponsors-2017",
+    tipo: "pieza",
+    titulo: "Placa de sponsors de la IV Copa",
+    fecha: "2017-07-15",
+    url: null,
+    nota: "Archivo de la asociación: lleva las mismas 15 marcas que el afiche.",
   },
   {
     id: "stickers-2017",
@@ -439,6 +455,14 @@ export const FUENTES: Fuente[] = [
     fecha: null,
     url: null,
     nota: ARCHIVO,
+  },
+  {
+    id: "identificadores-mesa-2021",
+    tipo: "correo",
+    titulo: "Pedido de las piezas de la VII Copa al diseñador, con los identificadores de mesa",
+    fecha: "2021-11-02",
+    url: null,
+    nota: "Archivo de la asociación: pide los identificadores de las mesas 1 a 15, dos de extracciones, tres del jurado y tres de sponsors, y trae adjunto el diseño.",
   },
   {
     id: "etiqueta-muestra-2021",

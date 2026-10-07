@@ -406,7 +406,7 @@ describe("objetos y gráficas planas", () => {
   });
 
   it("lo que pasó de mano en mano es objeto; afiches, flyers, logos y placas, no", () => {
-    for (const t of ["credencial", "entrada", "sticker", "rotulo", "ficha-cata", "etiqueta-premio"] as const) {
+    for (const t of ["credencial", "entrada", "sticker", "rotulo", "ficha-cata", "etiqueta-premio", "identificador-mesa"] as const) {
       expect(esObjeto(pieza("a", t)), t).toBe(true);
     }
     for (const t of ["afiche", "flyer", "logo", "placa-ganadores", "placa-sponsors"] as const) {
@@ -426,6 +426,7 @@ describe("objetos y gráficas planas", () => {
     expect(material("entrada")).toBe("papel");
     expect(material("ficha-cata")).toBe("papel");
     expect(material("etiqueta-premio")).toBe("papel");
+    expect(material("identificador-mesa")).toBe("carton");
   });
 
   it("un material propio manda sobre el del tipo: una credencial de papel no es plástico", () => {
