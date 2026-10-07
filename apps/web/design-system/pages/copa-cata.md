@@ -132,9 +132,10 @@ es objeto y de qué material lo dice `MATERIAL_OBJETO` (`lib/vertical/copa-cata/
 salvo que la pieza declare el suyo (`material` en `graficas.ts`): la credencial
 de 2022 no era un plastificado sino una tarjeta de papel para escanear. El
 bloque va después del podio o, sin podio, pegado a la banda de órbitas.
-Hoy hay objetos en 2014 (las dos credenciales y un rótulo), 2017 (entrada,
-sticker y ficha), 2019 (ficha), 2021 (entrada, rótulo y dos etiquetas de
-premio) y 2022 (la credencial de participante). Las credenciales de 2015 a 2019
+Hoy hay objetos en 2014 (las dos credenciales, la ficha de cata y un rótulo),
+2017 (entrada, sticker y ficha), 2019 (ficha), 2021 (rótulo, dos etiquetas de
+premio, el identificador de la mesa de sponsors y la entrada) y 2022 (la
+credencial de participante). Las credenciales de 2015 a 2019
 se ven en fotos de la galería, pero los originales no están en el archivo. La
 de 2022 es una reconstrucción a partir de fotos del evento (paso
 `09_credencial_2022.py` del repo de secretaría): la etiqueta va sin el nombre ni
@@ -149,6 +150,7 @@ vigila que siga siendo así.
 | `vinilo` | Stickers | El borde blanco del corte y un brillo leve |
 | `adhesivo` | Rótulos de muestra | Apenas satinado |
 | `papel` | Entradas, fichas, etiquetas de premio y la credencial de 2022 | Mate: no refleja, lo recorre una luz ancha y tenue. No cuelga: flota |
+| `carton` | Identificadores de mesa | Mate como el papel, con el canto de una tarjeta gruesa: cuatro capas de un píxel abajo, del blanco del borde al gris del alma, que se inclinan con la pieza |
 
 El recorte y el color salen del pipeline (`07_graficas.py`, con su perfil ICC:
 las planchas de 2014 son CMYK); el material es solo CSS, así el visor muestra
@@ -191,6 +193,12 @@ perspectiva, 62rem; es lo que se mide, porque no se mueve) › `.objeto-vaiven`
 la entrada, 135), salvo la ficha, que a escala taparía al resto. La credencial
 apaisada de 2022 (unos 130 mm) toma el ancho de una entrada. En el teléfono las
 dos credenciales de 2014 entran de a par.
+
+**Filas**: los objetos van en una fila centrada que se parte cuando no entran,
+en el orden de los datos. Entre 1024 y 1279 px se achican un poco para que las
+cuatro piezas de 2014 entren juntas. En 2021, con cinco, la entrada —la pieza
+ancha— va última: cuando la fila se parte, cierra sola abajo, centrada, en vez
+de dejar una pieza chica huérfana.
 
 **El remate de la portada**: la credencial de socio participante de 2014
 cuelga en la columna del manifiesto, al lado de «La Copa nació en 2014 como

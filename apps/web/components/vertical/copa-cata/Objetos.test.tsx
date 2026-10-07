@@ -114,6 +114,22 @@ describe("Objetos", () => {
     }
   });
 
+  it("el cartón (el identificador de mesa) tampoco cuelga, y lleva su material", () => {
+    const mesa: ItemObjeto = {
+      src: "/copa-cata/2021/2021-mesa-sponsors.webp",
+      width: 1039,
+      height: 1600,
+      alt: "Identificador de prueba de una mesa",
+      tipo: "identificador-mesa",
+      material: "carton",
+      rotulo: "Identificador de mesa · Sponsors",
+    };
+    render(<Objetos items={[mesa]} etiquetas={ETIQUETAS} />);
+    const boton = screen.getByRole("button", { name: /Identificador de prueba/ });
+    expect(boton).toHaveAttribute("data-material", "carton");
+    expect(boton.querySelector(".objeto-cordon")).toBeNull();
+  });
+
   it("una credencial de papel (la tarjeta de 2022) no cuelga: sin cordón, ranura ni gancho", () => {
     const tarjeta: ItemObjeto = {
       ...CREDENCIAL,

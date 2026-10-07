@@ -208,6 +208,10 @@ describe("ediciones", () => {
     }
   });
 
+  it("2021 tuvo 15 mesas de participantes, según el pedido de sus identificadores", () => {
+    expect(getEdicion(2021).mesas).toMatchObject({ valor: 15, fuente: "identificadores-mesa-2021" });
+  });
+
   it("las cifras nunca son un cero que quiera decir 'no sé'", () => {
     for (const e of EDICIONES) {
       for (const c of [e.muestras, e.participantes, e.cupo, e.mesas]) {
@@ -230,6 +234,9 @@ describe("ediciones", () => {
     };
     // La crónica nombra 6; la credencial suma una marca que la crónica no nombra.
     expect(rango(2014)).toEqual([6, 7]);
+    // El afiche y la placa de sponsors llevan las mismas 15; el agradecimiento suma una.
+    expect(rango(2017)).toEqual([15, 16]);
+    expect(getEdicion(2017).marcas.fuentes).toContain("placa-sponsors-2017");
     expect(rango(2015)).toEqual([10, 12]);
     expect(rango(2019)).toEqual([45, 45]);
     expect(rango(2021)).toEqual([33, 36]);
@@ -281,6 +288,11 @@ describe("ediciones", () => {
         expect(c.versiones.length, `${e.anio}: ${c.tema}`).toBeGreaterThanOrEqual(2);
       }
     }
+  });
+
+  it("la ficha de 2014 y la invitación no coinciden en la hora de la cata: están las dos", () => {
+    const c = getEdicion(2014).contradicciones.find((x) => x.versiones.some((v) => v.fuente === "ficha-cata-2014"));
+    expect(c?.versiones.map((v) => v.fuente)).toEqual(["invitacion-2014", "ficha-cata-2014"]);
   });
 
   it("las contradicciones conocidas están cargadas con las dos versiones", () => {
@@ -680,6 +692,15 @@ describe("objetos de la época", () => {
       for (const o of objetosDe(anio)) expect(MATERIAL_OBJETO[o.tipo], o.id).toBeTruthy();
     }
     expect(ANIOS.filter((a) => objetosDe(a).length > 0)).toEqual([2014, 2017, 2019, 2021, 2022]);
+    // En 2021 la entrada, la pieza ancha, va última: si no entran todas en una fila, cierra sola abajo.
+    expect(objetosDe(2021).map((g) => g.id)).toEqual([
+      "2021-rotulo-muestra",
+      "2021-premio-mejor-planta",
+      "2021-mesa-sponsors",
+      "2021-premio-equipo",
+      "2021-entrada",
+    ]);
+    expect(objetosDe(2014).map((g) => g.tipo)).toEqual(["credencial", "credencial", "ficha-cata", "rotulo"]);
   });
 });
 

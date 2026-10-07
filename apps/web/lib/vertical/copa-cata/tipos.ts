@@ -253,6 +253,7 @@ export const TIPOS_GRAFICA = [
   "sticker",
   "ficha-cata",
   "etiqueta-premio",
+  "identificador-mesa",
 ] as const;
 
 export type TipoGrafica = (typeof TIPOS_GRAFICA)[number];
@@ -264,8 +265,9 @@ export type TipoGrafica = (typeof TIPOS_GRAFICA)[number];
  * - `vinilo`: sticker con brillo leve y el borde blanco del corte.
  * - `adhesivo`: rótulo de papel autoadhesivo, apenas satinado.
  * - `papel`: mate, sin reflejo; solo la luz que lo recorre.
+ * - `carton`: mate como el papel, con el canto de una tarjeta gruesa.
  */
-export type Material = "plastico" | "vinilo" | "adhesivo" | "papel";
+export type Material = "plastico" | "vinilo" | "adhesivo" | "papel" | "carton";
 
 /**
  * Las piezas que pasaron de mano en mano, con su material. Las demás —afiches,
@@ -278,6 +280,7 @@ export const MATERIAL_OBJETO = {
   rotulo: "adhesivo",
   "ficha-cata": "papel",
   "etiqueta-premio": "papel",
+  "identificador-mesa": "carton",
 } as const satisfies Partial<Record<TipoGrafica, Material>>;
 
 export type TipoObjeto = keyof typeof MATERIAL_OBJETO;
