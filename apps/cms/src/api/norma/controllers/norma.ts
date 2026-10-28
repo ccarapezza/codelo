@@ -1,6 +1,6 @@
 import { factories } from "@strapi/strapi";
 import { requireAdmin } from "../../../lib/admin-auth";
-import { syncBoletinOficial } from "../../../verticals/boletin-oficial";
+import { consultaCaida, syncBoletinOficial } from "../../../verticals/boletin-oficial";
 
 /** Same shared-secret check the other internal endpoints use. */
 function verifyInternalKey(ctx: any): boolean {
@@ -22,11 +22,24 @@ export default factories.createCoreController("api::norma.norma", ({ strapi }) =
    *
    * Acepta `x-internal-key` (scripts, deploy) o sesión de admin (el botón del
    * widget), porque se usa desde los dos lados.
+   *
+   * Que no responda NINGUNA búsqueda también es un 502, aunque el sync haya
+   * terminado: antes volvía 200 con "0 normas nuevas" y el botón lo mostraba
+   * como un éxito.
    */
   async syncAhora(ctx: any) {
     if (!verifyInternalKey(ctx) && !(await requireAdmin(ctx, strapi))) return;
     try {
-      ctx.body = await syncBoletinOficial(strapi, { sinceDays: 7 });
+      const r = await syncBoletinOficial(strapi, { sinceDays: 7 });
+      if (consultaCaida(r.consulta)) {
+        ctx.status = 502;
+        ctx.body = {
+          ...r,
+          error: `El Boletín no respondió a ninguna búsqueda: ${r.consulta.ultimoError}`,
+        };
+        return;
+      }
+      ctx.body = r;
     } catch (err) {
       strapi.log.error("[boletin-oficial] sync manual falló:", err);
       ctx.status = 502;

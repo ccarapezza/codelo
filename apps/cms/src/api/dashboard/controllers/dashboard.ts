@@ -4,7 +4,11 @@
 // author). A propósito NO usa requireAdminPermission — la idea es que editores
 // y autores entiendan de dónde y cuándo sale la información, sin poder tocarla.
 import { requireAdmin } from "../../../lib/admin-auth";
-import { DEFAULT_BO_TERMS } from "../../../verticals/boletin-oficial";
+import {
+  DEFAULT_BO_TERMS,
+  estadoBoletin,
+  getBoletinSalud,
+} from "../../../verticals/boletin-oficial";
 
 // Traduce las reglas de cron que realmente usamos (config/cron-tasks.ts) a una
 // frase legible. Sólo cubre esos patrones; cualquier otro se muestra crudo, en
@@ -68,8 +72,16 @@ export default ({ strapi }: { strapi: any }) => ({
       q.count({ where: { analisisEstado: "error" } }),
     ]);
 
+    // Cómo salió la última consulta al Boletín. Es lo que distingue "no hubo
+    // normas" de "no se pudo preguntar", que los conteos de arriba no ven.
+    const salud = await getBoletinSalud(strapi);
+
     ctx.body = {
       cron: cronInfo(strapi, "boletinOficial"),
+      salud,
+      estado: estadoBoletin(salud),
+      // Sólo si hay uno: la URL puede llevar credenciales y no sale del server.
+      proxyConfigurado: Boolean(process.env.BOLETIN_PROXY_URL?.trim()),
       terms: DEFAULT_BO_TERMS,
       // Ventana de días hacia atrás que barre cada corrida (ver cron-tasks.ts).
       sinceDays: 7,

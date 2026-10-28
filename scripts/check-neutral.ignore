@@ -17,3 +17,6 @@
 
 # El .env.example de la raíz es de este proyecto.
 ^\.env\.example:
+
+# El túnel de las PCs de la casa hacia el Boletín Oficial (salida argentina).
+^deploy/boletin-tunnel/

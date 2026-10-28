@@ -52,6 +52,10 @@ pipeline {
             CORS_ALLOWED_ORIGINS:    'https://cogollosdeloeste.com.ar',
             RATE_LIMIT_WINDOW_MS:    '60000',
             RATE_LIMIT_MAX:          '60',
+            // Salida argentina al Boletín Oficial: los túneles de las PCs de la
+            // casa, en orden de preferencia (deploy/boletin-tunnel/README.md).
+            // No lleva secretos: los puertos sólo escuchan para los containers.
+            BOLETIN_PROXY_URL:       'socks5h://host.docker.internal:18881#nitro-v15,socks5h://host.docker.internal:18882#pc-2',
           ],
           secrets: [
             POSTGRES_PASSWORD:           'codelo-postgres-password',

@@ -20,8 +20,17 @@
 // without notice and break this module. Every failure path here is soft (logs
 // + returns empty) so a broken BO never takes down the agent run or the CMS.
 // The RSS feeds remain the primary source; this is complementary.
+//
+// ⚠️ SÓLO RESPONDE A IPs ARGENTINAS (desde el 22-oct-2026). Fuera del país la
+// conexión ni abre: timeout de TCP, que llega como "fetch failed" con causa
+// UND_ERR_CONNECT_TIMEOUT. El VPS está en EE.UU.; con BOLETIN_PROXY_URL la
+// consulta sale por un proxy argentino (ver proxy-fetch.ts). Y como "fallo
+// suave" sin más era indistinguible de un día sin normas —estuvo una semana
+// así sin que nadie lo notara—, cada consulta deja su resultado en el core
+// store y el tablero del panel avisa cuando ninguna búsqueda respondió.
 
 import type { Core } from "@strapi/strapi";
+import * as project from "../lib/project";
 import type { NewsItem } from "../lib/rss-fetcher";
 import {
   analisisEsUtil,
@@ -29,6 +38,7 @@ import {
   RELEVANCIA_MINIMA,
   type NormaAnalisis,
 } from "./boletin-analisis";
+import { fetchViaProxy, proxyLabel, type ProxyResponse } from "./proxy-fetch";
 
 const BO_BASE = "https://www.boletinoficial.gob.ar";
 const BO_SEARCH = `${BO_BASE}/busquedaAvanzada/realizarBusqueda`;
@@ -46,6 +56,81 @@ const BO_HEADERS: Record<string, string> = {
 
 /** Primera Sección — "Legislación y Avisos Oficiales" (leyes, decretos, resoluciones). */
 const SECCION_LEGISLACION = 1;
+
+/**
+ * Proxies de salida hacia el Boletín, en orden de preferencia. Son varios
+ * porque cada uno es una PC de la casa que puede estar apagada: alcanza con
+ * que responda una (ver deploy/boletin-tunnel/).
+ */
+function boletinProxies(): string[] {
+  return (process.env.BOLETIN_PROXY_URL ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/**
+ * El último proxy que respondió va primero en el pedido siguiente. Una corrida
+ * son ~10 pedidos: sin esto, con la primera PC apagada cada uno pagaría el
+ * intento fallido —instantáneo si la PC cerró bien su túnel, hasta el timeout
+ * si se cortó de golpe y el VPS todavía no se dio cuenta—.
+ */
+let proxyPreferido: string | null = null;
+
+/**
+ * Todo pedido al Boletín pasa por acá: por los proxies si hay, directo si no.
+ * Sólo el Boletín: el resto del CMS sigue saliendo directo. `via` dice por
+ * cuál salió.
+ */
+async function boRequest(
+  url: string,
+  init: { method?: string; body?: string; timeoutMs: number },
+): Promise<ProxyResponse & { via: string | null }> {
+  const proxies = boletinProxies();
+  if (proxies.length > 0) {
+    const orden = proxyPreferido && proxies.includes(proxyPreferido)
+      ? [proxyPreferido, ...proxies.filter((p) => p !== proxyPreferido)]
+      : proxies;
+    const fallos: string[] = [];
+    for (const proxy of orden) {
+      try {
+        const res = await fetchViaProxy(url, proxy, { ...init, headers: BO_HEADERS });
+        proxyPreferido = proxy;
+        return { ...res, via: proxyLabel(proxy) };
+      } catch (err) {
+        fallos.push(`${proxyLabel(proxy)}: ${(err as Error).message}`);
+      }
+    }
+    // Con todos caídos, el mensaje dice qué le pasó a cada uno: es lo que va a
+    // mostrar el panel.
+    throw new Error(fallos.join(" · "));
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), init.timeoutMs);
+  try {
+    const res = await fetch(url, {
+      method: init.method ?? "GET",
+      headers: BO_HEADERS,
+      body: init.body,
+      signal: controller.signal,
+    });
+    return { status: res.status, ok: res.ok, text: await res.text(), via: null };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * El mensaje de un fallo, con su causa. El `fetch` de Node dice sólo "fetch
+ * failed" y guarda el motivo real en `cause`: es la diferencia entre "el BO
+ * bloquea esta IP" (UND_ERR_CONNECT_TIMEOUT) y "el BO cambió algo".
+ */
+function describeError(err: unknown): string {
+  const e = err as Error & { cause?: { code?: string; message?: string } };
+  const cause = e.cause?.code ?? e.cause?.message;
+  return cause && !e.message.includes(cause) ? `${e.message} (${cause})` : e.message;
+}
 
 /**
  * Search terms covering the statutory topics. Kept deliberately broad — the
@@ -212,7 +297,7 @@ async function searchTerm(
   desde: Date,
   hasta: Date,
   timeoutMs: number,
-): Promise<BoletinItem[]> {
+): Promise<{ items: BoletinItem[]; via: string | null }> {
   // Bounding the range SERVER-side is what makes this a watch instead of an
   // archive dump: results come grouped by rubro (LEYES, DECRETOS, …) and NOT
   // sorted by date, spread over several pages. Unbounded, "cannabis" returns
@@ -232,35 +317,27 @@ async function searchTerm(
     array_volver: "[]",
   });
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(BO_SEARCH, {
-      method: "POST",
-      headers: BO_HEADERS,
-      body,
-      signal: controller.signal,
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const res = await boRequest(BO_SEARCH, { method: "POST", body: body.toString(), timeoutMs });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-    const json = (await res.json()) as {
-      error?: number;
-      content?: { html?: string } | null;
-      mensajes?: string[];
-    };
-    // The endpoint answers 200 with an in-band error code.
-    if (json.error !== 0) {
-      throw new Error(json.mensajes?.join("; ") || `error=${json.error}`);
-    }
-    // A term with no hits answers error=0 with an EMPTY html string — that is a
-    // valid "nothing found", not a failure. (REPROCANN, for one, never appears
-    // verbatim in the Boletín.)
-    const html = json.content?.html ?? "";
-    if (!html) return [];
-    return parseBoletinHtml(html);
-  } finally {
-    clearTimeout(timer);
+  let json: { error?: number; content?: { html?: string } | null; mensajes?: string[] };
+  try {
+    json = JSON.parse(res.text);
+  } catch {
+    // Un 200 con HTML en vez de JSON es una página intermedia (bloqueo,
+    // mantenimiento), no una respuesta del buscador.
+    throw new Error(`respuesta no JSON: ${res.text.slice(0, 80).replace(/\s+/g, " ")}`);
   }
+  // The endpoint answers 200 with an in-band error code.
+  if (json.error !== 0) {
+    throw new Error(json.mensajes?.join("; ") || `error=${json.error}`);
+  }
+  // A term with no hits answers error=0 with an EMPTY html string — that is a
+  // valid "nothing found", not a failure. (REPROCANN, for one, never appears
+  // verbatim in the Boletín.)
+  const html = json.content?.html ?? "";
+  if (!html) return { items: [], via: res.via };
+  return { items: parseBoletinHtml(html), via: res.via };
 }
 
 /**
@@ -282,12 +359,10 @@ async function searchTerm(
  * que importa (VISTO, CONSIDERANDO y los ARTÍCULOS) entra holgada en 60.000.
  */
 async function fetchAvisoDetail(url: string, timeoutMs: number): Promise<string | null> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(url, { headers: BO_HEADERS, signal: controller.signal });
+    const res = await boRequest(url, { timeoutMs });
     if (!res.ok) return null;
-    const html = await res.text();
+    const html = res.text;
 
     const marker = html.indexOf('id="cuerpoDetalleAviso"');
     if (marker === -1) return null;
@@ -309,9 +384,24 @@ async function fetchAvisoDetail(url: string, timeoutMs: number): Promise<string 
     return text.length > 40 ? text.slice(0, 60000) : null;
   } catch {
     return null;
-  } finally {
-    clearTimeout(timer);
   }
+}
+
+/** Cómo le fue a una consulta al Boletín: cuántas búsquedas respondieron. */
+export type BoletinConsulta = {
+  terminos: number;
+  fallidos: number;
+  /** El último motivo de fallo, con su causa (ver describeError). */
+  ultimoError: string | null;
+  /** Si había proxies configurados. */
+  viaProxy: boolean;
+  /** Cuál respondió por última vez (su etiqueta), o null. */
+  proxy: string | null;
+};
+
+/** Ninguna búsqueda respondió: no hay forma de saber si hubo normas. */
+export function consultaCaida(c: BoletinConsulta): boolean {
+  return c.terminos > 0 && c.fallidos >= c.terminos;
 }
 
 /**
@@ -335,7 +425,7 @@ export async function fetchRecentBoletinItems(
      */
     knownUrls?: Set<string>;
   },
-): Promise<BoletinItem[]> {
+): Promise<{ items: BoletinItem[]; consulta: BoletinConsulta }> {
   const terms = opts?.terms ?? DEFAULT_BO_TERMS;
   const sinceDays = opts?.sinceDays ?? 7;
   const timeoutMs = opts?.timeoutMs ?? 20000;
@@ -344,12 +434,20 @@ export async function fetchRecentBoletinItems(
   const hasta = new Date();
   const cutoff = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000);
   const byUrl = new Map<string, BoletinItem>();
+  const consulta: BoletinConsulta = {
+    terminos: terms.length,
+    fallidos: 0,
+    ultimoError: null,
+    viaProxy: boletinProxies().length > 0,
+    proxy: null,
+  };
 
   // Sequential with a pause between terms: this is someone else's public site
   // and an undocumented endpoint — no reason to hammer it.
   for (const term of terms) {
     try {
-      const found = await searchTerm(term, cutoff, hasta, timeoutMs);
+      const { items: found, via } = await searchTerm(term, cutoff, hasta, timeoutMs);
+      if (via) consulta.proxy = via;
       const recent = found.filter(
         (i) =>
           i.itemPublishedAt !== null &&
@@ -368,15 +466,19 @@ export async function fetchRecentBoletinItems(
         `[boletin-oficial] "${term}": ${found.length} resultados, ${recent.length} relevantes en los últimos ${sinceDays} días.`,
       );
     } catch (err) {
-      // Soft failure: a changed endpoint must not break the agent run.
+      // Soft failure: a changed endpoint must not break the agent run. Pero se
+      // cuenta: si fallan todas, el llamador tiene que poder decirlo.
+      consulta.fallidos += 1;
+      consulta.ultimoError = describeError(err);
       strapi.log.warn(
-        `[boletin-oficial] Búsqueda "${term}" falló (se omite): ${(err as Error).message}`,
+        `[boletin-oficial] Búsqueda "${term}" falló (se omite): ${consulta.ultimoError}`,
       );
     }
     if (delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));
   }
 
   const items = [...byUrl.values()];
+  if (items.length === 0) return { items, consulta };
 
   // Segundo paso: por cada norma nueva se baja su texto completo. Son pocas
   // (unas 4 por día), secuenciales y con pausa: el volumen no justifica
@@ -399,7 +501,77 @@ export async function fetchRecentBoletinItems(
         : "."),
   );
 
-  return items;
+  return { items, consulta };
+}
+
+// ---------------------------------------------------------------------------
+// Salud — qué pasó en la última consulta, para el tablero del panel
+// ---------------------------------------------------------------------------
+
+/** Lo que queda guardado de la última consulta al Boletín. */
+export type BoletinSalud = {
+  /** Cuándo se consultó por última vez (ISO). */
+  ultimaConsulta: string;
+  terminos: number;
+  fallidos: number;
+  /** El último motivo de fallo de esa consulta, tal cual. */
+  error: string | null;
+  /**
+   * Última consulta en la que respondió al menos una búsqueda (ISO). Sobrevive
+   * a los fallos: es el "desde cuándo" de un corte.
+   */
+  ultimoExito: string | null;
+  viaProxy: boolean;
+  /** El proxy que respondió en esa consulta (su etiqueta), o null. */
+  proxy: string | null;
+};
+
+/**
+ * - `caido`: ninguna búsqueda respondió en la última consulta.
+ * - `atrasado`: la última consulta es de hace más de dos días: el cron no corre.
+ * - `parcial`: algunas búsquedas fallaron.
+ * - `sin-datos`: todavía no corrió ninguna consulta con este control.
+ */
+export type EstadoBoletin = "ok" | "parcial" | "atrasado" | "caido" | "sin-datos";
+
+/** El cron es diario: dos días sin consulta ya no es un retraso, es que no corre. */
+const ATRASO_MAXIMO_MS = 50 * 60 * 60 * 1000;
+
+export function estadoBoletin(s: BoletinSalud | null, ahora = new Date()): EstadoBoletin {
+  if (!s) return "sin-datos";
+  if (s.terminos > 0 && s.fallidos >= s.terminos) return "caido";
+  if (ahora.getTime() - Date.parse(s.ultimaConsulta) > ATRASO_MAXIMO_MS) return "atrasado";
+  return s.fallidos > 0 ? "parcial" : "ok";
+}
+
+const SALUD_KEY = project.coreStoreKey("boletin-salud");
+
+export async function getBoletinSalud(strapi: Core.Strapi): Promise<BoletinSalud | null> {
+  const value = await strapi.store({ type: "core" }).get({ key: SALUD_KEY });
+  return value && typeof value === "object" ? (value as BoletinSalud) : null;
+}
+
+async function registrarConsulta(
+  strapi: Core.Strapi,
+  c: BoletinConsulta,
+): Promise<BoletinSalud> {
+  const previa = await getBoletinSalud(strapi).catch(() => null);
+  const ahora = new Date().toISOString();
+  const salud: BoletinSalud = {
+    ultimaConsulta: ahora,
+    terminos: c.terminos,
+    fallidos: c.fallidos,
+    error: c.ultimoError,
+    ultimoExito: consultaCaida(c) ? (previa?.ultimoExito ?? null) : ahora,
+    viaProxy: c.viaProxy,
+    proxy: c.proxy,
+  };
+  try {
+    await strapi.store({ type: "core" }).set({ key: SALUD_KEY, value: salud });
+  } catch (err) {
+    strapi.log.warn(`[boletin-oficial] No se pudo guardar el estado de la consulta: ${err}`);
+  }
+  return salud;
 }
 
 // ---------------------------------------------------------------------------
@@ -428,6 +600,8 @@ export type SyncBoletinResult = {
   relevantes: number;
   /** Análisis que fallaron y quedaron para reintentar. */
   errores: number;
+  /** Cuántas búsquedas respondieron. Con todas caídas, los ceros no significan nada. */
+  consulta: BoletinConsulta;
 };
 
 /** El título como lo ve el Redactor y el admin: "Ley 27669 — Título". */
@@ -598,7 +772,24 @@ export async function syncBoletinOficial(
     .findMany({ fields: ["url"], limit: -1 })) as unknown as Array<{ url: string }>;
   const knownUrls = new Set(archivadas.map((n) => n.url));
 
-  const items = await fetchRecentBoletinItems(strapi, { ...opts, knownUrls });
+  const { items, consulta } = await fetchRecentBoletinItems(strapi, { ...opts, knownUrls });
+  const salud = await registrarConsulta(strapi, consulta);
+
+  if (consultaCaida(consulta)) {
+    // A nivel error y no warn: es el único rastro en los logs de que no se
+    // está archivando nada. Los ceros de abajo parecen un día sin normas.
+    const desde = salud.ultimoExito
+      ? `Última consulta que respondió: ${salud.ultimoExito}.`
+      : "No hay una consulta exitosa registrada.";
+    const pista = consulta.viaProxy
+      ? "No respondió ningún proxy de BOLETIN_PROXY_URL: ¿están apagadas las PCs o caídos sus túneles?"
+      : "Si es un timeout de conexión, el Boletín está rechazando la IP de este servidor " +
+        "(sólo acepta IPs argentinas): configurar BOLETIN_PROXY_URL.";
+    strapi.log.error(
+      `[boletin-oficial] ⚠️ El Boletín no respondió a ninguna de las ${consulta.terminos} búsquedas ` +
+        `(${consulta.ultimoError}). No se archivó nada: esto NO es un día sin normas. ${desde} ${pista}`,
+    );
+  }
 
   const syncedAt = new Date();
   let nuevas = 0;
@@ -625,11 +816,15 @@ export async function syncBoletinOficial(
     }
   }
 
-  strapi.log.info(
-    `[boletin-oficial] ${items.length} normas en la ventana, ${nuevas} nuevas archivadas.`,
-  );
+  if (!consultaCaida(consulta)) {
+    strapi.log.info(
+      `[boletin-oficial] ${items.length} normas en la ventana, ${nuevas} nuevas archivadas.`,
+    );
+  }
 
+  // El análisis corre igual con el Boletín caído: lo pendiente ya está archivado
+  // con su texto y no necesita volver a pedirle nada.
   const analisis = await analizarPendientes(strapi, opts?.maxAnalisis ?? 25);
 
-  return { encontradas: items.length, nuevas, ...analisis };
+  return { encontradas: items.length, nuevas, ...analisis, consulta };
 }

@@ -1,0 +1,41 @@
+[Unit]
+Description=Salida argentina al Boletín Oficial para el CMS de codelo (túnel SSH al VPS)
+Documentation=https://github.com/ccarapezza/codelo/tree/main/deploy/boletin-tunnel
+Wants=network-online.target
+After=network-online.target
+# Reintentar para siempre: una PC que se suspende o cambia de red corta el
+# túnel muchas veces por día, y cada corte tiene que volver solo.
+StartLimitIntervalSec=0
+
+[Service]
+User=boletin-tunnel
+EnvironmentFile=/etc/boletin-tunnel/env
+# -R sin destino: ssh hace de proxy SOCKS en el VPS, y PermitRemoteOpen limita
+# a dónde puede salir por esta PC. Sólo al Boletín, sólo por HTTPS: el VPS no
+# puede usar este túnel para ver la red de la casa ni nada más.
+# ServerAlive* detecta un corte (suspensión, cambio de IP del router) en ~45 s;
+# ExitOnForwardFailure hace que, si el puerto todavía está tomado por la sesión
+# vieja, ssh salga y systemd reintente en vez de quedar conectado sin túnel.
+ExecStart=/usr/bin/ssh -F /dev/null -NT \
+    -i /var/lib/boletin-tunnel/id_ed25519 -o IdentitiesOnly=yes -o BatchMode=yes \
+    -o UserKnownHostsFile=/etc/boletin-tunnel/known_hosts -o StrictHostKeyChecking=yes \
+    -o UpdateHostKeys=no \
+    -o ExitOnForwardFailure=yes -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
+    -o PermitRemoteOpen=www.boletinoficial.gob.ar:443 \
+    -R 172.17.0.1:${TUNNEL_PORT} \
+    boletin-tunnel@${VPS}
+Restart=always
+RestartSec=15
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target

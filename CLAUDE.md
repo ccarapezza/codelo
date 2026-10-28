@@ -265,6 +265,25 @@ complementa. Tres cosas no obvias, todas verificadas contra el sitio real:
   *todas* las palabras significativas aparezcan en el ítem.
 - **Cero resultados llega como `error: 0` con `html` vacío** — no es un fallo
   (REPROCANN, por ejemplo, nunca aparece literal en el Boletín).
+- **Sólo acepta IPs argentinas (desde el 22-oct-2026).** Desde afuera la
+  conexión ni abre: `fetch failed (UND_ERR_CONNECT_TIMEOUT)` a los 10 s por
+  término. Probado desde 40 nodos en 25 países —São Paulo y Cloudflare
+  incluidos—: todos timeout. DNS no tiene nada que ver (resuelve bien). El VPS
+  está en EE.UU., así que la consulta sale por `BOLETIN_PROXY_URL`: una lista
+  de proxies, separados por coma, que se prueban en orden. Son túneles SSH
+  inversos desde las PCs de la casa (`ssh -R` sin destino = SOCKS de OpenSSH,
+  limitado al Boletín con `PermitRemoteOpen`), que escuchan en `172.17.0.1`
+  del VPS. Instalación, seguridad y problemas: `deploy/boletin-tunnel/README.md`.
+  `verticals/proxy-fetch.ts` habla SOCKS5 y HTTP CONNECT sin dependencias.
+  El PDF del día (`s3.arsat.com.ar/cdn-bo-001/…`) sí se baja desde afuera, por
+  si algún día hace falta otra fuente: sale ~00:05 y trae marcas `#I…I#`
+  por aviso, pero sólo está el del día y los suplementos vienen sin marcas.
+
+El "fallo suave" estuvo una semana sin que nadie lo notara: con todas las
+búsquedas caídas el log decía "0 normas nuevas", igual que un día tranquilo.
+Ahora cada consulta queda en el core store (`<slug>:boletin-salud`), el widget
+del panel muestra un aviso rojo cuando ninguna búsqueda respondió, el log sale
+a nivel `error` y el sync manual devuelve 502.
 
 ## Reglas editoriales del vertical (prompts)
 

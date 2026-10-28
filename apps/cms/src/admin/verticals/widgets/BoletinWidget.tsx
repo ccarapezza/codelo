@@ -15,8 +15,20 @@ type Item = {
   resumen: string | null;
   analisisEstado: "pendiente" | "listo" | "descartada" | "error";
 };
+type Salud = {
+  ultimaConsulta: string;
+  terminos: number;
+  fallidos: number;
+  error: string | null;
+  ultimoExito: string | null;
+  viaProxy: boolean;
+  proxy: string | null;
+};
 type BoletinData = {
   cron: CronInfo;
+  salud: Salud | null;
+  estado: "ok" | "parcial" | "atrasado" | "caido" | "sin-datos";
+  proxyConfigurado: boolean;
   terms: string[];
   sinceDays: number;
   total: number;
@@ -27,6 +39,72 @@ type BoletinData = {
 function fmtDate(iso: string | null): string {
   if (!iso) return "";
   return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function fmtDateTime(iso: string): string {
+  return new Date(iso).toLocaleString("es-AR", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/**
+ * El aviso de que el Boletín no se está leyendo. Va arriba de todo porque es
+ * la única señal: con el Boletín caído los conteos y la lista se ven normales,
+ * sólo que viejos.
+ */
+function SaludAviso({ data }: { data: BoletinData }) {
+  const s = data.salud;
+  if (!s) return null;
+
+  if (data.estado === "caido") {
+    return (
+      <Box padding={3} background="danger100" borderColor="danger600" borderWidth="1px" borderStyle="solid" hasRadius>
+        <Typography variant="pi" fontWeight="bold" textColor="danger700">
+          El Boletín Oficial no responde: no se están archivando normas
+        </Typography>
+        <Box marginTop={1}>
+          <Typography variant="pi" textColor="danger700">
+            En la última consulta ({fmtDateTime(s.ultimaConsulta)}) fallaron las {s.terminos} búsquedas:{" "}
+            {s.error ?? "sin detalle"}. No es un día sin normas: no se pudo preguntar.{" "}
+            {s.ultimoExito
+              ? `La última consulta que respondió fue el ${fmtDateTime(s.ultimoExito)}.`
+              : "No hay una consulta exitosa registrada."}
+          </Typography>
+        </Box>
+        <Box marginTop={1}>
+          <Typography variant="pi" textColor="danger700">
+            {s.viaProxy
+              ? "No respondió ninguno de los proxies de BOLETIN_PROXY_URL: ¿están apagadas las PCs de la casa, o se cayeron sus túneles?"
+              : "Si dice timeout de conexión, el Boletín está rechazando la IP del servidor (sólo acepta IPs argentinas) y hace falta configurar BOLETIN_PROXY_URL."}
+          </Typography>
+        </Box>
+      </Box>
+    );
+  }
+
+  if (data.estado === "parcial" || (data.estado === "atrasado" && data.cron.enabled)) {
+    return (
+      <Box padding={3} background="warning100" borderColor="warning600" borderWidth="1px" borderStyle="solid" hasRadius>
+        <Typography variant="pi" textColor="warning700">
+          {data.estado === "parcial"
+            ? `En la última consulta (${fmtDateTime(s.ultimaConsulta)}) fallaron ${s.fallidos} de ${s.terminos} búsquedas: ${s.error ?? "sin detalle"}. Lo de esos términos no se archivó.`
+            : `La última consulta al Boletín fue el ${fmtDateTime(s.ultimaConsulta)}: el cron diario no está corriendo.`}
+        </Typography>
+      </Box>
+    );
+  }
+
+  return null;
+}
+
+/** El mensaje que trae un 4xx/5xx del backend, en cualquiera de las dos formas que usa. */
+function errorMessage(err: unknown): string {
+  const data = (err as { response?: { data?: { error?: string | { message?: string } } } })?.response?.data;
+  const e = data?.error;
+  return (typeof e === "string" ? e : e?.message) || String(err);
 }
 
 /** Cómo se ve cada estado del análisis. El color es la señal, no el texto. */
@@ -63,17 +141,28 @@ export default function BoletinWidget() {
     try {
       const path = action === "sync" ? "/api/boletin/sync" : "/api/boletin/reanalizar";
       const res = await post(path, {});
-      const d = res.data as { nuevas?: number; analizadas?: number; encoladas?: number };
+      const d = res.data as {
+        nuevas?: number;
+        analizadas?: number;
+        encoladas?: number;
+        consulta?: { terminos: number; fallidos: number };
+      };
+      // Que fallen todas vuelve como 502 (cae en el catch); que fallen algunas,
+      // como 200 con el conteo: el resultado vale, pero está incompleto.
+      const fallidas = d.consulta?.fallidos ?? 0;
       toggleNotification({
-        type: "success",
+        type: fallidas > 0 ? "warning" : "success",
         message:
           action === "sync"
-            ? `${d.nuevas ?? 0} normas nuevas, ${d.analizadas ?? 0} analizadas.`
+            ? `${d.nuevas ?? 0} normas nuevas, ${d.analizadas ?? 0} analizadas.` +
+              (fallidas > 0 ? ` Fallaron ${fallidas} de ${d.consulta!.terminos} búsquedas.` : "")
             : `${d.encoladas ?? 0} normas encoladas para re-analizar.`,
       });
       await load();
     } catch (err) {
-      toggleNotification({ type: "danger", message: `No se pudo completar: ${err}` });
+      toggleNotification({ type: "danger", message: `No se pudo completar: ${errorMessage(err)}` });
+      // El sync caído igual dejó registrada la consulta: recargar muestra el aviso.
+      await load();
     } finally {
       setRunning(null);
     }
@@ -91,12 +180,21 @@ export default function BoletinWidget() {
         /normativa y se le pasan al Redactor.
       </Typography>
 
+      <SaludAviso data={data} />
+
       <Flex gap={2} wrap="wrap" alignItems="center">
         <Badge>{data.cron.enabled ? (data.cron.label ?? "programado") : "cron desactivado"}</Badge>
         <Typography variant="pi" textColor="neutral500">
           barre los últimos {data.sinceDays} días · {data.total} normas archivadas
         </Typography>
       </Flex>
+      {data.salud ? (
+        <Typography variant="pi" textColor="neutral500">
+          Última consulta: {fmtDateTime(data.salud.ultimaConsulta)}
+          {data.estado === "ok" ? " · respondieron todas las búsquedas" : ""}
+          {data.salud.proxy ? ` · salió por ${data.salud.proxy}` : data.salud.viaProxy ? " · vía proxy" : ""}
+        </Typography>
+      ) : null}
 
       <Flex gap={2} wrap="wrap" alignItems="center">
         <Badge backgroundColor="success100" textColor="success600">
